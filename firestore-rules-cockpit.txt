@@ -1,0 +1,47 @@
+Règles Firestore à AJOUTER dans le projet Firebase "reco-app-da0ce"
+(le même projet que Recos) — Firebase Console > Firestore Database > Règles.
+
+Ce projet a déjà des règles pour les collections de Recos (users/{uid}/...).
+NE PAS les supprimer : coller les blocs ci-dessous À L'INTÉRIEUR du même
+"match /databases/{database}/documents { ... }", à côté des règles
+existantes, puis Publier.
+
+--------------------------------------------------------------------
+
+    function cockpitEstCapfinances() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('.*@capfinances[.]fr$');
+    }
+    function cockpitEstAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'c.hodicq-mandataire@capfinances.fr';
+    }
+
+    match /cockpit_roster/{docId} {
+      allow read: if cockpitEstCapfinances();
+      allow write: if cockpitEstAdmin();
+    }
+
+    match /cockpit_parametres/{docId} {
+      allow read: if cockpitEstCapfinances();
+      allow write: if cockpitEstAdmin();
+    }
+
+    match /cockpit_semaines/{docId} {
+      allow read: if cockpitEstCapfinances();
+      allow create: if cockpitEstCapfinances()
+        && request.resource.data.ownerEmail == request.auth.token.email;
+      allow update, delete: if cockpitEstAdmin()
+        || (cockpitEstCapfinances() && resource.data.ownerEmail == request.auth.token.email);
+    }
+
+--------------------------------------------------------------------
+
+Ce que ça garantit :
+- Lecture : tous les comptes @capfinances.fr (lecture d'équipe, comme avant).
+- Roster (Équipe) et Paramètres (pondération) : écriture réservée à
+  c.hodicq-mandataire@capfinances.fr.
+- Semaines (Ma semaine / Ma fiche) : chacun ne peut créer/modifier/supprimer
+  que ses propres lignes (ownerEmail = l'email du compte qui a créé la
+  ligne) ; l'administrateur peut tout modifier.

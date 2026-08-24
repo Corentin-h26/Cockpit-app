@@ -1,0 +1,2366 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cockpit Commercial Premium</title>
+<meta name="theme-color" content="#152A49">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="assets/icon-512.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-app-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-firestore-compat.js"></script>
+
+<style>
+  /*
+   * Palette figée sur theme/colors.py de l'appli desktop (Colors),
+   * volontairement à un seul thème : Cockpit n'a pas de mode sombre.
+   */
+  :root {
+    color-scheme: light;
+    --navy: #152A49;
+    --navy-hover: #1C3053;
+    --gold: #B39359;
+    --gold-tint: rgba(179, 147, 89, 0.14);
+    --silver: #A9AFBB;
+    --coral: #EF5B6E;
+    --success: #2DBE7F;
+    --warning: #F0A43A;
+    --bg: #FFFFFF;
+    --cream: #F2EDE6;
+    --cream-hover: #E9DFCE;
+    --dark-card: #1D2735;
+    --nav-hover: #243246;
+    --border: #E3D8C7;
+    --heading: #152A49;
+    --heading-2: #5B6B82;
+    --nav-text: #FFFFFF;
+    --nav-text-dim: #B9C1CC;
+    --shadow: 0 1px 2px rgba(21, 42, 73, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", system-ui, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--heading);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body:not(.authed) .app { display: none; }
+  body.authed .login-screen { display: none; }
+
+  /* ---------------------------------------------------- Connexion */
+
+  .login-screen {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--navy);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .login-card {
+    background: var(--bg);
+    border-radius: 20px;
+    padding: 38px 34px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .login-card .icon { width: 42px; height: 42px; margin: 0 auto 2px; display: block; }
+  .login-title { text-align: center; font-size: 21px; font-weight: 700; }
+  .login-sub { text-align: center; font-size: 12.5px; color: var(--heading-2); margin-top: -6px; margin-bottom: 4px; }
+
+  .login-field { display: flex; flex-direction: column; gap: 5px; }
+  .login-field label { font-size: 11px; font-weight: 700; color: var(--heading-2); text-transform: uppercase; letter-spacing: 0.4px; }
+  .login-field input {
+    font: inherit;
+    padding: 10px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--cream);
+    color: var(--heading);
+  }
+  .login-field input:focus { outline: none; border-color: var(--gold); background: var(--bg); }
+
+  .login-hint { font-size: 11px; color: var(--heading-2); text-align: center; line-height: 1.4; }
+  .login-error { font-size: 12px; font-weight: 600; min-height: 16px; text-align: center; color: var(--coral); }
+
+  .login-links { display: flex; flex-direction: column; gap: 7px; align-items: center; margin-top: 2px; }
+  .login-links a { font-size: 12px; color: var(--gold); text-decoration: none; cursor: pointer; }
+  .login-links a:hover { text-decoration: underline; }
+
+  /* ---------------------------------------------------- App shell */
+
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    flex: 0 0 220px;
+    background: var(--navy);
+    color: var(--nav-text);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+  }
+
+  .sidebar-logo { text-align: center; padding: 10px 20px 25px; }
+  .sidebar-logo .icon { width: 38px; height: 38px; margin: 0 auto 8px; display: block; }
+  .sidebar-logo .mark { color: var(--gold); font-size: 22px; font-weight: 700; }
+  .sidebar-logo .sub { color: var(--nav-text-dim); font-size: 10.5px; margin-top: 4px; }
+
+  .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    color: var(--nav-text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  .nav-item.active { background: rgba(255, 255, 255, 0.09); color: var(--nav-text); }
+
+  .sidebar-user {
+    margin-top: auto;
+    padding: 14px 20px 0;
+    font-size: 11px;
+    color: var(--nav-text-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sidebar-user .email { font-weight: 600; color: var(--nav-text); word-break: break-all; }
+  .sidebar-user .admin-badge {
+    display: inline-block;
+    background: var(--gold-tint);
+    color: var(--gold);
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-radius: 6px;
+    padding: 2px 6px;
+    margin-top: 2px;
+    width: fit-content;
+  }
+  .btn-logout {
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--nav-text-dim);
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 4px 0 0;
+    cursor: pointer;
+  }
+  .btn-logout:hover { color: var(--coral); }
+
+  .sync-status {
+    padding: 12px 20px 0;
+    font-size: 10.5px;
+    color: var(--nav-text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex: 0 0 auto; }
+  .sync-dot.off { background: var(--warning); }
+
+  /* ---------------------------------------------------- Main */
+
+  .main { flex: 1; min-width: 0; }
+
+  .topbar {
+    background: var(--navy);
+    color: var(--nav-text);
+    padding: 14px 30px;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .topbar-filtres { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .topbar-select {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--navy-hover);
+    color: var(--nav-text);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+  }
+  .topbar-select:hover { background: rgba(255, 255, 255, 0.12); }
+  .topbar-select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+  .content { padding: 28px 32px 60px; max-width: 1300px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .page-title { font-size: 22px; font-weight: 700; text-wrap: balance; }
+  .page-sub { color: var(--heading-2); font-size: 13px; margin-top: 4px; line-height: 1.5; }
+
+  hr.rule { border: none; border-top: 1px solid var(--border); margin: 18px 0 24px; }
+
+  .section-label {
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    margin: 28px 0 14px;
+  }
+
+  .section-label:first-of-type { margin-top: 0; }
+
+  /* ---------------------------------------------------- KPI grid */
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .kpi-card {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 140px;
+    box-shadow: var(--shadow);
+  }
+
+  .kpi-icon {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--gold-tint);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold);
+  }
+  .kpi-icon svg { width: 17px; height: 17px; }
+
+  .kpi-title { font-size: 12px; font-weight: 600; }
+  .kpi-value { color: var(--gold); font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: auto; }
+  .kpi-variation { color: var(--heading-2); font-size: 11px; font-weight: 600; }
+  .kpi-variation.positive { color: var(--success); }
+  .kpi-variation.negative { color: var(--coral); }
+
+  /* ---------------------------------------------------- Cards / tables */
+
+  .watch-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+  .card { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+  .watch-row-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .watch-row-item:last-child { border-bottom: none; }
+  .watch-name { font-size: 13px; font-weight: 600; }
+  .watch-sub { font-size: 11px; color: var(--heading-2); }
+
+  .pill { border-radius: 9px; padding: 3px 10px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .pill-elite { background: var(--gold); color: var(--navy); }
+  .pill-excellent { background: var(--silver); color: var(--navy); }
+  .pill-bon { background: var(--success); color: var(--bg); }
+  .pill-accompagner { background: var(--warning); color: var(--navy); }
+  .pill-prioritaire { background: var(--coral); color: var(--bg); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align: left; color: var(--heading-2); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; padding: 0 6px 9px; border-bottom: 1px solid var(--border); }
+  thead th.num, td.num { text-align: center; font-variant-numeric: tabular-nums; }
+  tbody td { padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  .rank { color: var(--heading-2); font-variant-numeric: tabular-nums; }
+
+  .tables-row { display: grid; grid-template-columns: 9fr 11fr; gap: 16px; }
+
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .bar-track { flex: 1; height: 6px; border-radius: 3px; background: rgba(21, 42, 73, 0.12); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-fill.ok { background: var(--success); }
+  .bar-fill.warn { background: var(--warning); }
+  .bar-fill.bad { background: var(--coral); }
+  .bar-pct { font-size: 10.5px; font-weight: 700; width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+  .bar-pct.ok { color: var(--success); }
+  .bar-pct.warn { color: var(--warning); }
+  .bar-pct.bad { color: var(--coral); }
+
+  .empty-state { color: var(--heading-2); font-size: 12.5px; padding: 20px 0; text-align: center; }
+
+  /* ---------------------------------------------------- Saisie */
+
+  .saisie-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+
+  .btn {
+    font: inherit;
+    border: 1px solid var(--border);
+    background: var(--cream);
+    color: var(--heading);
+    border-radius: 9px;
+    padding: 9px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--cream-hover); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--navy); color: var(--nav-text); border-color: var(--navy); }
+  .btn-primary:hover { background: var(--navy-hover); }
+  .btn-danger { color: var(--coral); }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+
+  .entry-table { min-width: 1400px; font-size: 12px; }
+  .entry-table th {
+    background: var(--navy);
+    color: var(--nav-text);
+    font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 10px 8px;
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  .entry-table td { padding: 4px; border-bottom: 1px solid var(--border); background: var(--cream); }
+  .entry-table tr:hover td { background: var(--cream-hover); }
+
+  .entry-table input {
+    font: inherit;
+    width: 100%;
+    min-width: 64px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--heading);
+    padding: 7px 6px;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .entry-table input:focus { border-color: var(--gold); background: var(--bg); outline: none; }
+  .entry-table input[type="text"] { min-width: 100px; }
+  .entry-table td.actions { width: 34px; }
+
+  .entry-table input:disabled, .roster-table input:disabled, .poids-input-wrap input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  tr.row-readonly .row-delete { display: none; }
+
+  /* Nom de conseiller qui ne correspond à personne du roster Équipe — le
+     classement/filtre Ancienneté ne le reconnaîtraient pas. */
+  .entry-table input.conseiller-inconnu {
+    border-color: var(--coral);
+    background: rgba(239, 91, 110, 0.08);
+  }
+
+  /* ---------------------------------------------------- Ma fiche */
+
+  .fiche-identite { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .fiche-identite label { font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
+
+  /* La même table que "Ma semaine" (mêmes <tr>/<input>, juste déplacés dans
+     le DOM) reformatée en cartes verticales : une carte par semaine, un seul
+     conseiller visible à la fois. */
+  .mode-fiche thead { display: none; }
+  .mode-fiche.entry-table,
+  .mode-fiche tbody { display: block; width: auto; min-width: 0; }
+  .mode-fiche tr { display: none; }
+  .mode-fiche tr.fiche-visible {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .mode-fiche td { display: block; padding: 0; background: transparent; border: none; }
+
+  .mode-fiche td[data-label] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .mode-fiche td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--heading-2);
+    margin-bottom: 6px;
+  }
+  .mode-fiche td.actions,
+  .mode-fiche td[data-label="Conseiller"] { display: none; }
+  .mode-fiche input {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+  }
+  .mode-fiche input:focus { outline: none; }
+  .mode-fiche input[readonly] {
+    color: var(--heading-2);
+    cursor: not-allowed;
+  }
+  .mode-fiche td:has(input[readonly]) { background: var(--cream); }
+
+  .entry-table.mode-fiche tr:hover td { background: transparent; }
+  .entry-table.mode-fiche tr:hover td[data-label] { background: var(--bg); }
+  .entry-table.mode-fiche tr:hover td[data-label]:has(input[readonly]) { background: var(--cream); }
+
+  .fiche-section-titre, .fiche-groupe { display: none; }
+
+  .mode-fiche .fiche-section-titre {
+    display: block;
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gold);
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    margin-top: 6px;
+  }
+  .mode-fiche .fiche-section-titre--premier { border-top: none; margin-top: 0; padding-top: 0; }
+  .mode-fiche .fiche-section-titre::before { content: attr(data-titre); }
+
+  .mode-fiche .fiche-groupe {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+    grid-column: 1 / -1;
+  }
+
+  .fiche-checkbox, .fiche-radio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--heading);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  .fiche-checkbox:has(input:checked), .fiche-radio:has(input:checked) {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+    font-weight: 600;
+  }
+  .fiche-checkbox input, .fiche-radio input {
+    accent-color: var(--gold);
+    margin: 0;
+    width: auto;
+    height: auto;
+    flex: 0 0 auto;
+  }
+  .fiche-checkbox span, .fiche-radio span { flex: 0 0 auto; white-space: nowrap; }
+
+  .row-delete {
+    border: none;
+    background: none;
+    color: var(--heading-2);
+    cursor: pointer;
+    font-size: 15px;
+    padding: 4px;
+  }
+  .row-delete:hover { color: var(--coral); }
+
+  .field-hint { font-size: 10.5px; color: var(--heading-2); margin-top: 10px; }
+
+  /* ---------------------------------------------------- Paramètres */
+
+  .poids-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+  .poids-row:last-child { border-bottom: none; }
+  .poids-row label { font-size: 13px; font-weight: 600; }
+  .poids-input-wrap { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .poids-input-wrap input {
+    font: inherit;
+    width: 64px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--heading);
+    padding: 6px 8px;
+    border-radius: 8px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .poids-input-wrap input:focus { border-color: var(--gold); outline: none; }
+  .poids-input-wrap span { font-size: 11px; color: var(--heading-2); }
+
+  /* ---------------------------------------------------- Roster */
+
+  .roster-table { min-width: 0; width: 100%; }
+  .roster-table th { border-bottom: 2px solid var(--gold); cursor: pointer; user-select: none; white-space: nowrap; }
+  .roster-table th[data-sort]:hover { color: var(--gold); }
+  .roster-table .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--gold); width: 8px; }
+  .roster-table td { padding: 14px 10px; font-size: 13px; }
+  .roster-table input { padding: 0; border: 1px solid transparent; background: transparent; font-size: 13px; color: var(--heading); font-family: inherit; }
+  .roster-table input:focus { border-color: var(--gold); background: var(--bg); border-radius: 6px; padding: 5px 7px; outline: none; }
+  .roster-table input[type="date"] { font-variant-numeric: tabular-nums; }
+  .roster-table .anc-duree,
+  .roster-table .anc-niveau { color: var(--heading); }
+
+  /* ---------------------------------------------------- Conseillers */
+
+  .conseiller-layout { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: start; }
+
+  .conseiller-list { display: flex; flex-direction: column; gap: 2px; padding: 10px; }
+
+  .conseiller-item {
+    font: inherit;
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--heading);
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .conseiller-item:hover { background: var(--cream-hover); }
+  .conseiller-item.active { background: var(--navy); color: var(--nav-text); }
+
+  .pipeline-row { display: flex; gap: 2px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+
+  .pipeline-stage { flex: 1; background: var(--cream); text-align: center; padding: 10px 6px 0; }
+  .pipeline-label { background: var(--navy); color: var(--nav-text); font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 6px 4px; margin: -10px -6px 8px; }
+  .pipeline-value { font-size: 17px; font-weight: 700; color: var(--heading); }
+  .pipeline-ref { font-size: 10px; color: var(--heading-2); margin: 2px 0 8px; }
+  .pipeline-bar { height: 5px; }
+  .pipeline-bar.ok { background: var(--success); }
+  .pipeline-bar.warn { background: var(--warning); }
+  .pipeline-bar.bad { background: var(--coral); }
+
+  /* ---------------------------------------------------- Pipeline équipe (chaîne) */
+
+  .pchain { display: flex; align-items: flex-start; gap: 2px; overflow-x: auto; padding-top: 4px; }
+
+  .pchain-stage { flex: 1; min-width: 76px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+
+  .pchain-icon { color: var(--gold); }
+  .pchain-icon svg { width: 15px; height: 15px; }
+
+  .pchain-label { color: var(--heading-2); font-size: 9px; font-weight: 600; height: 22px; display: flex; align-items: center; }
+  .pchain-value { color: var(--heading); font-size: 15px; font-weight: 700; }
+  .pchain-ref { color: var(--heading-2); font-size: 9px; margin-bottom: 2px; }
+
+  .pchain-statut { font-size: 13px; font-weight: 700; }
+  .pchain-statut.bon { color: var(--success); }
+  .pchain-statut.moyen { color: var(--warning); }
+  .pchain-statut.insuffisant { color: var(--coral); }
+
+  .pchain-arrow { color: var(--heading-2); font-size: 12px; padding-top: 40px; flex: 0 0 auto; }
+
+  .conseils-box {
+    background: var(--cream);
+    border-left: 4px solid var(--gold);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12.5px;
+  }
+
+  .alerte-card.has-items { border-color: var(--coral); }
+
+  .locked-hint { font-size: 10.5px; color: var(--heading-2); margin-top: 8px; }
+
+  @media (max-width: 1000px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .watch-row, .tables-row { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .conseiller-layout { grid-template-columns: 1fr; }
+    .topbar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="login-screen">
+  <form class="login-card" id="login-form">
+    <svg class="icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M 39.4 135 A 70 70 0 1 1 160.6 135" fill="none" stroke="#B39359" stroke-width="14" stroke-linecap="round"/>
+      <line x1="100" y1="100" x2="138.9" y2="61.1" stroke="#B39359" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="100" cy="100" r="9" fill="#B39359"/>
+    </svg>
+    <div class="login-title">Cockpit</div>
+    <div class="login-sub" id="login-sub">Connexion sécurisée</div>
+    <div class="login-field">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" autocomplete="username" required>
+    </div>
+    <div class="login-field">
+      <label for="login-password">Mot de passe</label>
+      <input id="login-password" type="password" autocomplete="current-password" required>
+    </div>
+    <div class="login-hint">Réservé aux collaborateurs Capfinances (@capfinances.fr)</div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" type="submit" id="login-submit-btn" style="width:100%;justify-content:center;padding:12px;">Se connecter</button>
+    <div class="login-links">
+      <a href="#" id="toggle-auth-mode">Pas encore de compte ? Créer un compte</a>
+      <a href="#" id="forgot-password-link">Mot de passe oublié ?</a>
+    </div>
+  </form>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg class="icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M 39.4 135 A 70 70 0 1 1 160.6 135" fill="none" stroke="#A9782F" stroke-width="14" stroke-linecap="round"/>
+        <line x1="100" y1="100" x2="138.9" y2="61.1" stroke="#A9782F" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="100" cy="100" r="9" fill="#A9782F"/>
+      </svg>
+      <div class="mark">Cockpit</div>
+      <div class="sub">Commercial Premium</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard" type="button">📊 Dashboard</button>
+      <button class="nav-item" data-view="saisie" type="button">✏️ Ma semaine</button>
+      <button class="nav-item" data-view="ma-fiche" type="button">🙋 Ma fiche</button>
+      <button class="nav-item" data-view="conseillers" type="button">👥 Conseillers</button>
+      <button class="nav-item" data-view="equipe" type="button">🪪 Équipe</button>
+      <button class="nav-item" data-view="classement" type="button">🏆 Classement</button>
+      <button class="nav-item" data-view="statistiques" type="button">📈 Statistiques</button>
+      <button class="nav-item" data-view="alertes" type="button">⚠️ Alertes</button>
+      <button class="nav-item" data-view="parametres" type="button">⚖️ Paramètres</button>
+    </nav>
+    <div class="sidebar-user">
+      <span class="email" id="sidebar-user-email"></span>
+      <span class="admin-badge" id="sidebar-admin-badge" style="display:none;">Admin</span>
+      <button class="btn-logout" id="btn-logout" type="button">Se déconnecter</button>
+    </div>
+    <div class="sync-status">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-label">Synchronisé</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span id="topbar-title">Dashboard</span>
+      <div class="topbar-filtres">
+        <select class="topbar-select" id="filtre-semaine" title="Filtrer par semaine"><option value="">Toutes les semaines</option></select>
+        <select class="topbar-select" id="filtre-mois" title="Filtrer par période (blocs 4-4-5)"><option value="">Tous les mois</option></select>
+        <select class="topbar-select" id="filtre-anciennete" title="Filtrer par ancienneté">
+          <option value="">Tous les conseillers</option>
+          <option value="nouveau">🌱 Nouveau</option>
+          <option value="progression">📈 En progression</option>
+          <option value="confirme">✅ Confirmé</option>
+          <option value="expert">🏅 Expert</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="content">
+      <datalist id="roster-datalist"></datalist>
+
+      <!-- ============================================= DASHBOARD ============================================= -->
+      <div class="view active" id="view-dashboard">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Vue d'ensemble de l'équipe, calculée en direct à partir des saisies de "Ma semaine".</div>
+        <hr class="rule">
+
+        <div class="section-label">Vue d'ensemble</div>
+        <div class="kpi-grid" id="kpi-grid"></div>
+
+        <div class="section-label">À surveiller</div>
+        <div class="watch-row" id="watch-row"></div>
+
+        <div class="section-label">Performance de l'équipe</div>
+        <div class="tables-row">
+          <div class="card">
+            <div class="card-title">🏆 Leaderboard Performance ID</div>
+            <table>
+              <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">Performance</th><th>Niveau</th></tr></thead>
+              <tbody id="leaderboard-body"></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-title">🎯 Objectifs vs Réalisé (équipe)</div>
+            <table>
+              <thead><tr><th>Indicateur</th><th class="num">Objectif</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
+              <tbody id="objectifs-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================= SAISIE ============================================= -->
+      <div class="view" id="view-saisie">
+        <div class="page-title">Ma semaine</div>
+        <div class="page-sub">Chaque ligne = un conseiller, une semaine. Tu ne peux modifier que tes propres lignes (grisées si elles appartiennent à quelqu'un d'autre) — le reste de l'équipe est visible pour situer ta performance.</div>
+        <hr class="rule">
+        <div class="saisie-toolbar">
+          <button class="btn btn-primary" id="btn-add-row" type="button">+ Ajouter une ligne</button>
+        </div>
+
+        <div id="saisie-table-slot">
+          <div class="table-wrap">
+            <table class="entry-table">
+              <thead>
+                <tr>
+                  <th>Semaine</th>
+                  <th>Conseiller</th>
+                  <th>RDV posés</th>
+                  <th>Visio</th>
+                  <th>R1</th>
+                  <th>R2</th>
+                  <th>Potentiel €</th>
+                  <th>RDV vus</th>
+                  <th>Visio vues</th>
+                  <th>R1 vus</th>
+                  <th>R2 vus</th>
+                  <th>R1→R2</th>
+                  <th>R2 signés</th>
+                  <th>Recos</th>
+                  <th>Commissions €</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="rows-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="field-hint">
+          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2 = prévu du jeudi. RDV vus → Commissions = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster.
+        </div>
+      </div>
+
+      <!-- ============================================= MA FICHE ============================================= -->
+      <div class="view" id="view-ma-fiche">
+        <div class="page-title">Ma fiche</div>
+        <div class="page-sub">Choisis ton nom pour ne voir que ta propre semaine, présentée en cartes — c'est la même donnée partagée que "Ma semaine".</div>
+        <hr class="rule">
+        <div class="fiche-identite">
+          <label for="fiche-qui">Tu es :</label>
+          <select class="topbar-select" id="fiche-qui"><option value="">-- choisir --</option></select>
+        </div>
+        <div class="saisie-toolbar" id="fiche-toolbar" style="display:none;">
+          <button class="btn btn-primary" id="btn-add-ma-semaine" type="button">+ Ajouter ma semaine</button>
+        </div>
+
+        <div id="ma-fiche-table-slot"></div>
+
+        <div class="field-hint" id="fiche-vide-hint"></div>
+      </div>
+
+      <!-- ============================================= CLASSEMENT ============================================= -->
+      <div class="view" id="view-classement">
+        <div class="page-title">Classement</div>
+        <div class="page-sub">Performance ID cumulée sur toutes les semaines saisies.</div>
+        <hr class="rule">
+        <div class="card">
+          <table>
+            <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">RDV posés</th><th class="num">Transfo. R1→R2</th><th class="num">Signature</th><th class="num">Concrétisation</th><th class="num">Performance</th><th>Niveau</th></tr></thead>
+            <tbody id="classement-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================================= CONSEILLERS ============================================= -->
+      <div class="view" id="view-conseillers">
+        <div class="page-title">Conseillers</div>
+        <div class="page-sub">La fiche de chaque conseiller — clique un nom pour voir le détail.</div>
+        <hr class="rule">
+        <div class="conseiller-layout">
+          <div class="conseiller-list card" id="conseiller-list"></div>
+          <div id="conseiller-detail"></div>
+        </div>
+      </div>
+
+      <!-- ============================================= ÉQUIPE ============================================= -->
+      <div class="view" id="view-equipe">
+        <div class="page-title">Équipe</div>
+        <div class="page-sub">Tous les mandataires du cabinet et leur ancienneté — indépendant des semaines saisies. Modifiable par l'administrateur uniquement.</div>
+        <hr class="rule">
+        <div class="section-label">Répartition par ancienneté</div>
+        <div class="card" id="anciennete-donut"></div>
+        <div class="section-label">Roster</div>
+        <div class="saisie-toolbar">
+          <button class="btn btn-primary" id="btn-add-roster" type="button">+ Ajouter un conseiller</button>
+          <button class="btn" id="btn-importer-roster" type="button" style="display:none;">Importer le roster initial (33 conseillers)</button>
+        </div>
+        <div class="table-wrap">
+          <table class="entry-table roster-table">
+            <thead><tr>
+              <th data-sort="conseiller">Conseiller<span class="sort-arrow"></span></th>
+              <th data-sort="date_entree">Date d'entrée<span class="sort-arrow"></span></th>
+              <th data-sort="anciennete">Ancienneté<span class="sort-arrow"></span></th>
+              <th data-sort="niveau">Niveau<span class="sort-arrow"></span></th>
+              <th></th>
+            </tr></thead>
+            <tbody id="roster-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================================= STATISTIQUES ============================================= -->
+      <div class="view" id="view-statistiques">
+        <div class="page-title">Statistiques</div>
+        <div class="page-sub">Vue analytique de l'équipe : pipeline, répartition des niveaux et top recommandations.</div>
+        <hr class="rule">
+
+        <div class="section-label">Indicateurs clés (équipe)</div>
+        <div class="card" id="stats-pipeline"></div>
+
+        <div class="section-label">Objectifs vs Réalisé (équipe)</div>
+        <div id="stats-objectifs"></div>
+
+        <div class="section-label">Vue d'ensemble</div>
+        <div class="watch-row">
+          <div class="card">
+            <div class="card-title">🥧 Répartition des niveaux</div>
+            <div id="stats-niveaux"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🏆 Top recommandations</div>
+            <div id="stats-top-reco"></div>
+          </div>
+        </div>
+
+        <div class="section-label">Moyennes avancées</div>
+        <div class="kpi-grid" id="stats-moyennes"></div>
+      </div>
+
+      <!-- ============================================= ALERTES ============================================= -->
+      <div class="view" id="view-alertes">
+        <div class="page-title">Alertes</div>
+        <div class="page-sub" id="alertes-sub"></div>
+        <hr class="rule">
+        <div id="alertes-body"></div>
+        <div class="field-hint">Ressenti et Accompagnement viennent de la dernière semaine connue de chaque conseiller (comme le bilan du mercredi) — remplis via l'onglet "Ma fiche".</div>
+      </div>
+
+      <!-- ============================================= PARAMÈTRES ============================================= -->
+      <div class="view" id="view-parametres">
+        <div class="page-title">Paramètres</div>
+        <div class="page-sub">Pondération du Performance ID — partagée pour toute l'équipe, modifiable par l'administrateur uniquement.</div>
+        <hr class="rule">
+
+        <div class="card">
+          <div class="card-title">⚖️ Pondération du Performance ID</div>
+
+          <div id="poids-fields">
+            <div class="poids-row">
+              <label>RDV posés</label>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_rdv" value="20" min="0" max="100" step="1"><span>pts</span></div>
+            </div>
+            <div class="poids-row">
+              <label>Transformation R1 → R2</label>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_r1_r2" value="20" min="0" max="100" step="1"><span>pts</span></div>
+            </div>
+            <div class="poids-row">
+              <label>Taux de signature</label>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_signature" value="20" min="0" max="100" step="1"><span>pts</span></div>
+            </div>
+            <div class="poids-row">
+              <label>Concrétisation</label>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_concretisation" value="20" min="0" max="100" step="1"><span>pts</span></div>
+            </div>
+            <div class="poids-row">
+              <label>Recommandations</label>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_recommandations" value="20" min="0" max="100" step="1"><span>pts</span></div>
+            </div>
+          </div>
+
+          <div class="field-hint" id="poids-total"></div>
+          <div class="locked-hint" id="poids-locked-hint" style="display:none;">🔒 Lecture seule — seul l'administrateur peut modifier la pondération.</div>
+        </div>
+
+        <div class="field-hint" style="margin-top:14px;">S'applique immédiatement au Performance ID de tout le monde (Dashboard, Classement, Conseillers, Statistiques, Alertes). Objectifs et seuils de niveaux restent alignés sur l'appli desktop pour l'instant.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   FIREBASE — même projet que Recos (comptes @capfinances.fr
+   partagés entre les deux applis).
+   ========================================================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDJVvlWIaIjeY3mCaMbTofrXvKrZKBX_2g",
+  authDomain: "reco-app-da0ce.firebaseapp.com",
+  projectId: "reco-app-da0ce",
+  storageBucket: "reco-app-da0ce.firebasestorage.app",
+  messagingSenderId: "783377738587",
+  appId: "1:783377738587:web:c2010bd5764282af52c87e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+  console.warn('Persistence Firestore non activée', err.code);
+});
+
+const ADMIN_EMAIL = 'c.hodicq-mandataire@capfinances.fr';
+const ALLOWED_EMAIL_DOMAIN = '@capfinances.fr';
+
+let currentUser = null;
+let isAdmin = false;
+
+/* ---- Connexion / inscription ---- */
+
+let authMode = 'login';
+
+function updateAuthModeUI() {
+  document.getElementById('login-submit-btn').textContent = authMode === 'signup' ? 'Créer mon compte' : 'Se connecter';
+  document.getElementById('toggle-auth-mode').textContent = authMode === 'signup' ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte';
+  document.getElementById('login-sub').textContent = authMode === 'signup' ? 'Créer un compte' : 'Connexion sécurisée';
+  document.getElementById('forgot-password-link').style.display = authMode === 'signup' ? 'none' : 'block';
+  document.getElementById('login-error').textContent = '';
+}
+document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
+  e.preventDefault();
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  updateAuthModeUI();
+});
+updateAuthModeUI();
+
+function authErrorMessage(code) {
+  switch (code) {
+    case 'auth/email-already-in-use': return "Un compte existe déjà avec cet email.";
+    case 'auth/weak-password': return "Mot de passe trop court (6 caractères minimum).";
+    case 'auth/invalid-email': return "Adresse email invalide.";
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential': return "Email ou mot de passe incorrect.";
+    case 'auth/too-many-requests': return "Trop de tentatives, réessaie dans quelques minutes.";
+    default: return "Une erreur est survenue. Réessaie.";
+  }
+}
+
+document.getElementById('login-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.color = 'var(--coral)';
+  errEl.textContent = '';
+
+  if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
+    errEl.textContent = `Réservé aux emails ${ALLOWED_EMAIL_DOMAIN}`;
+    return;
+  }
+
+  const action = authMode === 'signup'
+    ? auth.createUserWithEmailAndPassword(email, password)
+    : auth.signInWithEmailAndPassword(email, password);
+
+  action.catch(err => { errEl.textContent = authErrorMessage(err.code); });
+});
+
+document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!email) { errEl.style.color = 'var(--coral)'; errEl.textContent = "Indique ton email dans le champ ci-dessus d'abord."; return; }
+  auth.sendPasswordResetEmail(email).then(() => {
+    errEl.style.color = 'var(--success)';
+    errEl.textContent = "Email de réinitialisation envoyé.";
+  }).catch(() => {
+    errEl.style.color = 'var(--coral)';
+    errEl.textContent = "Impossible d'envoyer l'email (vérifie l'adresse).";
+  });
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => auth.signOut());
+
+/* =========================================================
+   MOTEUR DE CALCUL — reprend exactement les formules de
+   core/score_engine.py et core/stats_engine.py de Cockpit V5.
+   ========================================================= */
+
+const OBJECTIFS = { rdv: 18, recommandations: 30, r1_r2: 0.50, signature: 0.25, concretisation: 0.25, visio_max: 0.30 };
+const SEUILS = { elite: 90, excellent: 80, bon: 70, progression: 60 };
+
+let POIDS = { rdv: 20, r1_r2: 20, signature: 20, concretisation: 20, recommandations: 20 };
+const POIDS_CLES = ['rdv', 'r1_r2', 'signature', 'concretisation', 'recommandations'];
+
+function lirePoids() {
+  for (const cle of POIDS_CLES) {
+    const input = document.querySelector(`#poids-fields [data-field="poids_${cle}"]`);
+    const valeur = input ? parseFloat(input.value) : NaN;
+    if (!isNaN(valeur)) POIDS[cle] = valeur;
+  }
+  return POIDS;
+}
+
+const FIELDS = ['semaine', 'conseiller', 'rdv_poses', 'visio', 'r1', 'r2', 'potentiel', 'rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'recommandations', 'commissions'];
+const NUM_FIELDS = FIELDS.slice(2);
+const LABELS_CHAMPS = {
+  semaine: 'Semaine', conseiller: 'Conseiller', rdv_poses: 'RDV posés', visio: 'Visio', r1: 'R1', r2: 'R2', potentiel: 'Potentiel €',
+  rdv_vus: 'RDV vus', visio_vues: 'Visio vues', r1_vus: 'R1 vus', r2_vus: 'R2 vus',
+  r1_en_r2: 'R1→R2', r2_signes: 'R2 signés', recommandations: 'Recos', commissions: 'Commissions €',
+};
+
+const ACCOMPAGNEMENT_CATEGORIES = [
+  { valeur: 'Technique', emoji: '🔧' },
+  { valeur: 'Commercial', emoji: '💼' },
+  { valeur: 'Organisation', emoji: '🗂️' },
+  { valeur: 'Prospection', emoji: '🎯' },
+  { valeur: 'Produits', emoji: '📦' },
+  { valeur: 'Urgent', emoji: '🚨' },
+];
+const RESSENTI_OPTIONS = [
+  { valeur: 'Excellente', emoji: '😄' },
+  { valeur: 'Bonne', emoji: '🙂' },
+  { valeur: 'Moyenne', emoji: '😐' },
+  { valeur: 'Décevante', emoji: '🙁' },
+  { valeur: 'Très mauvaise', emoji: '😡' },
+];
+const RESSENTI_SEUIL_ALERTE = new Set(['Très mauvaise', 'Décevante']);
+
+function lireRessenti(tr) {
+  const coche = tr.querySelector('input[data-field="ressenti"]:checked');
+  return coche ? coche.value : null;
+}
+
+function lireAccompagnement(tr) {
+  return [...tr.querySelectorAll('input[data-field="accompagnement"]:checked')].map(cb => cb.value);
+}
+
+function readRows() {
+  const body = document.getElementById('rows-body');
+  const rows = [];
+  for (const tr of body.querySelectorAll('tr')) {
+    const row = {};
+    for (const field of FIELDS) {
+      const input = tr.querySelector(`[data-field="${field}"]`);
+      if (!input) continue;
+      if (field === 'semaine' || field === 'conseiller') {
+        row[field] = input.value.trim();
+      } else {
+        row[field] = parseFloat(input.value) || 0;
+      }
+    }
+    row.ressenti = lireRessenti(tr);
+    row.accompagnement = lireAccompagnement(tr);
+    if (row.conseiller) rows.push(row);
+  }
+  return rows;
+}
+
+function sum(rows, field) {
+  return rows.reduce((acc, r) => acc + (r[field] || 0), 0);
+}
+
+function scorePoint(valeur, objectif, points = 20) {
+  if (!objectif) return 0;
+  return Math.min(points, (valeur / objectif) * points);
+}
+
+function statutAtteinte(valeur, objectif, plafond = false) {
+  const atteinte = objectif ? (valeur / objectif) * 100 : 0;
+  if (plafond) {
+    if (atteinte <= 90) return 'ok';
+    if (atteinte <= 100) return 'warn';
+    return 'bad';
+  }
+  if (atteinte >= 100) return 'ok';
+  if (atteinte >= 70) return 'warn';
+  return 'bad';
+}
+
+function statutSeuil(valeur, seuilBon, seuilMoyen, inverse = false) {
+  if (inverse) {
+    if (valeur <= seuilBon) return 'bon';
+    if (valeur <= seuilMoyen) return 'moyen';
+    return 'insuffisant';
+  }
+  if (valeur >= seuilBon) return 'bon';
+  if (valeur >= seuilMoyen) return 'moyen';
+  return 'insuffisant';
+}
+
+const STATUT_ICONES = { bon: '✓', moyen: '⚠', insuffisant: '✗' };
+
+function pchainStageHTML(e) {
+  return `
+    <div class="pchain-stage">
+      <div class="pchain-icon">${icon(e.ic)}</div>
+      <div class="pchain-label">${e.label}</div>
+      <div class="pchain-value">${e.valeur}</div>
+      <div class="pchain-ref">${e.ref}</div>
+      <div class="pchain-statut ${e.statut}">${STATUT_ICONES[e.statut]}</div>
+    </div>`;
+}
+
+function niveauDe(perf) {
+  if (perf >= SEUILS.elite) return { texte: 'Elite', classe: 'pill-elite' };
+  if (perf >= SEUILS.excellent) return { texte: 'Excellent', classe: 'pill-excellent' };
+  if (perf >= SEUILS.bon) return { texte: 'Bon', classe: 'pill-bon' };
+  if (perf >= SEUILS.progression) return { texte: 'À accompagner', classe: 'pill-accompagner' };
+  return { texte: 'Prioritaire', classe: 'pill-prioritaire' };
+}
+
+function niveauEmoji(perf) {
+  if (perf >= SEUILS.elite) return '🏆 Elite';
+  if (perf >= SEUILS.excellent) return '🥇 Excellent';
+  if (perf >= SEUILS.bon) return '🟢 Bon';
+  if (perf >= SEUILS.progression) return '🟠 À accompagner';
+  return '🔴 Prioritaire';
+}
+
+function agreger(rows) {
+  const rdv_poses = sum(rows, 'rdv_poses');
+  const rdv_vus = sum(rows, 'rdv_vus');
+  const visio = sum(rows, 'visio');
+  const r1 = sum(rows, 'r1');
+  const r2 = sum(rows, 'r2');
+  const r1_vus = sum(rows, 'r1_vus');
+  const r2_vus = sum(rows, 'r2_vus');
+  const r1_en_r2 = sum(rows, 'r1_en_r2');
+  const r2_signes = sum(rows, 'r2_signes');
+  const recommandations = sum(rows, 'recommandations');
+  const potentiel = sum(rows, 'potentiel');
+  const commissions = sum(rows, 'commissions');
+
+  const denom_r1 = r1_vus > 0 ? r1_vus : r1;
+  const denom_r2 = r2_vus > 0 ? r2_vus : r2;
+
+  const taux_r1_r2 = denom_r1 ? r1_en_r2 / denom_r1 : 0;
+  const taux_signature = denom_r2 ? r2_signes / denom_r2 : 0;
+  const taux_concretisation = potentiel ? commissions / potentiel : 0;
+  const taux_visio = rdv_poses ? visio / rdv_poses : 0;
+  const taux_rdv_vu = rdv_poses ? rdv_vus / rdv_poses : 0;
+  const taux_casse = rdv_poses ? (rdv_poses - rdv_vus) / rdv_poses : 0;
+
+  const score_rdv = scorePoint(rdv_poses, OBJECTIFS.rdv, POIDS.rdv);
+  const score_r1r2 = scorePoint(taux_r1_r2, OBJECTIFS.r1_r2, POIDS.r1_r2);
+  const score_signature = scorePoint(taux_signature, OBJECTIFS.signature, POIDS.signature);
+  const score_concretisation = scorePoint(taux_concretisation, OBJECTIFS.concretisation, POIDS.concretisation);
+  const score_recommandations = scorePoint(recommandations, OBJECTIFS.recommandations, POIDS.recommandations);
+
+  const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations;
+
+  return {
+    rdv_poses, rdv_vus, visio, r1, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions,
+    taux_r1_r2, taux_signature, taux_concretisation, taux_visio, taux_rdv_vu, taux_casse,
+    score_rdv, score_r1r2, score_signature, score_concretisation, score_recommandations,
+    performance: Math.round(performance * 10) / 10,
+  };
+}
+
+const SEUIL_CONSEIL = 15;
+function conseilsPour(agg) {
+  const conseils = [];
+  if (agg.score_rdv < SEUIL_CONSEIL) conseils.push('📅 Poser davantage de RDV pour se rapprocher de l’objectif.');
+  if (agg.score_r1r2 < SEUIL_CONSEIL) conseils.push('🔄 Améliorer le taux de transformation R1 → R2.');
+  if (agg.score_signature < SEUIL_CONSEIL) conseils.push('✍️ Travailler le taux de signature en R2.');
+  if (agg.score_concretisation < SEUIL_CONSEIL) conseils.push('💰 Optimiser le taux de concrétisation des commissions.');
+  if (agg.score_recommandations < SEUIL_CONSEIL) conseils.push('👥 Augmenter le nombre de recommandations.');
+  if (!conseils.length) conseils.push('🎉 Excellent travail sur tous les indicateurs, continuez ainsi !');
+  return conseils;
+}
+
+const NIVEAUX_ANCIENNETE = { nouveau: 12, progression: 24, confirme: 36 };
+const LIBELLES_ANCIENNETE = {
+  nouveau: '🌱 Nouveau', progression: '📈 En progression', confirme: '✅ Confirmé', expert: '🏅 Expert',
+};
+
+function moisDepuis(dateStr) {
+  if (!dateStr) return null;
+  const entree = new Date(dateStr);
+  if (isNaN(entree)) return null;
+  const auj = new Date();
+  let mois = (auj.getFullYear() - entree.getFullYear()) * 12 + (auj.getMonth() - entree.getMonth());
+  if (auj.getDate() < entree.getDate()) mois -= 1;
+  return Math.max(mois, 0);
+}
+
+function cleAncienneteDepuisMois(mois) {
+  if (mois === null) return null;
+  if (mois < NIVEAUX_ANCIENNETE.nouveau) return 'nouveau';
+  if (mois < NIVEAUX_ANCIENNETE.progression) return 'progression';
+  if (mois < NIVEAUX_ANCIENNETE.confirme) return 'confirme';
+  return 'expert';
+}
+
+function dureeMois(mois) {
+  if (mois === null) return '—';
+  const annees = Math.floor(mois / 12);
+  const reste = mois % 12;
+  if (annees === 0) return `${reste} mois`;
+  const texteAnnees = `${annees} an${annees > 1 ? 's' : ''}`;
+  return reste === 0 ? texteAnnees : `${texteAnnees} ${reste} mois`;
+}
+
+function readRoster() {
+  const body = document.getElementById('roster-body');
+  const roster = [];
+  for (const tr of body.querySelectorAll('tr')) {
+    const nom = tr.querySelector('[data-field="r_conseiller"]')?.value.trim();
+    const date = tr.querySelector('[data-field="r_date_entree"]')?.value.trim();
+    if (nom) roster.push({ conseiller: nom, date_entree: date || null });
+  }
+  return roster;
+}
+
+function parConseiller(rows) {
+  const noms = [...new Set(rows.map(r => r.conseiller))];
+  return noms.map(nom => ({ conseiller: nom, ...agreger(rows.filter(r => r.conseiller === nom)) }));
+}
+
+function classementDe(rows) {
+  return parConseiller(rows).sort((a, b) => b.performance - a.performance);
+}
+
+function meilleureProgression(rows) {
+  const noms = [...new Set(rows.map(r => r.conseiller))];
+  let meilleur = null;
+  for (const nom of noms) {
+    const semaines = [...new Set(rows.filter(r => r.conseiller === nom).map(r => r.semaine))].sort();
+    if (semaines.length < 2) continue;
+    const derniere = agreger(rows.filter(r => r.conseiller === nom && r.semaine === semaines[semaines.length - 1])).performance;
+    const avantDerniere = agreger(rows.filter(r => r.conseiller === nom && r.semaine === semaines[semaines.length - 2])).performance;
+    const delta = Math.round((derniere - avantDerniere) * 10) / 10;
+    if (!meilleur || delta > meilleur.delta) meilleur = { conseiller: nom, delta };
+  }
+  return meilleur;
+}
+
+function euro(n) {
+  return Math.round(n).toLocaleString('fr-FR').replace(/[\s,]/g, ' ') + ' €';
+}
+
+const ICONS = {
+  heart: '<path d="M12 21.3s-7.4-4.4-10-9.2C.4 8.8 1.9 5 5.6 5c2 0 3.7 1.1 5 3 .1.2.3.2.4 0 1.3-1.9 3-3 5-3 3.7 0 5.2 3.8 3.6 7.1-2.6 4.8-10 9.2-10 9.2z" fill="currentColor"/>',
+  users: '<circle cx="9" cy="7.6" r="3.3" fill="currentColor"/><path d="M2.7 19.4c0-3.6 2.8-6 6.3-6s6.3 2.4 6.3 6z" fill="currentColor"/><circle cx="17.3" cy="8.4" r="2.3" fill="currentColor" opacity="0.55"/><path d="M15.6 13.7c2.7.2 4.9 2.3 4.9 5.7h-3.4" fill="currentColor" opacity="0.55"/>',
+  target: '<path fill-rule="evenodd" clip-rule="evenodd" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-3.3a5.7 5.7 0 1 0 0-11.4 5.7 5.7 0 0 0 0 11.4z" fill="currentColor"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/>',
+  rotate: '<path d="M12 4.5a7.5 7.5 0 0 1 6.8 4.3.8.8 0 0 1-1.5.7A6 6 0 0 0 12 6a6 6 0 0 0-5.4 3.4l1.5-.3.3 1.5-3.6.8-1-3.5 1.5-.4.4 1.4A7.5 7.5 0 0 1 12 4.5z" fill="currentColor"/><path d="M12 19.5a7.5 7.5 0 0 1-6.8-4.3.8.8 0 1 1 1.5-.7A6 6 0 0 0 12 18a6 6 0 0 0 5.4-3.4l-1.5.3-.3-1.5 3.6-.8 1 3.5-1.5.4-.4-1.4A7.5 7.5 0 0 1 12 19.5z" fill="currentColor"/>',
+  sack: '<path d="M9.3 3h5.4l.9 2.3c1.9.9 3.2 3 3.2 5.4C18.8 14.4 15.8 18 12 18s-6.8-3.6-6.8-7.3c0-2.4 1.3-4.5 3.2-5.4z" fill="currentColor"/>',
+  coins: '<ellipse cx="8" cy="7.6" rx="5.6" ry="3" fill="currentColor"/><path d="M2.4 7.6v3.8c0 1.7 2.5 3 5.6 3s5.6-1.3 5.6-3V7.6" fill="currentColor" opacity="0.8"/><ellipse cx="16" cy="14.8" rx="5.2" ry="2.7" fill="currentColor" opacity="0.55"/>',
+  video: '<rect x="2" y="6" width="13" height="12" rx="2.5" fill="currentColor"/><path d="M15 10.2l6.3-3.6a.6.6 0 0 1 .9.5v9.8a.6.6 0 0 1-.9.5L15 13.8z" fill="currentColor"/>',
+  calendarx: '<path d="M3 8.4A2.4 2.4 0 0 1 5.4 6h13.2A2.4 2.4 0 0 1 21 8.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="currentColor"/><path d="M3 5.4A2.4 2.4 0 0 1 5.4 3h13.2A2.4 2.4 0 0 1 21 5.4V9H3z" fill="currentColor" opacity="0.55"/><path d="M9.3 13.3l5.4 5.4M14.7 13.3l-5.4 5.4" stroke="var(--cream)" stroke-width="1.6" stroke-linecap="round"/>',
+  star: '<path d="M12 2.8l2.9 6.5 7 .7-5.3 4.7 1.6 6.9L12 18l-6.2 3.6 1.6-6.9-5.3-4.7 7-.7z" fill="currentColor"/>',
+  calendarcheck: '<path d="M3 8.4A2.4 2.4 0 0 1 5.4 6h13.2A2.4 2.4 0 0 1 21 8.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="currentColor"/><path d="M3 5.4A2.4 2.4 0 0 1 5.4 3h13.2A2.4 2.4 0 0 1 21 5.4V9H3z" fill="currentColor" opacity="0.55"/><path d="M8.5 14.2l2 2 4.5-4.6" stroke="var(--cream)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  eye: '<path d="M12 5.5c5 0 8.7 3.9 9.8 6a1 1 0 0 1 0 .9c-1.1 2.1-4.8 6.1-9.8 6.1S3.3 14.5 2.2 12.4a1 1 0 0 1 0-.9C3.3 9.4 7 5.5 12 5.5z" fill="currentColor" opacity="0.55"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>',
+  percent: '<circle cx="6.5" cy="6.5" r="3" fill="currentColor"/><circle cx="17.5" cy="17.5" r="3" fill="currentColor"/><path d="M18 5.5L5.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pen: '<path d="M4 16.5V20h3.5L18.4 9.1l-3.5-3.5z" fill="currentColor"/><path d="M19.9 7.6l-3.5-3.5 1.6-1.6a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4z" fill="currentColor" opacity="0.6"/>',
+};
+function icon(name) { return `<svg viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
+
+function kpiCard({ ic, title, value, variation, tone }) {
+  const cls = tone === 'positive' ? ' positive' : tone === 'negative' ? ' negative' : '';
+  return `<div class="kpi-card"><div class="kpi-icon">${icon(ic)}</div><div class="kpi-title">${title}</div><div class="kpi-value">${value}</div><div class="kpi-variation${cls}">${variation}</div></div>`;
+}
+
+/* =========================================================
+   FILTRES GLOBAUX (barre du haut)
+   ========================================================= */
+
+const PATRON_MOIS = [4, 4, 5];
+const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+function libelleDateCourte(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return `${d.getDate()} ${MOIS_COURT[d.getMonth()]}`;
+}
+
+function libellePlage(debutStr, finStr) {
+  const debut = new Date(debutStr), fin = new Date(finStr);
+  if (isNaN(debut) || isNaN(fin)) return `${debutStr} → ${finStr}`;
+  const droite = `${libelleDateCourte(finStr)} ${fin.getFullYear()}`;
+  if (debut.getFullYear() === fin.getFullYear()) return `${libelleDateCourte(debutStr)} → ${droite}`;
+  return `${libelleDateCourte(debutStr)} ${debut.getFullYear()} → ${droite}`;
+}
+
+function blocsSemaines(rows) {
+  const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
+  const blocs = [];
+  let debut = 0, cycle = 0;
+  while (debut < semaines.length) {
+    const taille = PATRON_MOIS[cycle % PATRON_MOIS.length];
+    const groupe = semaines.slice(debut, debut + taille);
+    blocs.push({ libelle: libellePlage(groupe[0], groupe[groupe.length - 1]), semaines: groupe });
+    debut += taille;
+    cycle += 1;
+  }
+  return blocs;
+}
+
+let dernierBlocsMois = [];
+let filtreSemaineInitialise = false;
+
+function populerFiltresSemaineEtMois(rows) {
+  const selSemaine = document.getElementById('filtre-semaine');
+  const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
+  const valeurSemaine = selSemaine.value;
+  selSemaine.innerHTML = '<option value="">Toutes les semaines</option>' + semaines.map(s => `<option value="${s}">${s}</option>`).join('');
+  if (!filtreSemaineInitialise && semaines.length) {
+    selSemaine.value = semaines[semaines.length - 1];
+    filtreSemaineInitialise = true;
+  } else if (semaines.includes(valeurSemaine)) {
+    selSemaine.value = valeurSemaine;
+  }
+
+  const selMois = document.getElementById('filtre-mois');
+  dernierBlocsMois = blocsSemaines(rows);
+  const valeurMois = selMois.value;
+  selMois.innerHTML = '<option value="">Tous les mois</option>' + dernierBlocsMois.map((b, i) => `<option value="${i}">${b.libelle}</option>`).join('');
+  if (valeurMois !== '' && Number(valeurMois) < dernierBlocsMois.length) selMois.value = valeurMois;
+}
+
+function clientAncienneteDe(nom, roster) {
+  const entree = roster.find(r => r.conseiller === nom);
+  if (!entree) return null;
+  return cleAncienneteDepuisMois(moisDepuis(entree.date_entree));
+}
+
+function appliquerFiltres(rows) {
+  let filtre = rows;
+
+  const ancienneteSel = document.getElementById('filtre-anciennete').value;
+  if (ancienneteSel) {
+    const roster = readRoster();
+    filtre = filtre.filter(r => clientAncienneteDe(r.conseiller, roster) === ancienneteSel);
+  }
+
+  const semaineSel = document.getElementById('filtre-semaine').value;
+  if (semaineSel) filtre = filtre.filter(r => r.semaine === semaineSel);
+
+  const moisSel = document.getElementById('filtre-mois').value;
+  if (moisSel !== '' && dernierBlocsMois[Number(moisSel)]) {
+    const semainesBloc = new Set(dernierBlocsMois[Number(moisSel)].semaines);
+    filtre = filtre.filter(r => semainesBloc.has(r.semaine));
+  }
+
+  return filtre;
+}
+
+/* =========================================================
+   RENDU
+   ========================================================= */
+
+function renderAll() {
+  lirePoids();
+  populerDatalistRoster();
+  validerConseillersSaisis();
+  const toutesLignes = readRows();
+  populerFiltresSemaineEtMois(toutesLignes);
+  const rows = appliquerFiltres(toutesLignes);
+  renderDashboard(rows);
+  renderClassement(rows);
+  renderConseillers(rows);
+  renderEquipe();
+  renderStatistiques(rows);
+  renderAlertes(rows);
+  renderParametres();
+  if (modeFicheActif) renderMaFiche();
+}
+
+function renderParametres() {
+  const label = document.getElementById('poids-total');
+  if (!label) return;
+  const total = POIDS_CLES.reduce((acc, cle) => acc + (POIDS[cle] || 0), 0);
+  const ok = total === 100;
+  label.textContent = `Total : ${total} / 100` + (ok ? '' : '  (doit faire 100 pour un Performance ID cohérent)');
+  label.style.color = ok ? 'var(--success)' : 'var(--coral)';
+  label.style.fontWeight = '600';
+}
+
+function renderDashboard(rows) {
+  const equipe = agreger(rows);
+  const classement = classementDe(rows);
+  const nbConseillers = classement.length || 1;
+  const nbSemaines = Math.max(new Set(rows.map(r => r.semaine)).size, 1);
+
+  const cards = [
+    { ic: 'heart', title: 'Santé du Cabinet', value: classement.length ? `${(sum(classement, 'performance') / nbConseillers).toFixed(1)} / 100` : '— / 100', variation: classement.length ? `Niveau : ${niveauEmoji(sum(classement, 'performance') / nbConseillers)}` : 'Aucune donnée saisie' },
+    { ic: 'users', title: 'Moyenne de recommandations', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: '🎯 Objectif : 30' },
+    { ic: 'target', title: 'Taux de concrétisation', value: `${(equipe.taux_concretisation * 100).toFixed(1)} %`, variation: `${euro(equipe.commissions)} / ${euro(equipe.potentiel)}` },
+    { ic: 'rotate', title: 'Transformation R1 → R2', value: `${(equipe.taux_r1_r2 * 100).toFixed(1)} %`, variation: `🎯 Objectif : ${OBJECTIFS.r1_r2 * 100} %` },
+    { ic: 'sack', title: 'Potentiel', value: euro(equipe.potentiel), variation: 'Cumulé sur les semaines saisies' },
+    { ic: 'coins', title: 'Commissions réalisées', value: euro(equipe.commissions), variation: 'Cumulé sur les semaines saisies' },
+    { ic: 'video', title: 'Taux de RDV Visio', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %` },
+    { ic: 'calendarx', title: 'Taux de casse', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: "RDV posés qui n'ont pas eu lieu" },
+  ];
+  document.getElementById('kpi-grid').innerHTML = cards.map(kpiCard).join('');
+
+  const aAccompagner = classement.filter(c => c.performance < SEUILS.bon).slice(-3).reverse();
+  const watchRows = aAccompagner.map(c => `
+    <div class="watch-row-item">
+      <div><div class="watch-name">${c.conseiller}</div><div class="watch-sub">${c.performance.toFixed(1)} / 100</div></div>
+      <span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span>
+    </div>`).join('') || `<div class="empty-state">🎉 Personne en dessous du seuil actuellement.</div>`;
+
+  const progression = meilleureProgression(rows);
+  const progCard = progression
+    ? kpiCard({ ic: 'star', title: 'Plus forte progression', value: progression.conseiller, variation: `${progression.delta > 0 ? '+' : ''}${progression.delta.toFixed(1)} pts vs semaine précédente`, tone: progression.delta >= 0 ? 'positive' : 'negative' })
+    : kpiCard({ ic: 'star', title: 'Plus forte progression', value: '—', variation: 'Pas encore assez d’historique (2 semaines mini).' });
+
+  document.getElementById('watch-row').innerHTML = `
+    <div class="card"><div class="card-title">🆘 Conseillers à accompagner</div><div>${watchRows}</div></div>
+    ${progCard}`;
+
+  document.getElementById('leaderboard-body').innerHTML = classement.length
+    ? classement.map((c, i) => `
+      <tr>
+        <td class="num rank">${i + 1}</td>
+        <td>${c.conseiller}</td>
+        <td class="num">${c.performance.toFixed(1)}</td>
+        <td><span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span></td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant — remplis "Ma semaine".</td></tr>`;
+
+  const objectifsLignes = [
+    { label: 'RDV posés (moy. hebdo)', realise: equipe.rdv_poses / nbSemaines, objectif: OBJECTIFS.rdv * nbConseillers, fmt: 'entier' },
+    { label: 'Transformation R1 → R2', realise: equipe.taux_r1_r2 * 100, objectif: OBJECTIFS.r1_r2 * 100, fmt: 'pct' },
+    { label: 'Taux de signature', realise: equipe.taux_signature * 100, objectif: OBJECTIFS.signature * 100, fmt: 'pct' },
+    { label: 'Concrétisation', realise: equipe.taux_concretisation * 100, objectif: OBJECTIFS.concretisation * 100, fmt: 'pct' },
+    { label: 'Recommandations (moy. hebdo)', realise: equipe.recommandations / nbSemaines, objectif: OBJECTIFS.recommandations * nbConseillers, fmt: 'entier' },
+  ];
+
+  document.getElementById('objectifs-body').innerHTML = rows.length ? objectifsLignes.map(o => {
+    const atteinte = o.objectif ? (o.realise / o.objectif) * 100 : 0;
+    const cls = atteinte >= 100 ? 'ok' : atteinte >= 70 ? 'warn' : 'bad';
+    const fmtVal = v => o.fmt === 'pct' ? `${v.toFixed(0)} %` : v.toFixed(0);
+    return `
+      <tr>
+        <td>${o.label}</td>
+        <td class="num">${fmtVal(o.objectif)}</td>
+        <td class="num">${fmtVal(o.realise)}</td>
+        <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.min(atteinte, 100)}%"></div></div><div class="bar-pct ${cls}">${atteinte.toFixed(0)} %</div></div></td>
+      </tr>`;
+  }).join('') : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
+}
+
+function renderClassement(rows) {
+  const classement = classementDe(rows);
+  document.getElementById('classement-body').innerHTML = classement.length ? classement.map((c, i) => `
+    <tr>
+      <td class="num rank">${i + 1}</td>
+      <td>${c.conseiller}</td>
+      <td class="num">${c.rdv_poses}</td>
+      <td class="num">${(c.taux_r1_r2 * 100).toFixed(0)} %</td>
+      <td class="num">${(c.taux_signature * 100).toFixed(0)} %</td>
+      <td class="num">${(c.taux_concretisation * 100).toFixed(0)} %</td>
+      <td class="num">${c.performance.toFixed(1)}</td>
+      <td><span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span></td>
+    </tr>`).join('') : `<tr><td colspan="8" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
+}
+
+/* =========================================================
+   CONSEILLERS
+   ========================================================= */
+
+let conseillerSelectionne = null;
+
+function historiqueDe(rows, nom) {
+  const semaines = [...new Set(rows.filter(r => r.conseiller === nom).map(r => r.semaine))].sort();
+  return semaines.map(s => ({
+    semaine: s,
+    performance: agreger(rows.filter(r => r.conseiller === nom && r.semaine === s)).performance,
+  }));
+}
+
+function derniereLigneDe(rows, nom) {
+  const lignes = rows.filter(r => r.conseiller === nom).sort((a, b) => a.semaine.localeCompare(b.semaine));
+  return lignes.length ? lignes[lignes.length - 1] : null;
+}
+
+function svgEvolution(points) {
+  if (points.length < 2) return `<div class="empty-state">Pas encore assez d'historique (2 semaines mini).</div>`;
+  const w = 560, h = 160, pad = 24;
+  const xs = points.map((p, i) => pad + (i * (w - 2 * pad)) / (points.length - 1));
+  const ys = points.map(p => h - pad - (Math.max(Math.min(p.performance, 100), 0) / 100) * (h - 2 * pad));
+  const ligne = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const aire = `${ligne} L${xs[xs.length - 1].toFixed(1)},${h - pad} L${xs[0].toFixed(1)},${h - pad} Z`;
+  const points_svg = xs.map((x, i) => `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3" fill="var(--gold)"/>`).join('');
+  const labels = points.map((p, i) => `<text x="${xs[i].toFixed(1)}" y="${h - 4}" font-size="9" fill="var(--heading-2)" text-anchor="middle">${p.semaine}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;overflow:visible;">
+    <path d="${aire}" fill="var(--gold)" opacity="0.12"/>
+    <path d="${ligne}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>
+    ${points_svg}${labels}
+  </svg>`;
+}
+
+function renderConseillers(rows) {
+  const classement = classementDe(rows);
+  const roster = readRoster();
+
+  if (!conseillerSelectionne && classement.length) conseillerSelectionne = classement[0].conseiller;
+
+  document.getElementById('conseiller-list').innerHTML = classement.length
+    ? classement.map(c => `<button class="conseiller-item ${c.conseiller === conseillerSelectionne ? 'active' : ''}" data-nom="${c.conseiller}" type="button">${c.conseiller}</button>`).join('')
+    : `<div class="empty-state">Aucun conseiller — remplis "Ma semaine".</div>`;
+
+  document.querySelectorAll('.conseiller-item').forEach(btn => {
+    btn.addEventListener('click', () => { conseillerSelectionne = btn.dataset.nom; renderConseillers(readRows()); });
+  });
+
+  const detail = document.getElementById('conseiller-detail');
+  const agg = classement.find(c => c.conseiller === conseillerSelectionne);
+
+  if (!agg) { detail.innerHTML = `<div class="card empty-state">Sélectionne un conseiller.</div>`; return; }
+
+  const rang = classement.findIndex(c => c.conseiller === conseillerSelectionne) + 1;
+  const entreeRoster = roster.find(r => r.conseiller === conseillerSelectionne);
+  const mois = entreeRoster ? moisDepuis(entreeRoster.date_entree) : null;
+  const niveau = niveauDe(agg.performance);
+  const historique = historiqueDe(rows, conseillerSelectionne);
+
+  const etapes = [
+    { label: 'RDV posés', valeur: agg.rdv_poses, ref: `Obj. ${OBJECTIFS.rdv}`, statut: statutAtteinte(agg.rdv_poses, OBJECTIFS.rdv) },
+    { label: 'Taux visio', valeur: `${(agg.taux_visio * 100).toFixed(0)} %`, ref: `Max ${OBJECTIFS.visio_max * 100} %`, statut: statutAtteinte(agg.taux_visio, OBJECTIFS.visio_max, true) },
+    { label: 'R1 → R2', valeur: `${(agg.taux_r1_r2 * 100).toFixed(0)} %`, ref: `Obj. ${OBJECTIFS.r1_r2 * 100} %`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) },
+    { label: 'Signature', valeur: `${(agg.taux_signature * 100).toFixed(0)} %`, ref: `Obj. ${OBJECTIFS.signature * 100} %`, statut: statutAtteinte(agg.taux_signature, OBJECTIFS.signature) },
+    { label: 'Recommandations', valeur: agg.recommandations, ref: `Obj. ${OBJECTIFS.recommandations}`, statut: statutAtteinte(agg.recommandations, OBJECTIFS.recommandations) },
+  ];
+
+  const signatures = agg.r2_signes;
+  const commissionParSignature = signatures ? agg.commissions / signatures : 0;
+
+  detail.innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:20px;font-weight:700;">${conseillerSelectionne}</div>
+          <div class="watch-sub">${mois !== null ? `${dureeMois(mois)} d'ancienneté` : 'Ancienneté inconnue (à renseigner dans Équipe)'}</div>
+        </div>
+        <div style="display:flex;gap:22px;">
+          <div style="text-align:center;"><div class="kpi-value" style="font-size:20px;">${rang} / ${classement.length}</div><div class="watch-sub">RANG</div></div>
+          <div style="text-align:center;"><span class="pill ${niveau.classe}" style="font-size:12px;padding:5px 12px;">${niveau.texte}</span><div class="watch-sub" style="margin-top:4px;">NIVEAU</div></div>
+          <div style="text-align:center;"><div class="kpi-value" style="font-size:20px;">${agg.performance.toFixed(0)} / 100</div><div class="watch-sub">PERFORMANCE ID</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-title">📊 Pipeline</div>
+    <div class="pipeline-row">
+      ${etapes.map(e => `
+        <div class="pipeline-stage">
+          <div class="pipeline-label">${e.label}</div>
+          <div class="pipeline-value">${e.valeur}</div>
+          <div class="pipeline-ref">${e.ref}</div>
+          <div class="pipeline-bar ${e.statut}"></div>
+        </div>`).join('')}
+    </div>
+
+    <div class="card-title" style="margin-top:18px;">💼 Indicateurs personnels</div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+      ${kpiCard({ ic: 'sack', title: 'Potentiel', value: euro(agg.potentiel), variation: 'Cumulé' })}
+      ${kpiCard({ ic: 'coins', title: 'Commissions', value: euro(agg.commissions), variation: `${(agg.taux_concretisation * 100).toFixed(1)} % de concrétisation` })}
+      ${kpiCard({ ic: 'target', title: 'Commission / signature', value: euro(commissionParSignature), variation: `${signatures} signature(s)` })}
+    </div>
+
+    <div class="card-title" style="margin-top:18px;">📈 Évolution de la Performance ID</div>
+    <div class="card">${svgEvolution(historique)}</div>
+
+    <div class="card-title" style="margin-top:18px;">🎯 Pour progresser</div>
+    <div class="conseils-box">${conseilsPour(agg).map(c => `<div>${c}</div>`).join('')}</div>
+  `;
+}
+
+/* =========================================================
+   ÉQUIPE
+   ========================================================= */
+
+function renderEquipe() {
+  const roster = readRoster();
+  const comptes = { nouveau: 0, progression: 0, confirme: 0, expert: 0 };
+  for (const entree of roster) {
+    const cle = cleAncienneteDepuisMois(moisDepuis(entree.date_entree));
+    if (cle) comptes[cle] += 1;
+  }
+  const total = Math.max(roster.length, 1);
+  const couleurs = { nouveau: 'var(--silver)', progression: 'var(--warning)', confirme: 'var(--success)', expert: 'var(--gold)' };
+
+  document.getElementById('anciennete-donut').innerHTML = roster.length ? `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${Object.entries(comptes).map(([cle, val]) => `
+        <div class="bar-cell">
+          <div style="width:150px;font-size:12.5px;">${LIBELLES_ANCIENNETE[cle]}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(val / total) * 100}%;background:${couleurs[cle]}"></div></div>
+          <div class="bar-pct" style="color:${couleurs[cle]}">${val}</div>
+        </div>`).join('')}
+    </div>` : `<div class="empty-state">Aucun conseiller dans le roster.</div>`;
+
+  renderRosterAnciennete();
+}
+
+function renderRosterAnciennete() {
+  for (const tr of document.getElementById('roster-body').querySelectorAll('tr')) {
+    const dateInput = tr.querySelector('[data-field="r_date_entree"]');
+    const dureeCell = tr.querySelector('.anc-duree');
+    const niveauCell = tr.querySelector('.anc-niveau');
+    if (!dateInput || !dureeCell || !niveauCell) continue;
+    const mois = moisDepuis(dateInput.value.trim());
+    dureeCell.textContent = dureeMois(mois);
+    const cle = cleAncienneteDepuisMois(mois);
+    niveauCell.textContent = cle ? LIBELLES_ANCIENNETE[cle] : '—';
+  }
+}
+
+/* =========================================================
+   TRI DU ROSTER
+   ========================================================= */
+
+let rosterSort = { key: 'anciennete', dir: 'desc' };
+
+function valeurTriRoster(tr, cle) {
+  const nom = tr.querySelector('[data-field="r_conseiller"]')?.value.trim() || '';
+  const dateStr = tr.querySelector('[data-field="r_date_entree"]')?.value.trim() || '';
+  const mois = moisDepuis(dateStr);
+  if (cle === 'conseiller') return nom.toLowerCase();
+  if (cle === 'date_entree') return dateStr;
+  return mois === null ? -1 : mois;
+}
+
+function trierRoster() {
+  const body = document.getElementById('roster-body');
+  const lignes = [...body.querySelectorAll('tr')];
+  const { key, dir } = rosterSort;
+
+  lignes.sort((a, b) => {
+    const va = valeurTriRoster(a, key);
+    const vb = valeurTriRoster(b, key);
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), 'fr');
+    return dir === 'asc' ? cmp : -cmp;
+  });
+
+  lignes.forEach(tr => body.appendChild(tr));
+
+  document.querySelectorAll('.roster-table th[data-sort] .sort-arrow').forEach(el => { el.textContent = ''; });
+  const flecheActive = document.querySelector(`.roster-table th[data-sort="${key}"] .sort-arrow`);
+  if (flecheActive) flecheActive.textContent = dir === 'asc' ? '▴' : '▾';
+}
+
+/* =========================================================
+   STATISTIQUES
+   ========================================================= */
+
+function ligneObjectifHTML(o) {
+  const atteinte = o.objectif ? (o.realise / o.objectif) * 100 : 0;
+  const cls = atteinte >= 100 ? 'ok' : atteinte >= 70 ? 'warn' : 'bad';
+  const fmtVal = v => o.fmt === 'pct' ? `${v.toFixed(0)} %` : v.toFixed(0);
+  return `<tr>
+    <td>${o.label}</td>
+    <td class="num">${fmtVal(o.objectif)}</td>
+    <td class="num">${fmtVal(o.realise)}</td>
+    <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.min(atteinte, 100)}%"></div></div><div class="bar-pct ${cls}">${atteinte.toFixed(0)} %</div></div></td>
+  </tr>`;
+}
+
+function renderStatistiques(rows) {
+  const equipe = agreger(rows);
+  const classement = classementDe(rows);
+  const nbConseillers = classement.length || 1;
+  const nbSemaines = Math.max(new Set(rows.map(r => r.semaine)).size, 1);
+
+  const objectifRdvEquipe = OBJECTIFS.rdv * nbConseillers;
+  const objectifVisioPct = OBJECTIFS.visio_max * 100;
+  const objectifR1R2Pct = OBJECTIFS.r1_r2 * 100;
+  const objectifSignaturePct = OBJECTIFS.signature * 100;
+  const objectifConcretisationPct = OBJECTIFS.concretisation * 100;
+  const objectifRecoEquipe = OBJECTIFS.recommandations * nbConseillers;
+
+  const lignesObjectifs = [
+    { label: 'RDV Posés (moy. hebdo)', realise: equipe.rdv_poses / nbSemaines, objectif: objectifRdvEquipe, fmt: 'entier' },
+    { label: 'Taux de RDV vu', realise: equipe.taux_rdv_vu * 100, objectif: 66, fmt: 'pct' },
+    { label: 'Taux Visio', realise: equipe.taux_visio * 100, objectif: objectifVisioPct, fmt: 'pct' },
+    { label: 'Taux R1 → R2', realise: equipe.taux_r1_r2 * 100, objectif: objectifR1R2Pct, fmt: 'pct' },
+    { label: 'Taux Signature', realise: equipe.taux_signature * 100, objectif: objectifSignaturePct, fmt: 'pct' },
+    { label: 'Taux Concrétisation', realise: equipe.taux_concretisation * 100, objectif: objectifConcretisationPct, fmt: 'pct' },
+    { label: 'Recommandations (moy. hebdo)', realise: equipe.recommandations / nbSemaines, objectif: objectifRecoEquipe, fmt: 'entier' },
+  ];
+
+  document.getElementById('stats-objectifs').innerHTML = rows.length ? `
+    <div class="card"><table>
+      <thead><tr><th>Indicateur</th><th class="num">Objectif</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
+      <tbody>${lignesObjectifs.map(ligneObjectifHTML).join('')}</tbody>
+    </table></div>` : `<div class="card empty-state">Aucune saisie pour l'instant.</div>`;
+
+  const atteinteRdv = objectifRdvEquipe ? (equipe.rdv_poses / objectifRdvEquipe) * 100 : 0;
+  const atteinteVisio = objectifVisioPct ? ((equipe.taux_visio * 100) / objectifVisioPct) * 100 : 0;
+  const atteinteR1R2 = objectifR1R2Pct ? ((equipe.taux_r1_r2 * 100) / objectifR1R2Pct) * 100 : 0;
+  const atteinteSignature = objectifSignaturePct ? ((equipe.taux_signature * 100) / objectifSignaturePct) * 100 : 0;
+
+  const etapes = [
+    { ic: 'calendarcheck', label: 'RDV posés', valeur: `${equipe.rdv_poses}`, ref: `Objectif ${objectifRdvEquipe.toFixed(0)}`, statut: statutSeuil(atteinteRdv, 100, 70) },
+    { ic: 'eye', label: 'Taux RDV vu', valeur: `${(equipe.taux_rdv_vu * 100).toFixed(0)} %`, ref: 'Objectif > 66 %', statut: statutSeuil(equipe.taux_rdv_vu * 100, 66, 50) },
+    { ic: 'video', label: 'Taux de visio', valeur: `${(equipe.taux_visio * 100).toFixed(0)} %`, ref: `Max ${objectifVisioPct.toFixed(0)} %`, statut: statutSeuil(atteinteVisio, 90, 100, true) },
+    { ic: 'rotate', label: 'R1 en R2', valeur: equipe.r1 ? `${equipe.r1_en_r2}/${equipe.r1}` : '—', ref: `Objectif ${objectifR1R2Pct.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2, 100, 70) },
+    { ic: 'percent', label: 'Taux R1 → R2', valeur: `${(equipe.taux_r1_r2 * 100).toFixed(0)} %`, ref: `Objectif ${objectifR1R2Pct.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2, 100, 70) },
+    { ic: 'pen', label: 'R2 signés', valeur: equipe.r2 ? `${equipe.r2_signes}/${equipe.r2}` : '—', ref: `Objectif ${objectifSignaturePct.toFixed(0)} %`, statut: statutSeuil(atteinteSignature, 100, 70) },
+    { ic: 'target', label: 'Signature', valeur: `${(equipe.taux_signature * 100).toFixed(0)} %`, ref: `Objectif ${objectifSignaturePct.toFixed(0)} %`, statut: statutSeuil(atteinteSignature, 100, 70) },
+  ];
+
+  document.getElementById('stats-pipeline').innerHTML = `
+    <div class="card-title">📊 Indicateurs clés (équipe)</div>
+    <div class="pchain">
+      ${etapes.map((e, i) => `${pchainStageHTML(e)}${i < etapes.length - 1 ? '<div class="pchain-arrow">→</div>' : ''}`).join('')}
+    </div>`;
+
+  const compteNiveaux = { elite: 0, excellent: 0, bon: 0, accompagner: 0, prioritaire: 0 };
+  for (const c of classement) {
+    if (c.performance >= SEUILS.elite) compteNiveaux.elite++;
+    else if (c.performance >= SEUILS.excellent) compteNiveaux.excellent++;
+    else if (c.performance >= SEUILS.bon) compteNiveaux.bon++;
+    else if (c.performance >= SEUILS.progression) compteNiveaux.accompagner++;
+    else compteNiveaux.prioritaire++;
+  }
+  const NIV = [['elite', 'Elite', 'var(--gold)'], ['excellent', 'Excellent', 'var(--silver)'], ['bon', 'Bon', 'var(--success)'], ['accompagner', 'À accompagner', 'var(--warning)'], ['prioritaire', 'Prioritaire', 'var(--coral)']];
+  document.getElementById('stats-niveaux').innerHTML = classement.length ? NIV.map(([cle, label, couleur]) => `
+    <div class="bar-cell" style="margin-bottom:8px;">
+      <div style="width:120px;font-size:12px;">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(compteNiveaux[cle] / nbConseillers) * 100}%;background:${couleur}"></div></div>
+      <div class="bar-pct" style="color:${couleur}">${compteNiveaux[cle]}</div>
+    </div>`).join('') : `<div class="empty-state">Aucune donnée.</div>`;
+
+  const topReco = [...classement].sort((a, b) => b.recommandations - a.recommandations).slice(0, 6);
+  const maxReco = Math.max(...topReco.map(c => c.recommandations), 1);
+  document.getElementById('stats-top-reco').innerHTML = topReco.length ? topReco.map(c => `
+    <div class="bar-cell" style="margin-bottom:8px;">
+      <div style="width:120px;font-size:12px;">${c.conseiller}</div>
+      <div class="bar-track"><div class="bar-fill ok" style="width:${(c.recommandations / maxReco) * 100}%"></div></div>
+      <div class="bar-pct ok">${c.recommandations}</div>
+    </div>`).join('') : `<div class="empty-state">Aucune recommandation enregistrée.</div>`;
+
+  const totalSignatures = sum(classement, 'r2_signes');
+  const commissionParSignature = totalSignatures ? equipe.commissions / totalSignatures : 0;
+  document.getElementById('stats-moyennes').innerHTML = [
+    kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}` }),
+    kpiCard({ ic: 'coins', title: 'Commission moyenne / signature', value: euro(commissionParSignature), variation: `${totalSignatures} signature(s)` }),
+    kpiCard({ ic: 'calendarx', title: 'Taux de casse moyen', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: 'Équipe' }),
+  ].join('');
+}
+
+/* =========================================================
+   ALERTES
+   ========================================================= */
+
+function renderAlertes(rows) {
+  const classement = classementDe(rows);
+
+  const categories = [
+    { titre: '🔴 Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => `${c.conseiller} — ${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})`) },
+    { titre: '🔄 Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${c.conseiller} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (objectif ${OBJECTIFS.r1_r2 * 100} %)`) },
+    { titre: '✍️ Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${c.conseiller} — ${(c.taux_signature * 100).toFixed(1)} % (objectif ${OBJECTIFS.signature * 100} %)`) },
+    { titre: '💰 Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${c.conseiller} — ${(c.taux_concretisation * 100).toFixed(1)} % (objectif ${OBJECTIFS.concretisation * 100} %)`) },
+    { titre: '👥 Recommandations', items: classement.filter(c => c.recommandations < OBJECTIFS.recommandations).map(c => `${c.conseiller} — ${c.recommandations} (objectif ${OBJECTIFS.recommandations})`) },
+    { titre: '📅 RDV posés', items: classement.filter(c => c.rdv_poses < OBJECTIFS.rdv).map(c => `${c.conseiller} — ${c.rdv_poses} (objectif ${OBJECTIFS.rdv})`) },
+    { titre: '📉 Absence de progression (semaine sur semaine)', items: (() => {
+        const out = [];
+        for (const c of classement) {
+          const hist = historiqueDe(rows, c.conseiller);
+          if (hist.length < 2) continue;
+          const delta = Math.round((hist[hist.length - 1].performance - hist[hist.length - 2].performance) * 10) / 10;
+          if (delta <= 0) out.push(`${c.conseiller} — ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente`);
+        }
+        return out;
+      })() },
+    { titre: '🤝 Besoin d\'accompagnement déclaré', items: (() => {
+        const out = [];
+        for (const c of classement) {
+          const derniere = derniereLigneDe(rows, c.conseiller);
+          if (derniere && derniere.accompagnement.length) {
+            const urgent = derniere.accompagnement.includes('Urgent');
+            out.push(`${urgent ? '🆘 ' : ''}${c.conseiller} — ${derniere.accompagnement.join(', ')}`);
+          }
+        }
+        return out;
+      })() },
+    { titre: '😔 Ressenti bas sur la semaine', items: (() => {
+        const out = [];
+        for (const c of classement) {
+          const derniere = derniereLigneDe(rows, c.conseiller);
+          if (derniere && derniere.ressenti && RESSENTI_SEUIL_ALERTE.has(derniere.ressenti)) {
+            out.push(`${c.conseiller} — ${derniere.ressenti}`);
+          }
+        }
+        return out;
+      })() },
+  ];
+
+  const total = categories.reduce((acc, c) => acc + c.items.length, 0);
+  document.getElementById('alertes-sub').textContent = total === 0
+    ? '🎉 Aucune alerte active — tout va bien.'
+    : `${total} alerte(s) active(s) sur l'équipe, détectées automatiquement par rapport aux objectifs.`;
+
+  document.getElementById('alertes-body').innerHTML = categories.map(cat => `
+    <div class="card alerte-card ${cat.items.length ? 'has-items' : ''}" style="margin-bottom:14px;">
+      <div class="card-title">${cat.titre} — ${cat.items.length} alerte(s)</div>
+      ${cat.items.length
+        ? cat.items.map(t => `<div class="watch-sub" style="padding:4px 0;">${t}</div>`).join('')
+        : `<div class="watch-sub" style="color:var(--success);">✅ Aucune alerte sur cet indicateur.</div>`}
+    </div>`).join('');
+}
+
+/* =========================================================
+   SAISIE — construction des lignes depuis Firestore
+   ========================================================= */
+
+function jeudiCourant() {
+  const auj = new Date();
+  const decalage = (auj.getDay() - 4 + 7) % 7;
+  const jeudi = new Date(auj);
+  jeudi.setDate(auj.getDate() - decalage);
+  const annee = jeudi.getFullYear();
+  const mois = String(jeudi.getMonth() + 1).padStart(2, '0');
+  const jour = String(jeudi.getDate()).padStart(2, '0');
+  return `${annee}-${mois}-${jour}`;
+}
+
+function celluleChampValeur(f, valeur) {
+  const label = LABELS_CHAMPS[f];
+  if (f === 'semaine') return `<td data-label="${label}"><input type="text" data-field="semaine" placeholder="2026-08-27" value="${valeur ?? ''}"></td>`;
+  if (f === 'conseiller') return `<td data-label="${label}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Prénom Nom" value="${valeur ?? ''}"></td>`;
+  return `<td data-label="${label}"><input type="number" inputmode="decimal" data-field="${f}" value="${valeur ?? 0}"></td>`;
+}
+
+const CHAMPS_PREVU = ['rdv_poses', 'visio', 'r1', 'r2', 'potentiel'];
+const CHAMPS_REALISE = ['rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'recommandations', 'commissions'];
+
+/** Construit le <tr> d'une ligne "semaine" à partir d'un document Firestore — utilisé à la fois pour reconstruire depuis un snapshot et pour l'insertion optimiste juste après création. */
+function construireLigneHTML(docId, data) {
+  const prevuHTML = CHAMPS_PREVU.map(f => celluleChampValeur(f, data[f])).join('');
+  const realiseHTML = CHAMPS_REALISE.map(f => celluleChampValeur(f, data[f])).join('');
+  const accompagnementSet = new Set(data.accompagnement || []);
+
+  const accompagnementHTML = ACCOMPAGNEMENT_CATEGORIES.map(cat => `
+    <label class="fiche-checkbox"><input type="checkbox" data-field="accompagnement" value="${cat.valeur}" ${accompagnementSet.has(cat.valeur) ? 'checked' : ''}><span>${cat.emoji} ${cat.valeur}</span></label>
+  `).join('');
+
+  const ressentiHTML = RESSENTI_OPTIONS.map(r => `
+    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${docId}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span>${r.emoji} ${r.valeur}</span></label>
+  `).join('');
+
+  return `<tr data-doc-id="${docId}" data-owner-email="${data.ownerEmail || ''}">
+    ${celluleChampValeur('semaine', data.semaine)}${celluleChampValeur('conseiller', data.conseiller)}
+    <td class="fiche-section-titre fiche-section-titre--premier" data-titre="Prévu"></td>
+    ${prevuHTML}
+    <td class="fiche-section-titre" data-titre="Réalisé"></td>
+    ${realiseHTML}
+    <td class="fiche-section-titre" data-titre="Souhaites-tu un accompagnement cette semaine ?"></td>
+    <td class="fiche-groupe">${accompagnementHTML}</td>
+    <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ?"></td>
+    <td class="fiche-groupe">${ressentiHTML}</td>
+    <td class="actions"><button class="row-delete" type="button" title="Supprimer">✕</button></td>
+  </tr>`;
+}
+
+/** Une ligne n'est modifiable que par son propriétaire (celui qui l'a créée) ou l'administrateur — la vraie interdiction est côté règles Firestore, ceci n'est que le reflet visuel. */
+function appliquerVerrouillageLigne(tr) {
+  const owner = tr.dataset.ownerEmail;
+  const editable = isAdmin || (!!currentUser && owner === currentUser.email);
+  tr.querySelectorAll('input').forEach(inp => { inp.disabled = !editable; });
+  tr.classList.toggle('row-readonly', !editable);
+}
+
+function ligneVideDefaut(conseillerPreRempli, semainePreRemplie) {
+  return {
+    semaine: semainePreRemplie ?? jeudiCourant(),
+    conseiller: conseillerPreRempli || '',
+    rdv_poses: 0, visio: 0, r1: 0, r2: 0, potentiel: 0,
+    rdv_vus: 0, visio_vues: 0, r1_vus: 0, r2_vus: 0, r1_en_r2: 0, r2_signes: 0, recommandations: 0, commissions: 0,
+    ressenti: null, accompagnement: [],
+    ownerEmail: currentUser ? currentUser.email : '',
+  };
+}
+
+function ajouterLigne(conseillerPreRempli, semainePreRemplie) {
+  if (!currentUser) return;
+  const data = ligneVideDefaut(conseillerPreRempli, semainePreRemplie);
+  const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  db.collection('cockpit_semaines').add(payload).then(ref => {
+    const body = document.getElementById('rows-body');
+    const template = document.createElement('tbody');
+    template.innerHTML = construireLigneHTML(ref.id, data);
+    const tr = template.firstElementChild;
+    body.appendChild(tr);
+    appliquerVerrouillageLigne(tr);
+    const premierChamp = tr.querySelector('[data-field="rdv_poses"]');
+    if (premierChamp) premierChamp.focus();
+    renderAll();
+  }).catch(err => {
+    console.error(err);
+    alert("Impossible d'ajouter la ligne : " + err.message);
+  });
+}
+
+document.getElementById('btn-add-row').addEventListener('click', () => ajouterLigne());
+
+function validerConseillersSaisis() {
+  const noms = new Set(readRoster().map(r => r.conseiller));
+  for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
+    const input = tr.querySelector('[data-field="conseiller"]');
+    if (!input) continue;
+    const valeur = input.value.trim();
+    input.classList.toggle('conseiller-inconnu', valeur !== '' && !noms.has(valeur));
+  }
+}
+
+function populerDatalistRoster() {
+  const datalist = document.getElementById('roster-datalist');
+  datalist.innerHTML = readRoster().map(r => `<option value="${r.conseiller}"></option>`).join('');
+}
+
+/* ---- Écriture différée (debounce) vers Firestore, ligne par ligne ---- */
+
+const rowWriteTimers = new Map();
+function rowDataFromTr(tr) {
+  const data = {};
+  for (const field of FIELDS) {
+    const input = tr.querySelector(`[data-field="${field}"]`);
+    if (!input) continue;
+    if (field === 'semaine' || field === 'conseiller') data[field] = input.value.trim();
+    else data[field] = parseFloat(input.value) || 0;
+  }
+  data.ressenti = lireRessenti(tr);
+  data.accompagnement = lireAccompagnement(tr);
+  return data;
+}
+function scheduleRowWrite(tr) {
+  const docId = tr.dataset.docId;
+  if (!docId) return;
+  clearTimeout(rowWriteTimers.get(docId));
+  rowWriteTimers.set(docId, setTimeout(() => {
+    const data = rowDataFromTr(tr);
+    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    db.collection('cockpit_semaines').doc(docId).set(data, { merge: true }).catch(err => console.error('Écriture ligne échouée', err));
+  }, 600));
+}
+
+/* =========================================================
+   MA FICHE
+   ========================================================= */
+
+let modeFicheActif = false;
+
+function verrouillerChampsSemaine(verrouille) {
+  for (const input of document.getElementById('rows-body').querySelectorAll('[data-field="semaine"]')) {
+    input.readOnly = verrouille;
+  }
+}
+
+function activerModeFiche() {
+  if (modeFicheActif) return;
+  const tableWrap = document.querySelector('#saisie-table-slot .table-wrap');
+  if (!tableWrap) return;
+  document.getElementById('ma-fiche-table-slot').appendChild(tableWrap);
+  tableWrap.querySelector('.entry-table').classList.add('mode-fiche');
+  modeFicheActif = true;
+  verrouillerChampsSemaine(true);
+}
+
+function desactiverModeFiche() {
+  if (!modeFicheActif) return;
+  const tableWrap = document.querySelector('#ma-fiche-table-slot .table-wrap');
+  if (!tableWrap) { modeFicheActif = false; return; }
+  tableWrap.querySelector('.entry-table').classList.remove('mode-fiche');
+  document.getElementById('saisie-table-slot').appendChild(tableWrap);
+  modeFicheActif = false;
+  verrouillerChampsSemaine(false);
+}
+
+function renderMaFiche() {
+  if (modeFicheActif) verrouillerChampsSemaine(true);
+  const selQui = document.getElementById('fiche-qui');
+  const roster = readRoster();
+  const valeurSouhaitee = selQui.value || sessionStorage.getItem('cockpit_qui') || '';
+  selQui.innerHTML = '<option value="">-- choisir --</option>' + roster.map(r => `<option value="${r.conseiller}">${r.conseiller}</option>`).join('');
+  if (roster.some(r => r.conseiller === valeurSouhaitee)) selQui.value = valeurSouhaitee;
+
+  const qui = selQui.value;
+  document.getElementById('fiche-toolbar').style.display = qui ? 'flex' : 'none';
+
+  let nbVisibles = 0;
+  for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
+    const nomInput = tr.querySelector('[data-field="conseiller"]');
+    const correspond = !!qui && !!nomInput && nomInput.value.trim() === qui;
+    tr.classList.toggle('fiche-visible', correspond);
+    if (correspond) nbVisibles++;
+  }
+
+  const hint = document.getElementById('fiche-vide-hint');
+  if (!qui) hint.textContent = 'Choisis ton nom dans la liste ci-dessus pour voir tes semaines.';
+  else if (nbVisibles === 0) hint.textContent = 'Aucune semaine saisie pour toi pour l’instant — clique sur "+ Ajouter ma semaine".';
+  else hint.textContent = '';
+}
+
+document.getElementById('fiche-qui').addEventListener('change', () => {
+  sessionStorage.setItem('cockpit_qui', document.getElementById('fiche-qui').value);
+  renderMaFiche();
+});
+
+document.getElementById('btn-add-ma-semaine').addEventListener('click', () => {
+  const qui = document.getElementById('fiche-qui').value;
+  if (!qui) return;
+  const semaine = jeudiCourant();
+
+  const dejaLa = [...document.getElementById('rows-body').querySelectorAll('tr')].find(tr => {
+    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim();
+    const sem = tr.querySelector('[data-field="semaine"]')?.value.trim();
+    return nom === qui && sem === semaine;
+  });
+  if (dejaLa) {
+    renderMaFiche();
+    dejaLa.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  ajouterLigne(qui, semaine);
+  renderMaFiche();
+});
+
+document.getElementById('rows-body').addEventListener('click', (e) => {
+  if (e.target.classList.contains('row-delete')) {
+    const tr = e.target.closest('tr');
+    const docId = tr.dataset.docId;
+    tr.remove();
+    renderAll();
+    if (docId) db.collection('cockpit_semaines').doc(docId).delete().catch(err => console.error(err));
+  }
+});
+
+document.getElementById('rows-body').addEventListener('input', (e) => {
+  renderAll();
+  const tr = e.target.closest('tr');
+  if (tr) scheduleRowWrite(tr);
+});
+
+/* =========================================================
+   ROSTER — construction, verrouillage, écriture
+   ========================================================= */
+
+function construireLigneRosterHTML(docId, data) {
+  return `<tr data-doc-id="${docId}">
+    <td><input type="text" data-field="r_conseiller" placeholder="Prénom Nom" value="${data.conseiller || ''}"></td>
+    <td><input type="date" data-field="r_date_entree" value="${data.date_entree || ''}"></td>
+    <td class="anc-duree"></td>
+    <td class="anc-niveau"></td>
+    <td class="actions"><button class="row-delete" type="button" title="Supprimer">✕</button></td>
+  </tr>`;
+}
+
+function appliquerVerrouillageRoster() {
+  for (const tr of document.getElementById('roster-body').querySelectorAll('tr')) {
+    tr.querySelectorAll('input').forEach(inp => { inp.disabled = !isAdmin; });
+    tr.classList.toggle('row-readonly', !isAdmin);
+  }
+  document.getElementById('btn-add-roster').style.display = isAdmin ? '' : 'none';
+}
+
+function ajouterLigneRoster() {
+  if (!isAdmin) return;
+  const data = { conseiller: '', date_entree: null };
+  db.collection('cockpit_roster').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }).then(ref => {
+    const body = document.getElementById('roster-body');
+    const template = document.createElement('tbody');
+    template.innerHTML = construireLigneRosterHTML(ref.id, data);
+    const tr = template.firstElementChild;
+    body.appendChild(tr);
+    const premierChamp = tr.querySelector('[data-field="r_conseiller"]');
+    if (premierChamp) premierChamp.focus();
+    renderAll();
+  }).catch(err => { console.error(err); alert("Impossible d'ajouter : " + err.message); });
+}
+
+document.getElementById('btn-add-roster').addEventListener('click', ajouterLigneRoster);
+
+document.getElementById('roster-body').addEventListener('click', (e) => {
+  if (e.target.classList.contains('row-delete')) {
+    if (!isAdmin) return;
+    const tr = e.target.closest('tr');
+    const docId = tr.dataset.docId;
+    tr.remove();
+    renderAll();
+    if (docId) db.collection('cockpit_roster').doc(docId).delete().catch(err => console.error(err));
+  }
+});
+
+const rosterWriteTimers = new Map();
+document.getElementById('roster-body').addEventListener('input', (e) => {
+  renderAll();
+  const tr = e.target.closest('tr');
+  const docId = tr?.dataset.docId;
+  if (!docId || !isAdmin) return;
+  clearTimeout(rosterWriteTimers.get(docId));
+  rosterWriteTimers.set(docId, setTimeout(() => {
+    const data = {
+      conseiller: tr.querySelector('[data-field="r_conseiller"]')?.value.trim() || '',
+      date_entree: tr.querySelector('[data-field="r_date_entree"]')?.value.trim() || null,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    db.collection('cockpit_roster').doc(docId).set(data, { merge: true }).catch(err => console.error(err));
+  }, 600));
+});
+
+/* Roster initial (33 conseillers) — importé une seule fois par l'administrateur si la collection est vide. */
+const ROSTER_INITIAL = [
+  { conseiller: 'Grousset Audrey', date_entree: '2022-12-06' },
+  { conseiller: 'Munoz Alexis', date_entree: '2023-07-21' },
+  { conseiller: 'Bellet Margot', date_entree: '2023-08-23' },
+  { conseiller: 'Allain Pierre', date_entree: '2023-10-17' },
+  { conseiller: 'Tanne Julia', date_entree: '2024-02-21' },
+  { conseiller: 'Bernagout Alexandre', date_entree: '2024-02-21' },
+  { conseiller: 'Roux Amélie', date_entree: '2024-07-15' },
+  { conseiller: 'Acier Cécile', date_entree: '2024-10-21' },
+  { conseiller: 'Lavigne Mathéo', date_entree: '2024-10-21' },
+  { conseiller: 'Mercier Guilhem', date_entree: '2024-10-23' },
+  { conseiller: 'Layat Amadila', date_entree: '2024-12-12' },
+  { conseiller: 'Gaillard Danael', date_entree: '2025-02-17' },
+  { conseiller: 'Cadu Étienne', date_entree: '2025-02-17' },
+  { conseiller: 'Verdier Manon', date_entree: '2025-10-15' },
+  { conseiller: 'Arsonneau Chloé', date_entree: '2025-10-15' },
+  { conseiller: 'Eyrard Cécile', date_entree: '2025-12-01' },
+  { conseiller: 'Gautronneau Esther', date_entree: '2025-12-08' },
+  { conseiller: 'Pemjean Maxence', date_entree: '2025-12-11' },
+  { conseiller: 'Wasilewski Axel', date_entree: '2025-12-15' },
+  { conseiller: 'Popse Benjamin', date_entree: '2025-12-17' },
+  { conseiller: 'Osmond Quentin', date_entree: '2026-02-11' },
+  { conseiller: 'Teillet Léa', date_entree: '2026-02-13' },
+  { conseiller: 'Gouraud Anthony', date_entree: '2026-02-20' },
+  { conseiller: 'Nguimbus Thomas', date_entree: '2026-03-06' },
+  { conseiller: 'Dabin Axel', date_entree: '2026-06-22' },
+  { conseiller: 'Gombert Aimie', date_entree: '2026-07-06' },
+  { conseiller: 'Minatchy Lucas', date_entree: '2026-07-06' },
+  { conseiller: 'Klavic Mathilde', date_entree: '2026-07-06' },
+  { conseiller: 'Messelier Grégoire', date_entree: '2019-10-07' },
+  { conseiller: 'Merwan Aoufi', date_entree: '2020-02-24' },
+  { conseiller: 'Alexandre Paris', date_entree: '2020-11-30' },
+  { conseiller: 'Enzo Arlabosse', date_entree: '2023-12-05' },
+  { conseiller: 'Corentin Hodicq', date_entree: '2015-11-21' },
+];
+
+document.getElementById('btn-importer-roster').addEventListener('click', async () => {
+  if (!isAdmin) return;
+  if (!confirm('Importer les 33 conseillers du roster initial ? À ne faire qu’une seule fois.')) return;
+  const btn = document.getElementById('btn-importer-roster');
+  btn.disabled = true;
+  try {
+    const batch = db.batch();
+    for (const p of ROSTER_INITIAL) {
+      const ref = db.collection('cockpit_roster').doc();
+      batch.set(ref, { conseiller: p.conseiller, date_entree: p.date_entree, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
+  } catch (err) {
+    alert('Échec de l’import : ' + err.message);
+    btn.disabled = false;
+  }
+});
+
+/* =========================================================
+   PARAMÈTRES — pondération (admin uniquement)
+   ========================================================= */
+
+function appliquerVerrouillagePoids() {
+  document.querySelectorAll('#poids-fields input').forEach(inp => { inp.disabled = !isAdmin; });
+  document.getElementById('poids-locked-hint').style.display = isAdmin ? 'none' : 'block';
+}
+
+let poidsWriteTimer = null;
+document.getElementById('poids-fields').addEventListener('input', () => {
+  renderAll();
+  if (!isAdmin) return;
+  clearTimeout(poidsWriteTimer);
+  poidsWriteTimer = setTimeout(() => {
+    const data = {};
+    for (const cle of POIDS_CLES) {
+      const input = document.querySelector(`#poids-fields [data-field="poids_${cle}"]`);
+      data['poids_' + cle] = input ? (parseFloat(input.value) || 0) : 0;
+    }
+    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    db.collection('cockpit_parametres').doc('poids').set(data, { merge: true }).catch(err => console.error(err));
+  }, 600);
+});
+
+/* =========================================================
+   FILTRES GLOBAUX / TRI ROSTER / NAVIGATION
+   ========================================================= */
+
+['filtre-semaine', 'filtre-mois', 'filtre-anciennete'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => renderAll());
+});
+
+document.querySelectorAll('.roster-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const cle = th.dataset.sort;
+    if (rosterSort.key === cle) rosterSort.dir = rosterSort.dir === 'asc' ? 'desc' : 'asc';
+    else rosterSort = { key: cle, dir: (cle === 'conseiller' || cle === 'date_entree') ? 'asc' : 'desc' };
+    trierRoster();
+  });
+});
+
+const TITLES = {
+  dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
+  equipe: 'Équipe', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
+  parametres: 'Paramètres',
+};
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
+    document.getElementById('topbar-title').textContent = TITLES[btn.dataset.view];
+
+    if (btn.dataset.view === 'ma-fiche') {
+      activerModeFiche();
+      renderMaFiche();
+    } else {
+      desactiverModeFiche();
+    }
+
+    if (btn.dataset.view !== 'saisie' && btn.dataset.view !== 'ma-fiche') renderAll();
+  });
+});
+
+/* =========================================================
+   SYNCHRO FIRESTORE — écoute temps réel + garde-fou anti-perte
+   de focus (on ne reconstruit jamais le DOM d'un tableau pendant
+   qu'on y tape, sinon le curseur saute à chaque frappe).
+   ========================================================= */
+
+let rowsFocused = false, rosterFocused = false, poidsFocused = false;
+let pendingRowsSnap = null, pendingRosterSnap = null, pendingPoidsSnap = null;
+
+function armerGardeFocus(elementId, onUnfocus) {
+  const el = document.getElementById(elementId);
+  el.addEventListener('focusin', () => { if (elementId === 'rows-body') rowsFocused = true; else if (elementId === 'roster-body') rosterFocused = true; else poidsFocused = true; });
+  el.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!el.contains(document.activeElement)) {
+        if (elementId === 'rows-body') rowsFocused = false; else if (elementId === 'roster-body') rosterFocused = false; else poidsFocused = false;
+        onUnfocus();
+      }
+    }, 0);
+  });
+}
+armerGardeFocus('rows-body', () => { if (pendingRowsSnap) { appliquerRowsSnapshot(pendingRowsSnap); pendingRowsSnap = null; } });
+armerGardeFocus('roster-body', () => { if (pendingRosterSnap) { appliquerRosterSnapshot(pendingRosterSnap); pendingRosterSnap = null; } });
+armerGardeFocus('poids-fields', () => { if (pendingPoidsSnap) { appliquerPoidsSnapshot(pendingPoidsSnap); pendingPoidsSnap = null; } });
+
+function appliquerRowsSnapshot(snap) {
+  const body = document.getElementById('rows-body');
+  body.innerHTML = snap.docs.map(doc => construireLigneHTML(doc.id, doc.data())).join('');
+  body.querySelectorAll('tr').forEach(appliquerVerrouillageLigne);
+  renderAll();
+  if (modeFicheActif) renderMaFiche();
+}
+
+function appliquerRosterSnapshot(snap) {
+  const body = document.getElementById('roster-body');
+  body.innerHTML = snap.docs.map(doc => construireLigneRosterHTML(doc.id, doc.data())).join('');
+  appliquerVerrouillageRoster();
+  trierRoster();
+  document.getElementById('btn-importer-roster').style.display = (isAdmin && snap.empty) ? '' : 'none';
+  renderAll();
+}
+
+function appliquerPoidsSnapshot(snap) {
+  const data = snap.exists ? snap.data() : null;
+  if (data) {
+    for (const cle of POIDS_CLES) {
+      const input = document.querySelector(`#poids-fields [data-field="poids_${cle}"]`);
+      if (input && typeof data['poids_' + cle] === 'number') input.value = data['poids_' + cle];
+    }
+  } else if (isAdmin) {
+    const defaults = {};
+    for (const cle of POIDS_CLES) defaults['poids_' + cle] = POIDS[cle];
+    db.collection('cockpit_parametres').doc('poids').set(defaults).catch(err => console.error(err));
+  }
+  appliquerVerrouillagePoids();
+  renderAll();
+}
+
+function marquerSynchronise(ok) {
+  document.getElementById('sync-dot').classList.toggle('off', !ok);
+  document.getElementById('sync-label').textContent = ok ? 'Synchronisé' : 'Synchronisation interrompue';
+}
+
+let unsubscribers = [];
+
+function demarrerEcoutes() {
+  const unsubRows = db.collection('cockpit_semaines').onSnapshot(snap => {
+    marquerSynchronise(true);
+    if (rowsFocused) { pendingRowsSnap = snap; return; }
+    appliquerRowsSnapshot(snap);
+  }, err => { console.error('Sync semaines', err); marquerSynchronise(false); });
+  unsubscribers.push(unsubRows);
+
+  const unsubRoster = db.collection('cockpit_roster').onSnapshot(snap => {
+    if (rosterFocused) { pendingRosterSnap = snap; return; }
+    appliquerRosterSnapshot(snap);
+  }, err => { console.error('Sync roster', err); marquerSynchronise(false); });
+  unsubscribers.push(unsubRoster);
+
+  const unsubPoids = db.collection('cockpit_parametres').doc('poids').onSnapshot(snap => {
+    if (poidsFocused) { pendingPoidsSnap = snap; return; }
+    appliquerPoidsSnapshot(snap);
+  }, err => { console.error('Sync paramètres', err); marquerSynchronise(false); });
+  unsubscribers.push(unsubPoids);
+}
+
+auth.onAuthStateChanged(user => {
+  unsubscribers.forEach(u => u());
+  unsubscribers = [];
+  currentUser = user;
+  isAdmin = !!user && user.email === ADMIN_EMAIL;
+
+  if (!user) {
+    document.body.classList.remove('authed');
+    return;
+  }
+
+  document.body.classList.add('authed');
+  document.getElementById('sidebar-user-email').textContent = user.email;
+  document.getElementById('sidebar-admin-badge').style.display = isAdmin ? '' : 'none';
+
+  demarrerEcoutes();
+});
+</script>
+</body>
+</html>
