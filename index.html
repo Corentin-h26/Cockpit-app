@@ -2,9 +2,13 @@
 <html lang="fr">
 <head>
 <meta charset="utf8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Cockpit Commercial Premium</title>
 <meta name="theme-color" content="#152A49">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cockpit">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="assets/icon-512.png">
@@ -106,6 +110,30 @@
 
   .app { display: flex; min-height: 100vh; }
 
+  .menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: var(--navy-hover);
+    color: var(--nav-text);
+    font-size: 17px;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 38, 0.5);
+    z-index: 199;
+  }
+  .sidebar-backdrop.open { display: block; }
+
   .sidebar {
     width: 220px;
     flex: 0 0 220px;
@@ -113,7 +141,7 @@
     color: var(--nav-text);
     display: flex;
     flex-direction: column;
-    padding: 20px 0;
+    padding: calc(20px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
   }
 
   .sidebar-logo { text-align: center; padding: 10px 20px 25px; }
@@ -197,7 +225,7 @@
   .topbar {
     background: var(--navy);
     color: var(--nav-text);
-    padding: 14px 30px;
+    padding: calc(14px + env(safe-area-inset-top)) 30px 14px;
     font-size: 18px;
     font-weight: 700;
     display: flex;
@@ -206,6 +234,8 @@
     gap: 16px;
     flex-wrap: wrap;
   }
+
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
 
   .topbar-filtres { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -608,9 +638,26 @@
   @media (max-width: 1000px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .watch-row, .tables-row { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
     .conseiller-layout { grid-template-columns: 1fr; }
     .topbar { flex-direction: column; align-items: flex-start; }
+
+    .menu-toggle { display: flex; }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 200;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 4px 0 24px rgba(10, 12, 38, 0.35);
+    }
+    .sidebar.open { transform: translateX(0); }
+  }
+
+  @media (max-width: 480px) {
+    .sidebar { width: 82vw; flex-basis: 82vw; }
   }
 </style>
 </head>
@@ -644,7 +691,8 @@
 </div>
 
 <div class="app">
-  <aside class="sidebar">
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <svg class="icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path d="M 39.4 135 A 70 70 0 1 1 160.6 135" fill="none" stroke="#D4B26A" stroke-width="14" stroke-linecap="round"/>
@@ -678,7 +726,10 @@
 
   <div class="main">
     <div class="topbar">
-      <span id="topbar-title">Dashboard</span>
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Menu">☰</button>
+        <span id="topbar-title">Dashboard</span>
+      </div>
       <div class="topbar-filtres">
         <select class="topbar-select" id="filtre-semaine" title="Filtrer par semaine"><option value="">Toutes les semaines</option></select>
         <select class="topbar-select" id="filtre-mois" title="Filtrer par période (blocs 4-4-5)"><option value="">Tous les mois</option></select>
@@ -2255,8 +2306,23 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     }
 
     if (btn.dataset.view !== 'saisie' && btn.dataset.view !== 'ma-fiche') renderAll();
+    fermerMenuMobile();
   });
 });
+
+/* ---- Menu mobile (tiroir) — la sidebar est masquée en display:none
+   au-delà de 1000px de large sans ce tiroir, elle serait totalement
+   inaccessible : aucun moyen de changer d'onglet sur téléphone. ---- */
+function ouvrirMenuMobile() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-backdrop').classList.add('open');
+}
+function fermerMenuMobile() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+document.getElementById('menu-toggle').addEventListener('click', ouvrirMenuMobile);
+document.getElementById('sidebar-backdrop').addEventListener('click', fermerMenuMobile);
 
 /* =========================================================
    SYNCHRO FIRESTORE — écoute temps réel + garde-fou anti-perte
