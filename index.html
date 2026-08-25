@@ -1197,16 +1197,20 @@ function scorePoint(valeur, objectif, points = 20) {
   return Math.min(points, (valeur / objectif) * points);
 }
 
-function statutAtteinte(valeur, objectif, plafond = false) {
+function statutAtteinte(valeur, objectif, plafond = false, seuilBon = 100, seuilMoyen = 70) {
   const atteinte = objectif ? (valeur / objectif) * 100 : 0;
   if (plafond) {
     if (atteinte <= 90) return 'ok';
     if (atteinte <= 100) return 'warn';
     return 'bad';
   }
-  if (atteinte >= 100) return 'ok';
-  if (atteinte >= 70) return 'warn';
+  if (atteinte >= seuilBon) return 'ok';
+  if (atteinte >= seuilMoyen) return 'warn';
   return 'bad';
+}
+/** Reprend le code couleur voulu pour les Recommandations : rouge sous 50 %, orange 50-69 %, vert à partir de 70 % de l'objectif (au lieu du seuil générique 100/70 des autres indicateurs). */
+function statutAtteinteReco(valeur, objectif) {
+  return statutAtteinte(valeur, objectif, false, 70, 50);
 }
 
 function statutSeuil(valeur, seuilBon, seuilMoyen, inverse = false) {
@@ -1309,7 +1313,7 @@ function conseilsPour(agg) {
   if (agg.score_r1r2 < SEUIL_CONSEIL) conseils.push({ ic: 'rotate', texte: 'Améliorer le taux de transformation R1 → R2.' });
   if (agg.score_signature < SEUIL_CONSEIL) conseils.push({ ic: 'pen', texte: 'Travailler le taux de signature en R2.' });
   if (agg.score_concretisation < SEUIL_CONSEIL) conseils.push({ ic: 'coins', texte: 'Optimiser le taux de concrétisation des commissions.' });
-  if (agg.score_recommandations < SEUIL_CONSEIL) conseils.push({ ic: 'users', texte: 'Augmenter le nombre de recommandations.' });
+  if (statutAtteinteReco(agg.recommandations, OBJECTIFS.recommandations) !== 'ok') conseils.push({ ic: 'users', texte: 'Augmenter le nombre de recommandations (moins de 70 % de l’objectif atteint).' });
   if (!conseils.length) conseils.push({ ic: 'checkcircle', texte: 'Excellent travail sur tous les indicateurs, continuez ainsi !' });
   return conseils;
 }
@@ -1593,21 +1597,12 @@ function renderDashboard(rows) {
     { label: 'Transformation R1 → R2', realise: equipe.taux_r1_r2 * 100, objectif: OBJECTIFS.r1_r2 * 100, fmt: 'pct' },
     { label: 'Taux de signature', realise: equipe.taux_signature * 100, objectif: OBJECTIFS.signature * 100, fmt: 'pct' },
     { label: 'Concrétisation', realise: equipe.taux_concretisation * 100, objectif: OBJECTIFS.concretisation * 100, fmt: 'pct' },
-    { label: 'Recommandations (moy. hebdo)', realise: equipe.recommandations / nbSemaines, objectif: OBJECTIFS.recommandations * nbConseillers, fmt: 'entier' },
+    { label: 'Recommandations (moy. hebdo)', realise: equipe.recommandations / nbSemaines, objectif: OBJECTIFS.recommandations * nbConseillers, fmt: 'entier', seuilBon: 70, seuilMoyen: 50 },
   ];
 
-  document.getElementById('objectifs-body').innerHTML = rows.length ? objectifsLignes.map(o => {
-    const atteinte = o.objectif ? (o.realise / o.objectif) * 100 : 0;
-    const cls = atteinte >= 100 ? 'ok' : atteinte >= 70 ? 'warn' : 'bad';
-    const fmtVal = v => o.fmt === 'pct' ? `${v.toFixed(0)} %` : v.toFixed(0);
-    return `
-      <tr>
-        <td>${o.label}</td>
-        <td class="num">${fmtVal(o.objectif)}</td>
-        <td class="num">${fmtVal(o.realise)}</td>
-        <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.min(atteinte, 100)}%"></div></div><div class="bar-pct ${cls}">${atteinte.toFixed(0)} %</div></div></td>
-      </tr>`;
-  }).join('') : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
+  document.getElementById('objectifs-body').innerHTML = rows.length
+    ? objectifsLignes.map(ligneObjectifHTML).join('')
+    : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
 }
 
 function renderClassement(rows) {
@@ -1817,7 +1812,7 @@ function renderConseillers(rows) {
     kpiCard({ ic: 'calendarcheck', title: 'RDV posés', value: agg.rdv_poses, variation: `Objectif : ${OBJECTIFS.rdv}`, statut: statutAtteinte(agg.rdv_poses, OBJECTIFS.rdv) }),
     kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.r1}`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) }),
     kpiCard({ ic: 'pen', title: 'Taux de signature', value: `${(agg.taux_signature * 100).toFixed(1)} %`, variation: `Signatures : ${signatures}`, statut: statutAtteinte(agg.taux_signature, OBJECTIFS.signature) }),
-    kpiCard({ ic: 'users', title: 'Recommandations', value: agg.recommandations, variation: `Objectif : ${OBJECTIFS.recommandations}`, statut: statutAtteinte(agg.recommandations, OBJECTIFS.recommandations) }),
+    kpiCard({ ic: 'users', title: 'Recommandations', value: agg.recommandations, variation: `Objectif : ${OBJECTIFS.recommandations}`, statut: statutAtteinteReco(agg.recommandations, OBJECTIFS.recommandations) }),
     kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés`, statut: statutAtteinte(agg.taux_visio, OBJECTIFS.visio_max, true) }),
     kpiCard({ ic: 'calendarx', title: 'Taux de casse', value: `${(agg.taux_casse * 100).toFixed(1)} %`, variation: `${agg.rdv_vus} vus sur ${agg.rdv_poses} posés`, statut: statutVersOkWarnBad(statutSeuil(agg.taux_rdv_vu * 100, 66, 50)) }),
     kpiCard({ ic: 'target', title: 'Concrétisation', value: `${(agg.taux_concretisation * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.concretisation * 100} %`, statut: statutAtteinte(agg.taux_concretisation, OBJECTIFS.concretisation) }),
@@ -1832,7 +1827,7 @@ function renderConseillers(rows) {
     { label: 'Transformation R1 → R2', realise: agg.taux_r1_r2 * 100, objectif: OBJECTIFS.r1_r2 * 100, fmt: 'pct' },
     { label: 'Taux de signature', realise: agg.taux_signature * 100, objectif: OBJECTIFS.signature * 100, fmt: 'pct' },
     { label: 'Concrétisation', realise: agg.taux_concretisation * 100, objectif: OBJECTIFS.concretisation * 100, fmt: 'pct' },
-    { label: 'Recommandations', realise: agg.recommandations, objectif: OBJECTIFS.recommandations, fmt: 'entier' },
+    { label: 'Recommandations', realise: agg.recommandations, objectif: OBJECTIFS.recommandations, fmt: 'entier', seuilBon: 70, seuilMoyen: 50 },
     { label: 'Taux de Visio', realise: agg.taux_visio * 100, objectif: OBJECTIFS.visio_max * 100, fmt: 'pct', plafond: true },
   ];
 
@@ -2045,7 +2040,7 @@ function ligneObjectifHTML(o) {
   // pipeline (statutSeuil(..., 90, 100, true)), pour rester cohérent.
   const cls = o.plafond
     ? (atteinte <= 90 ? 'ok' : atteinte <= 100 ? 'warn' : 'bad')
-    : (atteinte >= 100 ? 'ok' : atteinte >= 70 ? 'warn' : 'bad');
+    : (atteinte >= (o.seuilBon ?? 100) ? 'ok' : atteinte >= (o.seuilMoyen ?? 70) ? 'warn' : 'bad');
   const fmtVal = v => o.fmt === 'pct' ? `${v.toFixed(0)} %` : v.toFixed(0);
   return `<tr>
     <td>${o.label}</td>
@@ -2075,7 +2070,7 @@ function renderStatistiques(rows) {
     { label: 'Taux R1 → R2', realise: equipe.taux_r1_r2 * 100, objectif: objectifR1R2Pct, fmt: 'pct' },
     { label: 'Taux Signature', realise: equipe.taux_signature * 100, objectif: objectifSignaturePct, fmt: 'pct' },
     { label: 'Taux Concrétisation', realise: equipe.taux_concretisation * 100, objectif: objectifConcretisationPct, fmt: 'pct' },
-    { label: 'Recommandations (moy. hebdo)', realise: equipe.recommandations / nbSemaines, objectif: objectifRecoEquipe, fmt: 'entier' },
+    { label: 'Recommandations (moy. hebdo)', realise: equipe.recommandations / nbSemaines, objectif: objectifRecoEquipe, fmt: 'entier', seuilBon: 70, seuilMoyen: 50 },
   ];
 
   document.getElementById('stats-objectifs').innerHTML = rows.length ? `
@@ -2157,7 +2152,7 @@ function renderStatistiques(rows) {
   const totalSignatures = sum(classement, 'r2_signes');
   const commissionParSignature = totalSignatures ? equipe.commissions / totalSignatures : 0;
   document.getElementById('stats-moyennes').innerHTML = [
-    kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}`, statut: statutAtteinte(equipe.recommandations / nbConseillers, OBJECTIFS.recommandations) }),
+    kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}`, statut: statutAtteinteReco(equipe.recommandations / nbConseillers, OBJECTIFS.recommandations) }),
     kpiCard({ ic: 'coins', title: 'Commission moyenne / signature', value: euro(commissionParSignature), variation: `${totalSignatures} signature(s)` }),
     kpiCard({ ic: 'calendarx', title: 'Taux de casse moyen', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: 'Équipe', statut: statutVersOkWarnBad(statutSeuil(equipe.taux_rdv_vu * 100, 66, 50)) }),
     kpiCard({ ic: 'video', title: 'Taux de visio moyen', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: 'Équipe', statut: statutAtteinte(equipe.taux_visio, OBJECTIFS.visio_max, true) }),
