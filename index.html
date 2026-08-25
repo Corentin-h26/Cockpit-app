@@ -1988,6 +1988,7 @@ function renderStatistiques(rows) {
     kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}` }),
     kpiCard({ ic: 'coins', title: 'Commission moyenne / signature', value: euro(commissionParSignature), variation: `${totalSignatures} signature(s)` }),
     kpiCard({ ic: 'calendarx', title: 'Taux de casse moyen', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: 'Équipe' }),
+    kpiCard({ ic: 'video', title: 'Taux de visio moyen', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: 'Équipe' }),
   ].join('');
 }
 
