@@ -300,6 +300,8 @@
 
   .kpi-title { font-size: 12px; font-weight: 600; }
   .kpi-value { color: var(--gold); font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: auto; }
+  .kpi-value.warn { color: var(--warning); }
+  .kpi-value.bad { color: var(--coral); }
   .kpi-variation { color: var(--heading-2); font-size: 11px; font-weight: 600; }
   .kpi-variation.positive { color: var(--success); }
   .kpi-variation.negative { color: var(--coral); }
@@ -1185,6 +1187,18 @@ function statutSeuil(valeur, seuilBon, seuilMoyen, inverse = false) {
   return 'insuffisant';
 }
 
+/** Convertit un statut bon/moyen/insuffisant (statutSeuil) en ok/warn/bad (kpiCard/bar-fill). */
+function statutVersOkWarnBad(s) {
+  return s === 'bon' ? 'ok' : s === 'moyen' ? 'warn' : 'bad';
+}
+
+/** Statut Performance ID en 3 paliers pour les cartes KPI — reprend les seuils SEUILS déjà utilisés par niveauDe() (Elite/Excellent/Bon = ok, À accompagner = warn, Prioritaire = bad). */
+function statutDepuisPerformance(perf) {
+  if (perf >= SEUILS.bon) return 'ok';
+  if (perf >= SEUILS.progression) return 'warn';
+  return 'bad';
+}
+
 const STATUT_ICONES = { bon: '✓', moyen: '⚠', insuffisant: '✗' };
 
 function pchainStageHTML(e) {
@@ -1356,9 +1370,11 @@ const ICONS = {
 };
 function icon(name) { return `<svg viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
 
-function kpiCard({ ic, title, value, variation, tone }) {
+/** statut : 'warn'/'bad' pour repasser la valeur en orange/rouge selon les seuils réels de l'indicateur — omis (ou 'ok'), la valeur reste dorée comme avant. */
+function kpiCard({ ic, title, value, variation, tone, statut }) {
   const cls = tone === 'positive' ? ' positive' : tone === 'negative' ? ' negative' : '';
-  return `<div class="kpi-card"><div class="kpi-icon">${icon(ic)}</div><div class="kpi-title">${title}</div><div class="kpi-value">${value}</div><div class="kpi-variation${cls}">${variation}</div></div>`;
+  const valCls = statut === 'warn' ? ' warn' : statut === 'bad' ? ' bad' : '';
+  return `<div class="kpi-card"><div class="kpi-icon">${icon(ic)}</div><div class="kpi-title">${title}</div><div class="kpi-value${valCls}">${value}</div><div class="kpi-variation${cls}">${variation}</div></div>`;
 }
 
 /* =========================================================
@@ -1746,13 +1762,13 @@ function renderConseillers(rows) {
   // omise ici (donnée non collectée dans ce formulaire web).
   const kpisIndividuels = [
     kpiCard({ ic: 'coins', title: 'Commissions', value: euro(agg.commissions), variation: `Potentiel : ${euro(agg.potentiel)}` }),
-    kpiCard({ ic: 'calendarcheck', title: 'RDV posés', value: agg.rdv_poses, variation: `Objectif : ${OBJECTIFS.rdv}` }),
-    kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.r1}` }),
-    kpiCard({ ic: 'pen', title: 'Taux de signature', value: `${(agg.taux_signature * 100).toFixed(1)} %`, variation: `Signatures : ${signatures}` }),
-    kpiCard({ ic: 'users', title: 'Recommandations', value: agg.recommandations, variation: `Objectif : ${OBJECTIFS.recommandations}` }),
-    kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés` }),
-    kpiCard({ ic: 'calendarx', title: 'Taux de casse', value: `${(agg.taux_casse * 100).toFixed(1)} %`, variation: `${agg.rdv_vus} vus sur ${agg.rdv_poses} posés` }),
-    kpiCard({ ic: 'target', title: 'Concrétisation', value: `${(agg.taux_concretisation * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.concretisation * 100} %` }),
+    kpiCard({ ic: 'calendarcheck', title: 'RDV posés', value: agg.rdv_poses, variation: `Objectif : ${OBJECTIFS.rdv}`, statut: statutAtteinte(agg.rdv_poses, OBJECTIFS.rdv) }),
+    kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.r1}`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) }),
+    kpiCard({ ic: 'pen', title: 'Taux de signature', value: `${(agg.taux_signature * 100).toFixed(1)} %`, variation: `Signatures : ${signatures}`, statut: statutAtteinte(agg.taux_signature, OBJECTIFS.signature) }),
+    kpiCard({ ic: 'users', title: 'Recommandations', value: agg.recommandations, variation: `Objectif : ${OBJECTIFS.recommandations}`, statut: statutAtteinte(agg.recommandations, OBJECTIFS.recommandations) }),
+    kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés`, statut: statutAtteinte(agg.taux_visio, OBJECTIFS.visio_max, true) }),
+    kpiCard({ ic: 'calendarx', title: 'Taux de casse', value: `${(agg.taux_casse * 100).toFixed(1)} %`, variation: `${agg.rdv_vus} vus sur ${agg.rdv_poses} posés`, statut: statutVersOkWarnBad(statutSeuil(agg.taux_rdv_vu * 100, 66, 50)) }),
+    kpiCard({ ic: 'target', title: 'Concrétisation', value: `${(agg.taux_concretisation * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.concretisation * 100} %`, statut: statutAtteinte(agg.taux_concretisation, OBJECTIFS.concretisation) }),
     kpiCard({ ic: 'percent', title: 'Taux de suivi', value: `${(agg.taux_suivi * 100).toFixed(1)} %`, variation: `${agg.suivis} suivis prévus sur ${agg.rdv_poses} RDV posés` }),
   ];
 
@@ -2074,11 +2090,13 @@ function renderStatistiques(rows) {
     </div>`).join('') : `<div class="empty-state">Aucune recommandation enregistrée.</div>`;
 
   const moyennePerformance = classement.length ? sum(classement, 'performance') / nbConseillers : 0;
+  const statutClassePerf = statutDepuisPerformance(moyennePerformance);
+  const claseValeurPerf = statutClassePerf === 'warn' ? ' warn' : statutClassePerf === 'bad' ? ' bad' : '';
   document.getElementById('stats-indicateur-global').innerHTML = classement.length ? `
     <div class="card-title">🎯 Indicateur global de Performance ID</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:20px;">
       <div>
-        <div class="kpi-value" style="font-size:28px;">${moyennePerformance.toFixed(1)} / 100</div>
+        <div class="kpi-value${claseValeurPerf}" style="font-size:28px;">${moyennePerformance.toFixed(1)} / 100</div>
         <div class="watch-sub" style="font-size:13px;font-weight:600;margin-top:4px;">Niveau : ${niveauEmoji(moyennePerformance)}</div>
       </div>
       <div>${gaugeChartSVG(moyennePerformance, 100)}</div>
@@ -2087,10 +2105,10 @@ function renderStatistiques(rows) {
   const totalSignatures = sum(classement, 'r2_signes');
   const commissionParSignature = totalSignatures ? equipe.commissions / totalSignatures : 0;
   document.getElementById('stats-moyennes').innerHTML = [
-    kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}` }),
+    kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}`, statut: statutAtteinte(equipe.recommandations / nbConseillers, OBJECTIFS.recommandations) }),
     kpiCard({ ic: 'coins', title: 'Commission moyenne / signature', value: euro(commissionParSignature), variation: `${totalSignatures} signature(s)` }),
-    kpiCard({ ic: 'calendarx', title: 'Taux de casse moyen', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: 'Équipe' }),
-    kpiCard({ ic: 'video', title: 'Taux de visio moyen', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: 'Équipe' }),
+    kpiCard({ ic: 'calendarx', title: 'Taux de casse moyen', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: 'Équipe', statut: statutVersOkWarnBad(statutSeuil(equipe.taux_rdv_vu * 100, 66, 50)) }),
+    kpiCard({ ic: 'video', title: 'Taux de visio moyen', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: 'Équipe', statut: statutAtteinte(equipe.taux_visio, OBJECTIFS.visio_max, true) }),
   ].join('');
 }
 
