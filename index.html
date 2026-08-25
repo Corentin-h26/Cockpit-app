@@ -1600,16 +1600,58 @@ function renderConseillers(rows) {
   const niveau = niveauDe(agg.performance);
   const historique = historiqueDe(rows, conseillerSelectionne);
 
-  const etapes = [
-    { label: 'RDV posés', valeur: agg.rdv_poses, ref: `Obj. ${OBJECTIFS.rdv}`, statut: statutAtteinte(agg.rdv_poses, OBJECTIFS.rdv) },
-    { label: 'Taux visio', valeur: `${(agg.taux_visio * 100).toFixed(0)} %`, ref: `Max ${OBJECTIFS.visio_max * 100} %`, statut: statutAtteinte(agg.taux_visio, OBJECTIFS.visio_max, true) },
-    { label: 'R1 → R2', valeur: `${(agg.taux_r1_r2 * 100).toFixed(0)} %`, ref: `Obj. ${OBJECTIFS.r1_r2 * 100} %`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) },
-    { label: 'Signature', valeur: `${(agg.taux_signature * 100).toFixed(0)} %`, ref: `Obj. ${OBJECTIFS.signature * 100} %`, statut: statutAtteinte(agg.taux_signature, OBJECTIFS.signature) },
-    { label: 'Recommandations', valeur: agg.recommandations, ref: `Obj. ${OBJECTIFS.recommandations}`, statut: statutAtteinte(agg.recommandations, OBJECTIFS.recommandations) },
+  const signatures = agg.r2_signes;
+
+  // Reprend _build_pipeline() de conseillers_page.py côté desktop : 7 étapes
+  // évaluées sur leurs propres seuils (pas un objectif générique par
+  // conseiller — R1/R2 bruts n'ont pas d'objectif défini, ils apparaissent
+  // en contexte dans les fractions R1 en R2 / R2 signés).
+  const objectifRdvInd = OBJECTIFS.rdv;
+  const objectifVisioPctInd = OBJECTIFS.visio_max * 100;
+  const objectifR1R2PctInd = OBJECTIFS.r1_r2 * 100;
+  const objectifSignaturePctInd = OBJECTIFS.signature * 100;
+
+  const atteinteRdvInd = objectifRdvInd ? (agg.rdv_poses / objectifRdvInd) * 100 : 0;
+  const atteinteVisioInd = objectifVisioPctInd ? ((agg.taux_visio * 100) / objectifVisioPctInd) * 100 : 0;
+  const atteinteR1R2Ind = objectifR1R2PctInd ? ((agg.taux_r1_r2 * 100) / objectifR1R2PctInd) * 100 : 0;
+  const atteinteSignatureInd = objectifSignaturePctInd ? ((agg.taux_signature * 100) / objectifSignaturePctInd) * 100 : 0;
+  const tauxRdvVuInd = agg.rdv_poses ? (agg.rdv_vus / agg.rdv_poses) * 100 : 0;
+
+  const etapesPipeline = [
+    { ic: 'calendarcheck', label: 'RDV posés', valeur: `${agg.rdv_poses}`, ref: `Objectif ${objectifRdvInd.toFixed(0)}`, statut: statutSeuil(atteinteRdvInd, 100, 70) },
+    { ic: 'eye', label: 'Taux RDV vu', valeur: `${tauxRdvVuInd.toFixed(0)} %`, ref: 'Objectif > 66 %', statut: statutSeuil(tauxRdvVuInd, 66, 50) },
+    { ic: 'video', label: 'Taux de visio', valeur: `${(agg.taux_visio * 100).toFixed(0)} %`, ref: `Max ${objectifVisioPctInd.toFixed(0)} %`, statut: statutSeuil(atteinteVisioInd, 90, 100, true) },
+    { ic: 'rotate', label: 'R1 en R2', valeur: agg.r1 ? `${agg.r1_en_r2}/${agg.r1}` : '—', ref: `Objectif ${objectifR1R2PctInd.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2Ind, 100, 70) },
+    { ic: 'percent', label: 'Taux R1 → R2', valeur: `${(agg.taux_r1_r2 * 100).toFixed(0)} %`, ref: `Objectif ${objectifR1R2PctInd.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2Ind, 100, 70) },
+    { ic: 'pen', label: 'R2 signés', valeur: agg.r2 ? `${agg.r2_signes}/${agg.r2}` : '—', ref: `Objectif ${objectifSignaturePctInd.toFixed(0)} %`, statut: statutSeuil(atteinteSignatureInd, 100, 70) },
+    { ic: 'target', label: 'Signature', valeur: `${(agg.taux_signature * 100).toFixed(0)} %`, ref: `Objectif ${objectifSignaturePctInd.toFixed(0)} %`, statut: statutSeuil(atteinteSignatureInd, 100, 70) },
   ];
 
-  const signatures = agg.r2_signes;
-  const commissionParSignature = signatures ? agg.commissions / signatures : 0;
+  // Reprend _build_kpis() : mêmes 8 cartes, mêmes libellés/légendes, dans le
+  // même ordre — la carte conditionnelle "Présence en visio" du desktop est
+  // omise ici (donnée non collectée dans ce formulaire web).
+  const kpisIndividuels = [
+    kpiCard({ ic: 'coins', title: 'Commissions', value: euro(agg.commissions), variation: `Potentiel : ${euro(agg.potentiel)}` }),
+    kpiCard({ ic: 'calendarcheck', title: 'RDV posés', value: agg.rdv_poses, variation: `Objectif : ${OBJECTIFS.rdv}` }),
+    kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.r1}` }),
+    kpiCard({ ic: 'pen', title: 'Taux de signature', value: `${(agg.taux_signature * 100).toFixed(1)} %`, variation: `Signatures : ${signatures}` }),
+    kpiCard({ ic: 'users', title: 'Recommandations', value: agg.recommandations, variation: `Objectif : ${OBJECTIFS.recommandations}` }),
+    kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés` }),
+    kpiCard({ ic: 'calendarx', title: 'Taux de casse', value: `${(agg.taux_casse * 100).toFixed(1)} %`, variation: `${agg.rdv_vus} vus sur ${agg.rdv_poses} posés` }),
+    kpiCard({ ic: 'target', title: 'Concrétisation', value: `${(agg.taux_concretisation * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.concretisation * 100} %` }),
+  ];
+
+  // "Objectifs vs Réalisé" du conseiller — même table que Statistiques,
+  // mais sans mise à l'échelle par nb. de conseillers/semaines (ici c'est
+  // déjà la donnée d'une seule personne).
+  const lignesObjectifsInd = [
+    { label: 'RDV posés', realise: agg.rdv_poses, objectif: OBJECTIFS.rdv, fmt: 'entier' },
+    { label: 'Transformation R1 → R2', realise: agg.taux_r1_r2 * 100, objectif: OBJECTIFS.r1_r2 * 100, fmt: 'pct' },
+    { label: 'Taux de signature', realise: agg.taux_signature * 100, objectif: OBJECTIFS.signature * 100, fmt: 'pct' },
+    { label: 'Concrétisation', realise: agg.taux_concretisation * 100, objectif: OBJECTIFS.concretisation * 100, fmt: 'pct' },
+    { label: 'Recommandations', realise: agg.recommandations, objectif: OBJECTIFS.recommandations, fmt: 'entier' },
+    { label: 'Taux de Visio', realise: agg.taux_visio * 100, objectif: OBJECTIFS.visio_max * 100, fmt: 'pct' },
+  ];
 
   detail.innerHTML = `
     <div class="card" style="margin-bottom:16px;">
@@ -1626,23 +1668,23 @@ function renderConseillers(rows) {
       </div>
     </div>
 
-    <div class="card-title">📊 Pipeline</div>
-    <div class="pipeline-row">
-      ${etapes.map(e => `
-        <div class="pipeline-stage">
-          <div class="pipeline-label">${e.label}</div>
-          <div class="pipeline-value">${e.valeur}</div>
-          <div class="pipeline-ref">${e.ref}</div>
-          <div class="pipeline-bar ${e.statut}"></div>
-        </div>`).join('')}
+    <div class="card">
+      <div class="card-title">📊 Indicateurs clés du pipeline</div>
+      <div class="pchain">
+        ${etapesPipeline.map((e, i) => `${pchainStageHTML(e)}${i < etapesPipeline.length - 1 ? '<div class="pchain-arrow">→</div>' : ''}`).join('')}
+      </div>
     </div>
 
     <div class="card-title" style="margin-top:18px;">💼 Indicateurs personnels</div>
     <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
-      ${kpiCard({ ic: 'sack', title: 'Potentiel', value: euro(agg.potentiel), variation: 'Cumulé' })}
-      ${kpiCard({ ic: 'coins', title: 'Commissions', value: euro(agg.commissions), variation: `${(agg.taux_concretisation * 100).toFixed(1)} % de concrétisation` })}
-      ${kpiCard({ ic: 'target', title: 'Commission / signature', value: euro(commissionParSignature), variation: `${signatures} signature(s)` })}
+      ${kpisIndividuels.join('')}
     </div>
+
+    <div class="card-title" style="margin-top:18px;">🎯 Objectifs vs Réalisé</div>
+    <div class="card"><table>
+      <thead><tr><th>Indicateur</th><th class="num">Objectif</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
+      <tbody>${lignesObjectifsInd.map(ligneObjectifHTML).join('')}</tbody>
+    </table></div>
 
     <div class="card-title" style="margin-top:18px;">📈 Évolution de la Performance ID</div>
     <div class="card">${svgEvolution(historique)}</div>
