@@ -26,6 +26,7 @@
     color-scheme: light;
     --navy: #152A49;
     --navy-hover: #1C3053;
+    --menu-bg: #111440;
     --gold: #B39359;
     --gold-tint: rgba(179, 147, 89, 0.14);
     --silver: #A9AFBB;
@@ -137,7 +138,7 @@
   .sidebar {
     width: 220px;
     flex: 0 0 220px;
-    background: var(--navy);
+    background: var(--menu-bg);
     color: var(--nav-text);
     display: flex;
     flex-direction: column;
@@ -224,7 +225,7 @@
   .main { flex: 1; min-width: 0; }
 
   .topbar {
-    background: var(--navy);
+    background: var(--menu-bg);
     color: var(--nav-text);
     padding: calc(14px + env(safe-area-inset-top)) 30px 14px;
     font-size: 18px;
