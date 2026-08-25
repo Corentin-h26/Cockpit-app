@@ -482,7 +482,7 @@
   .entry-table.mode-fiche tr:hover td[data-label] { background: var(--bg); }
   .entry-table.mode-fiche tr:hover td[data-label]:has(input[readonly]) { background: var(--cream); }
 
-  .fiche-section-titre, .fiche-groupe { display: none; }
+  .fiche-section-titre, .fiche-groupe, .fiche-valider { display: none; }
 
   .mode-fiche .fiche-section-titre {
     display: block;
@@ -505,6 +505,30 @@
     gap: 8px;
     grid-column: 1 / -1;
   }
+
+  .mode-fiche .fiche-valider {
+    display: block;
+    grid-column: 1 / -1;
+    margin-top: 6px;
+  }
+  .btn-valider-fiche {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid var(--navy);
+    background: var(--navy);
+    color: var(--nav-text);
+    border-radius: 10px;
+    padding: 11px;
+    cursor: pointer;
+  }
+  .btn-valider-fiche:hover { background: var(--navy-hover); }
+  .btn-valider-fiche.valide { background: var(--success); border-color: var(--success); }
 
   .fiche-checkbox, .fiche-radio {
     display: flex;
@@ -2250,6 +2274,7 @@ function construireLigneHTML(docId, data) {
     <td class="fiche-groupe">${accompagnementHTML}</td>
     <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ?"></td>
     <td class="fiche-groupe">${ressentiHTML}</td>
+    <td class="fiche-valider"><button class="btn-valider-fiche" type="button">${ic('checkcircle', 15)} Valider ma semaine</button></td>
     <td class="actions"><button class="row-delete" type="button" title="Supprimer">✕</button></td>
   </tr>`;
 }
@@ -2361,14 +2386,20 @@ function rowDataFromTr(tr) {
   data.accompagnement = lireAccompagnement(tr);
   return data;
 }
+function writeRowNow(tr) {
+  const docId = tr.dataset.docId;
+  if (!docId) return Promise.reject(new Error('Ligne pas encore créée'));
+  clearTimeout(rowWriteTimers.get(docId));
+  const data = rowDataFromTr(tr);
+  data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  return db.collection('cockpit_semaines').doc(docId).set(data, { merge: true });
+}
 function scheduleRowWrite(tr) {
   const docId = tr.dataset.docId;
   if (!docId) return;
   clearTimeout(rowWriteTimers.get(docId));
   rowWriteTimers.set(docId, setTimeout(() => {
-    const data = rowDataFromTr(tr);
-    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-    db.collection('cockpit_semaines').doc(docId).set(data, { merge: true }).catch(err => console.error('Écriture ligne échouée', err));
+    writeRowNow(tr).catch(err => console.error('Écriture ligne échouée', err));
   }, 600));
 }
 
@@ -2461,6 +2492,27 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     tr.remove();
     renderAll();
     if (docId) db.collection('cockpit_semaines').doc(docId).delete().catch(err => console.error(err));
+    return;
+  }
+
+  const btnValider = e.target.closest('.btn-valider-fiche');
+  if (btnValider) {
+    const tr = btnValider.closest('tr');
+    const texteInitial = btnValider.innerHTML;
+    btnValider.disabled = true;
+    writeRowNow(tr).then(() => {
+      btnValider.classList.add('valide');
+      btnValider.innerHTML = `${ic('checkcircle', 15)} Enregistré`;
+      setTimeout(() => {
+        btnValider.classList.remove('valide');
+        btnValider.innerHTML = texteInitial;
+        btnValider.disabled = false;
+      }, 2200);
+    }).catch(err => {
+      console.error('Validation échouée', err);
+      alert("La validation a échoué : " + err.message);
+      btnValider.disabled = false;
+    });
   }
 });
 
