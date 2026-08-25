@@ -857,10 +857,18 @@
         <div class="page-title">Conseillers</div>
         <div class="page-sub">La fiche de chaque conseiller — clique un nom pour voir le détail.</div>
         <hr class="rule">
+        <div class="saisie-toolbar">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--heading-2);cursor:pointer;">
+            <input type="checkbox" id="compare-toggle" style="width:auto;">
+            🆚 Comparer avec un autre conseiller
+          </label>
+          <select class="topbar-select" id="conseiller-compare-qui" style="display:none;"><option value="">-- choisir --</option></select>
+        </div>
         <div class="conseiller-layout">
           <div class="conseiller-list card" id="conseiller-list"></div>
           <div id="conseiller-detail"></div>
         </div>
+        <div id="conseiller-comparaison" style="display:none;margin-top:20px;"></div>
       </div>
 
       <!-- ============================================= ÉQUIPE ============================================= -->
@@ -1554,6 +1562,7 @@ function renderClassement(rows) {
    ========================================================= */
 
 let conseillerSelectionne = null;
+let conseillerCompare = null;
 
 function historiqueDe(rows, nom) {
   const semaines = [...new Set(rows.filter(r => r.conseiller === nom).map(r => r.semaine))].sort();
@@ -1687,6 +1696,13 @@ function renderConseillers(rows) {
     btn.addEventListener('click', () => { conseillerSelectionne = btn.dataset.nom; renderConseillers(readRows()); });
   });
 
+  const selCompare = document.getElementById('conseiller-compare-qui');
+  const valeurCompareActuelle = selCompare.value;
+  selCompare.innerHTML = '<option value="">-- choisir --</option>' + classement.map(c => `<option value="${c.conseiller}">${c.conseiller}</option>`).join('');
+  if (classement.some(c => c.conseiller === valeurCompareActuelle)) selCompare.value = valeurCompareActuelle;
+
+  renderComparaison(classement);
+
   const detail = document.getElementById('conseiller-detail');
   const agg = classement.find(c => c.conseiller === conseillerSelectionne);
 
@@ -1792,6 +1808,86 @@ function renderConseillers(rows) {
     <div class="conseils-box">${conseilsPour(agg).map(c => `<div>${c}</div>`).join('')}</div>
   `;
 }
+
+/* =========================================================
+   COMPARAISON DE 2 CONSEILLERS
+   ========================================================= */
+
+function ligneComparaisonHTML(label, valA, valB, fmt, inverse) {
+  const fmtVal = v => fmt === 'pct' ? `${v.toFixed(1)} %` : fmt === 'euro' ? euro(v) : v.toFixed(0);
+  let meilleurA = false, meilleurB = false;
+  if (valA !== valB) {
+    meilleurA = inverse ? valA < valB : valA > valB;
+    meilleurB = inverse ? valB < valA : valB > valA;
+  }
+  const styleA = meilleurA ? 'color:var(--success);font-weight:700;' : '';
+  const styleB = meilleurB ? 'color:var(--success);font-weight:700;' : '';
+  return `<tr>
+    <td>${label}</td>
+    <td class="num" style="${styleA}">${fmtVal(valA)}</td>
+    <td class="num" style="${styleB}">${fmtVal(valB)}</td>
+  </tr>`;
+}
+
+/** Table "meilleur en vert" entre le conseiller sélectionné et un second choisi via #conseiller-compare-qui — indépendant de la fiche détaillée, purement pour situer les deux l'un par rapport à l'autre. */
+function renderComparaison(classement) {
+  const zone = document.getElementById('conseiller-comparaison');
+  const a = classement.find(c => c.conseiller === conseillerSelectionne);
+  const b = conseillerCompare ? classement.find(c => c.conseiller === conseillerCompare) : null;
+
+  if (!a || !b || a.conseiller === b.conseiller) {
+    zone.style.display = 'none';
+    zone.innerHTML = '';
+    return;
+  }
+
+  zone.style.display = 'block';
+  const niveauA = niveauDe(a.performance), niveauB = niveauDe(b.performance);
+  const stylePerfA = a.performance !== b.performance ? (a.performance > b.performance ? 'color:var(--success);font-weight:700;' : '') : '';
+  const stylePerfB = a.performance !== b.performance ? (b.performance > a.performance ? 'color:var(--success);font-weight:700;' : '') : '';
+
+  const lignes = [
+    ligneComparaisonHTML('RDV posés', a.rdv_poses, b.rdv_poses, 'entier'),
+    ligneComparaisonHTML('Taux de Visio (max 30 %)', a.taux_visio * 100, b.taux_visio * 100, 'pct', true),
+    ligneComparaisonHTML('Transformation R1 → R2', a.taux_r1_r2 * 100, b.taux_r1_r2 * 100, 'pct'),
+    ligneComparaisonHTML('Taux de signature', a.taux_signature * 100, b.taux_signature * 100, 'pct'),
+    ligneComparaisonHTML('Concrétisation', a.taux_concretisation * 100, b.taux_concretisation * 100, 'pct'),
+    ligneComparaisonHTML('Recommandations', a.recommandations, b.recommandations, 'entier'),
+    ligneComparaisonHTML('Commissions', a.commissions, b.commissions, 'euro'),
+    ligneComparaisonHTML('Taux de casse', a.taux_casse * 100, b.taux_casse * 100, 'pct', true),
+    ligneComparaisonHTML('Taux de suivi', a.taux_suivi * 100, b.taux_suivi * 100, 'pct'),
+  ].join('');
+
+  zone.innerHTML = `
+    <div class="card-title">🆚 Comparaison</div>
+    <div class="card"><table>
+      <thead><tr><th>Indicateur</th><th class="num">${a.conseiller}</th><th class="num">${b.conseiller}</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Performance ID</td>
+          <td class="num" style="${stylePerfA}">${a.performance.toFixed(1)} / 100</td>
+          <td class="num" style="${stylePerfB}">${b.performance.toFixed(1)} / 100</td>
+        </tr>
+        <tr>
+          <td>Niveau</td>
+          <td class="num"><span class="pill ${niveauA.classe}">${niveauA.texte}</span></td>
+          <td class="num"><span class="pill ${niveauB.classe}">${niveauB.texte}</span></td>
+        </tr>
+        ${lignes}
+      </tbody>
+    </table></div>`;
+}
+
+document.getElementById('compare-toggle').addEventListener('change', (e) => {
+  document.getElementById('conseiller-compare-qui').style.display = e.target.checked ? '' : 'none';
+  if (!e.target.checked) conseillerCompare = null;
+  renderConseillers(readRows());
+});
+
+document.getElementById('conseiller-compare-qui').addEventListener('change', (e) => {
+  conseillerCompare = e.target.value || null;
+  renderConseillers(readRows());
+});
 
 /* =========================================================
    ÉQUIPE
