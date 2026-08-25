@@ -1213,6 +1213,7 @@ function agreger(rows) {
   const recommandations = sum(rows, 'recommandations');
   const potentiel = sum(rows, 'potentiel');
   const commissions = sum(rows, 'commissions');
+  const suivis = sum(rows, 'suivis');
   const suivis_faits = sum(rows, 'suivis_faits');
 
   const denom_r1 = r1_vus > 0 ? r1_vus : r1;
@@ -1224,7 +1225,7 @@ function agreger(rows) {
   const taux_visio = rdv_poses ? visio / rdv_poses : 0;
   const taux_rdv_vu = rdv_poses ? rdv_vus / rdv_poses : 0;
   const taux_casse = rdv_poses ? (rdv_poses - rdv_vus) / rdv_poses : 0;
-  const taux_suivi = rdv_poses ? suivis_faits / rdv_poses : 0;
+  const taux_suivi = rdv_poses ? suivis / rdv_poses : 0;
 
   const score_rdv = scorePoint(rdv_poses, OBJECTIFS.rdv, POIDS.rdv);
   const score_r1r2 = scorePoint(taux_r1_r2, OBJECTIFS.r1_r2, POIDS.r1_r2);
@@ -1235,7 +1236,7 @@ function agreger(rows) {
   const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations;
 
   return {
-    rdv_poses, rdv_vus, visio, r1, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis_faits,
+    rdv_poses, rdv_vus, visio, r1, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis, suivis_faits,
     taux_r1_r2, taux_signature, taux_concretisation, taux_visio, taux_rdv_vu, taux_casse, taux_suivi,
     score_rdv, score_r1r2, score_signature, score_concretisation, score_recommandations,
     performance: Math.round(performance * 10) / 10,
@@ -1641,7 +1642,7 @@ function renderConseillers(rows) {
     kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés` }),
     kpiCard({ ic: 'calendarx', title: 'Taux de casse', value: `${(agg.taux_casse * 100).toFixed(1)} %`, variation: `${agg.rdv_vus} vus sur ${agg.rdv_poses} posés` }),
     kpiCard({ ic: 'target', title: 'Concrétisation', value: `${(agg.taux_concretisation * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.concretisation * 100} %` }),
-    kpiCard({ ic: 'percent', title: 'Taux de suivi', value: `${(agg.taux_suivi * 100).toFixed(1)} %`, variation: `${agg.suivis_faits} suivis faits sur ${agg.rdv_poses} RDV posés` }),
+    kpiCard({ ic: 'percent', title: 'Taux de suivi', value: `${(agg.taux_suivi * 100).toFixed(1)} %`, variation: `${agg.suivis} suivis prévus sur ${agg.rdv_poses} RDV posés` }),
   ];
 
   // "Objectifs vs Réalisé" du conseiller — même table que Statistiques,
