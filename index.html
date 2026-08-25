@@ -930,6 +930,7 @@
             <tbody id="roster-body"></tbody>
           </table>
         </div>
+        <div class="field-hint" id="roster-total" style="color:var(--gold);font-weight:600;"></div>
       </div>
 
       <!-- ============================================= STATISTIQUES ============================================= -->
@@ -1976,6 +1977,8 @@ function renderEquipe() {
           <div class="bar-pct" style="color:${couleurs[cle]}">${val}</div>
         </div>`).join('')}
     </div>` : `<div class="empty-state">Aucun conseiller dans le roster.</div>`;
+
+  document.getElementById('roster-total').textContent = `${roster.length} conseiller${roster.length > 1 ? 's' : ''} au total`;
 
   renderRosterAnciennete();
 }
