@@ -416,6 +416,12 @@
     background: rgba(239, 91, 110, 0.08);
   }
 
+  /* RDV posés ≠ R1 + R2 + Suivis (ou RDV vus ≠ R1 vus + R2 vus + Suivi fait) — la répartition ne correspond pas au total saisi. */
+  .entry-table input.champ-incoherent {
+    border-color: var(--warning);
+    background: rgba(240, 164, 58, 0.1);
+  }
+
   /* ---------------------------------------------------- Ma fiche */
 
   .fiche-identite { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
@@ -820,7 +826,7 @@
         </div>
 
         <div class="field-hint">
-          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Commissions = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster.
+          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Commissions = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster. RDV posés/RDV vus en orange : la répartition ne correspond pas au total (RDV posés doit égaler R1 + R2 + Suivis, RDV vus doit égaler R1 vus + R2 vus + Suivi fait).
         </div>
       </div>
 
@@ -1489,6 +1495,7 @@ function renderAll() {
   lirePoids();
   populerDatalistRoster();
   validerConseillersSaisis();
+  validerCoherenceRDV();
   const toutesLignes = readRows();
   populerFiltresSemaineEtMois(toutesLignes);
   const rows = appliquerFiltres(toutesLignes);
@@ -2294,6 +2301,27 @@ function validerConseillersSaisis() {
     if (!input) continue;
     const valeur = input.value.trim();
     input.classList.toggle('conseiller-inconnu', valeur !== '' && !noms.has(valeur));
+  }
+}
+
+/** RDV posés doit égaler R1 + R2 + Suivis (répartition du prévu), RDV vus doit égaler R1 vus + R2 vus + Suivi fait (répartition du réalisé) — signale l'écart en orange sans bloquer la saisie. */
+function validerCoherenceRDV() {
+  const valeur = (tr, champ) => parseFloat(tr.querySelector(`[data-field="${champ}"]`)?.value) || 0;
+  for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
+    const inputPrevu = tr.querySelector('[data-field="rdv_poses"]');
+    if (inputPrevu) {
+      const somme = valeur(tr, 'r1') + valeur(tr, 'r2') + valeur(tr, 'suivis');
+      const incoherent = valeur(tr, 'rdv_poses') !== somme;
+      inputPrevu.classList.toggle('champ-incoherent', incoherent);
+      inputPrevu.title = incoherent ? `Devrait égaler R1 + R2 + Suivis = ${somme}` : '';
+    }
+    const inputRealise = tr.querySelector('[data-field="rdv_vus"]');
+    if (inputRealise) {
+      const somme = valeur(tr, 'r1_vus') + valeur(tr, 'r2_vus') + valeur(tr, 'suivis_faits');
+      const incoherent = valeur(tr, 'rdv_vus') !== somme;
+      inputRealise.classList.toggle('champ-incoherent', incoherent);
+      inputRealise.title = incoherent ? `Devrait égaler R1 vus + R2 vus + Suivi fait = ${somme}` : '';
+    }
   }
 }
 
