@@ -1749,7 +1749,7 @@ function renderConseillers(rows) {
     { label: 'Taux de signature', realise: agg.taux_signature * 100, objectif: OBJECTIFS.signature * 100, fmt: 'pct' },
     { label: 'Concrétisation', realise: agg.taux_concretisation * 100, objectif: OBJECTIFS.concretisation * 100, fmt: 'pct' },
     { label: 'Recommandations', realise: agg.recommandations, objectif: OBJECTIFS.recommandations, fmt: 'entier' },
-    { label: 'Taux de Visio', realise: agg.taux_visio * 100, objectif: OBJECTIFS.visio_max * 100, fmt: 'pct' },
+    { label: 'Taux de Visio', realise: agg.taux_visio * 100, objectif: OBJECTIFS.visio_max * 100, fmt: 'pct', plafond: true },
   ];
 
   detail.innerHTML = `
@@ -1875,7 +1875,13 @@ function trierRoster() {
 
 function ligneObjectifHTML(o) {
   const atteinte = o.objectif ? (o.realise / o.objectif) * 100 : 0;
-  const cls = atteinte >= 100 ? 'ok' : atteinte >= 70 ? 'warn' : 'bad';
+  // "plafond" : objectif à ne pas dépasser (ex. Taux Visio, max 30 %) — au-delà
+  // de la cible, l'atteinte élevée est mauvaise, pas bonne (inverse de tous
+  // les autres indicateurs de ce tableau). Mêmes seuils 90/100 que le
+  // pipeline (statutSeuil(..., 90, 100, true)), pour rester cohérent.
+  const cls = o.plafond
+    ? (atteinte <= 90 ? 'ok' : atteinte <= 100 ? 'warn' : 'bad')
+    : (atteinte >= 100 ? 'ok' : atteinte >= 70 ? 'warn' : 'bad');
   const fmtVal = v => o.fmt === 'pct' ? `${v.toFixed(0)} %` : v.toFixed(0);
   return `<tr>
     <td>${o.label}</td>
@@ -1901,7 +1907,7 @@ function renderStatistiques(rows) {
   const lignesObjectifs = [
     { label: 'RDV Posés (moy. hebdo)', realise: equipe.rdv_poses / nbSemaines, objectif: objectifRdvEquipe, fmt: 'entier' },
     { label: 'Taux de RDV vu', realise: equipe.taux_rdv_vu * 100, objectif: 66, fmt: 'pct' },
-    { label: 'Taux Visio', realise: equipe.taux_visio * 100, objectif: objectifVisioPct, fmt: 'pct' },
+    { label: 'Taux Visio', realise: equipe.taux_visio * 100, objectif: objectifVisioPct, fmt: 'pct', plafond: true },
     { label: 'Taux R1 → R2', realise: equipe.taux_r1_r2 * 100, objectif: objectifR1R2Pct, fmt: 'pct' },
     { label: 'Taux Signature', realise: equipe.taux_signature * 100, objectif: objectifSignaturePct, fmt: 'pct' },
     { label: 'Taux Concrétisation', realise: equipe.taux_concretisation * 100, objectif: objectifConcretisationPct, fmt: 'pct' },
