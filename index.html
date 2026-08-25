@@ -169,6 +169,7 @@
   }
 
   .nav-item.active { background: rgba(255, 255, 255, 0.09); color: var(--nav-text); }
+  .nav-icon { width: 16px; height: 16px; flex: 0 0 auto; }
 
   .sidebar-user {
     margin-top: auto;
@@ -705,15 +706,15 @@
       <div class="sub">Commercial Premium</div>
     </div>
     <nav class="nav">
-      <button class="nav-item active" data-view="dashboard" type="button">📊 Dashboard</button>
-      <button class="nav-item" data-view="saisie" type="button">✏️ Ma semaine</button>
-      <button class="nav-item" data-view="ma-fiche" type="button">🙋 Ma fiche</button>
-      <button class="nav-item" data-view="conseillers" type="button">👥 Conseillers</button>
-      <button class="nav-item" data-view="equipe" type="button">🪪 Équipe</button>
-      <button class="nav-item" data-view="classement" type="button">🏆 Classement</button>
-      <button class="nav-item" data-view="statistiques" type="button">📈 Statistiques</button>
-      <button class="nav-item" data-view="alertes" type="button">⚠️ Alertes</button>
-      <button class="nav-item" data-view="parametres" type="button">⚖️ Paramètres</button>
+      <button class="nav-item active" data-view="dashboard" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="currentColor" opacity="0.55"/><rect x="3" y="13" width="8" height="8" rx="2" fill="currentColor" opacity="0.55"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/></svg><span>Dashboard</span></button>
+      <button class="nav-item" data-view="saisie" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16.5V20h3.5L18.4 9.1l-3.5-3.5z" fill="currentColor"/><path d="M19.9 7.6l-3.5-3.5 1.6-1.6a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4z" fill="currentColor" opacity="0.6"/></svg><span>Ma semaine</span></button>
+      <button class="nav-item" data-view="ma-fiche" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.7" fill="currentColor"/><path d="M4.6 20.2c0-4.1 3.3-6.6 7.4-6.6s7.4 2.5 7.4 6.6" fill="currentColor" opacity="0.55"/></svg><span>Ma fiche</span></button>
+      <button class="nav-item" data-view="conseillers" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="7.6" r="3.3" fill="currentColor"/><path d="M2.7 19.4c0-3.6 2.8-6 6.3-6s6.3 2.4 6.3 6z" fill="currentColor"/><circle cx="17.3" cy="8.4" r="2.3" fill="currentColor" opacity="0.55"/><path d="M15.6 13.7c2.7.2 4.9 2.3 4.9 5.7h-3.4" fill="currentColor" opacity="0.55"/></svg><span>Conseillers</span></button>
+      <button class="nav-item" data-view="equipe" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2.3" y="5" width="19.4" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.7" cy="11.7" r="2.1" fill="currentColor"/><path d="M5.3 15.8c0-1.7 1.5-2.8 3.4-2.8s3.4 1.1 3.4 2.8" fill="currentColor"/><line x1="14.3" y1="10" x2="18.3" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.3" y1="13" x2="18.3" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Équipe</span></button>
+      <button class="nav-item" data-view="classement" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Classement</span></button>
+      <button class="nav-item" data-view="statistiques" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Statistiques</span></button>
+      <button class="nav-item" data-view="alertes" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>Alertes</span></button>
+      <button class="nav-item" data-view="parametres" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="19" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><rect x="8" y="19" width="8" height="2" rx="1" fill="currentColor"/></svg><span>Paramètres</span></button>
     </nav>
     <div class="sidebar-user">
       <span class="email" id="sidebar-user-email"></span>
@@ -737,10 +738,10 @@
         <select class="topbar-select" id="filtre-mois" title="Filtrer par période (blocs 4-4-5)"><option value="">Tous les mois</option></select>
         <select class="topbar-select" id="filtre-anciennete" title="Filtrer par ancienneté">
           <option value="">Tous les conseillers</option>
-          <option value="nouveau">🌱 Nouveau</option>
-          <option value="progression">📈 En progression</option>
-          <option value="confirme">✅ Confirmé</option>
-          <option value="expert">🏅 Expert</option>
+          <option value="nouveau">Nouveau</option>
+          <option value="progression">En progression</option>
+          <option value="confirme">Confirmé</option>
+          <option value="expert">Expert</option>
         </select>
       </div>
     </div>
@@ -763,14 +764,14 @@
         <div class="section-label">Performance de l'équipe</div>
         <div class="tables-row">
           <div class="card">
-            <div class="card-title">🏆 Leaderboard Performance ID</div>
+            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Leaderboard Performance ID</span></div>
             <table>
               <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">Performance</th><th>Niveau</th></tr></thead>
               <tbody id="leaderboard-body"></tbody>
             </table>
           </div>
           <div class="card">
-            <div class="card-title">🎯 Objectifs vs Réalisé (équipe)</div>
+            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-3.3a5.7 5.7 0 1 0 0-11.4 5.7 5.7 0 0 0 0 11.4z" fill="currentColor"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg><span>Objectifs vs Réalisé (équipe)</span></div>
             <table>
               <thead><tr><th>Indicateur</th><th class="num">Objectif</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
               <tbody id="objectifs-body"></tbody>
@@ -862,7 +863,8 @@
         <div class="saisie-toolbar">
           <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--heading-2);cursor:pointer;">
             <input type="checkbox" id="compare-toggle" style="width:auto;">
-            🆚 Comparer avec un autre conseiller
+            <svg width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="currentColor"/></svg>
+            <span>Comparer avec un autre conseiller</span>
           </label>
           <select class="topbar-select" id="conseiller-compare-qui" style="display:none;"><option value="">-- choisir --</option></select>
         </div>
@@ -914,11 +916,11 @@
         <div class="section-label">Vue d'ensemble</div>
         <div class="watch-row">
           <div class="card">
-            <div class="card-title">🥧 Répartition des niveaux</div>
+            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10H12z" fill="currentColor"/><path d="M12 2a10 10 0 0 1 10 10H12z" fill="currentColor" opacity="0.45"/></svg><span>Répartition des niveaux</span></div>
             <div id="stats-niveaux"></div>
           </div>
           <div class="card">
-            <div class="card-title">🏆 Top recommandations</div>
+            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Top recommandations</span></div>
             <div id="stats-top-reco"></div>
           </div>
         </div>
@@ -949,7 +951,7 @@
         <hr class="rule">
 
         <div class="card">
-          <div class="card-title">⚖️ Pondération du Performance ID</div>
+          <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="19" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><rect x="8" y="19" width="8" height="2" rx="1" fill="currentColor"/></svg><span>Pondération du Performance ID</span></div>
 
           <div id="poids-fields">
             <div class="poids-row">
@@ -975,7 +977,7 @@
           </div>
 
           <div class="field-hint" id="poids-total"></div>
-          <div class="locked-hint" id="poids-locked-hint" style="display:none;">🔒 Lecture seule — seul l'administrateur peut modifier la pondération.</div>
+          <div class="locked-hint" id="poids-locked-hint" style="display:none;">Lecture seule — seul l'administrateur peut modifier la pondération.</div>
         </div>
 
         <div class="field-hint" style="margin-top:14px;">S'applique immédiatement au Performance ID de tout le monde (Dashboard, Classement, Conseillers, Statistiques, Alertes). Objectifs et seuils de niveaux restent alignés sur l'appli desktop pour l'instant.</div>
@@ -1109,19 +1111,19 @@ const LABELS_CHAMPS = {
 };
 
 const ACCOMPAGNEMENT_CATEGORIES = [
-  { valeur: 'Technique', emoji: '🔧' },
-  { valeur: 'Commercial', emoji: '💼' },
-  { valeur: 'Organisation', emoji: '🗂️' },
-  { valeur: 'Prospection', emoji: '🎯' },
-  { valeur: 'Produits', emoji: '📦' },
-  { valeur: 'Urgent', emoji: '🚨' },
+  { valeur: 'Technique', ic: 'wrench' },
+  { valeur: 'Commercial', ic: 'briefcase' },
+  { valeur: 'Organisation', ic: 'folder' },
+  { valeur: 'Prospection', ic: 'target' },
+  { valeur: 'Produits', ic: 'box' },
+  { valeur: 'Urgent', ic: 'priority' },
 ];
 const RESSENTI_OPTIONS = [
-  { valeur: 'Excellente', emoji: '😄' },
-  { valeur: 'Bonne', emoji: '🙂' },
-  { valeur: 'Moyenne', emoji: '😐' },
-  { valeur: 'Décevante', emoji: '🙁' },
-  { valeur: 'Très mauvaise', emoji: '😡' },
+  { valeur: 'Excellente', couleur: 'var(--success)' },
+  { valeur: 'Bonne', couleur: 'var(--gold)' },
+  { valeur: 'Moyenne', couleur: 'var(--warning)' },
+  { valeur: 'Décevante', couleur: '#E8815A' },
+  { valeur: 'Très mauvaise', couleur: 'var(--coral)' },
 ];
 const RESSENTI_SEUIL_ALERTE = new Set(['Très mauvaise', 'Décevante']);
 
@@ -1220,12 +1222,10 @@ function niveauDe(perf) {
   return { texte: 'Prioritaire', classe: 'pill-prioritaire' };
 }
 
+const COULEUR_NIVEAU = { 'pill-elite': 'var(--gold)', 'pill-excellent': 'var(--silver)', 'pill-bon': 'var(--success)', 'pill-accompagner': 'var(--warning)', 'pill-prioritaire': 'var(--coral)' };
 function niveauEmoji(perf) {
-  if (perf >= SEUILS.elite) return '🏆 Elite';
-  if (perf >= SEUILS.excellent) return '🥇 Excellent';
-  if (perf >= SEUILS.bon) return '🟢 Bon';
-  if (perf >= SEUILS.progression) return '🟠 À accompagner';
-  return '🔴 Prioritaire';
+  const n = niveauDe(perf);
+  return `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:${COULEUR_NIVEAU[n.classe]};display:inline-block;flex:0 0 auto;"></span>${n.texte}</span>`;
 }
 
 function agreger(rows) {
@@ -1274,18 +1274,18 @@ function agreger(rows) {
 const SEUIL_CONSEIL = 15;
 function conseilsPour(agg) {
   const conseils = [];
-  if (agg.score_rdv < SEUIL_CONSEIL) conseils.push('📅 Poser davantage de RDV pour se rapprocher de l’objectif.');
-  if (agg.score_r1r2 < SEUIL_CONSEIL) conseils.push('🔄 Améliorer le taux de transformation R1 → R2.');
-  if (agg.score_signature < SEUIL_CONSEIL) conseils.push('✍️ Travailler le taux de signature en R2.');
-  if (agg.score_concretisation < SEUIL_CONSEIL) conseils.push('💰 Optimiser le taux de concrétisation des commissions.');
-  if (agg.score_recommandations < SEUIL_CONSEIL) conseils.push('👥 Augmenter le nombre de recommandations.');
-  if (!conseils.length) conseils.push('🎉 Excellent travail sur tous les indicateurs, continuez ainsi !');
+  if (agg.score_rdv < SEUIL_CONSEIL) conseils.push({ ic: 'calendarcheck', texte: 'Poser davantage de RDV pour se rapprocher de l’objectif.' });
+  if (agg.score_r1r2 < SEUIL_CONSEIL) conseils.push({ ic: 'rotate', texte: 'Améliorer le taux de transformation R1 → R2.' });
+  if (agg.score_signature < SEUIL_CONSEIL) conseils.push({ ic: 'pen', texte: 'Travailler le taux de signature en R2.' });
+  if (agg.score_concretisation < SEUIL_CONSEIL) conseils.push({ ic: 'coins', texte: 'Optimiser le taux de concrétisation des commissions.' });
+  if (agg.score_recommandations < SEUIL_CONSEIL) conseils.push({ ic: 'users', texte: 'Augmenter le nombre de recommandations.' });
+  if (!conseils.length) conseils.push({ ic: 'checkcircle', texte: 'Excellent travail sur tous les indicateurs, continuez ainsi !' });
   return conseils;
 }
 
 const NIVEAUX_ANCIENNETE = { nouveau: 12, progression: 24, confirme: 36 };
 const LIBELLES_ANCIENNETE = {
-  nouveau: '🌱 Nouveau', progression: '📈 En progression', confirme: '✅ Confirmé', expert: '🏅 Expert',
+  nouveau: 'Nouveau', progression: 'En progression', confirme: 'Confirmé', expert: 'Expert',
 };
 
 function moisDepuis(dateStr) {
@@ -1367,8 +1367,28 @@ const ICONS = {
   eye: '<path d="M12 5.5c5 0 8.7 3.9 9.8 6a1 1 0 0 1 0 .9c-1.1 2.1-4.8 6.1-9.8 6.1S3.3 14.5 2.2 12.4a1 1 0 0 1 0-.9C3.3 9.4 7 5.5 12 5.5z" fill="currentColor" opacity="0.55"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>',
   percent: '<circle cx="6.5" cy="6.5" r="3" fill="currentColor"/><circle cx="17.5" cy="17.5" r="3" fill="currentColor"/><path d="M18 5.5L5.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   pen: '<path d="M4 16.5V20h3.5L18.4 9.1l-3.5-3.5z" fill="currentColor"/><path d="M19.9 7.6l-3.5-3.5 1.6-1.6a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4z" fill="currentColor" opacity="0.6"/>',
+  grid: '<rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="currentColor" opacity="0.55"/><rect x="3" y="13" width="8" height="8" rx="2" fill="currentColor" opacity="0.55"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/>',
+  idcard: '<rect x="2.3" y="5" width="19.4" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.7" cy="11.7" r="2.1" fill="currentColor"/><path d="M5.3 15.8c0-1.7 1.5-2.8 3.4-2.8s3.4 1.1 3.4 2.8" fill="currentColor"/><line x1="14.3" y1="10" x2="18.3" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.3" y1="13" x2="18.3" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  trophy: '<path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/>',
+  trending: '<path d="M3 17l6-6 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  alerttriangle: '<path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/>',
+  scale: '<line x1="12" y1="3" x2="12" y2="19" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><rect x="8" y="19" width="8" height="2" rx="1" fill="currentColor"/>',
+  pie: '<path d="M12 2a10 10 0 1 0 10 10H12z" fill="currentColor"/><path d="M12 2a10 10 0 0 1 10 10H12z" fill="currentColor" opacity="0.45"/>',
+  checkcircle: '<circle cx="12" cy="12" r="9.3" fill="currentColor" opacity="0.14"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>',
+  priority: '<path d="M5 3v18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 4h11l-2.4 3.4L16 11H5z" fill="currentColor"/>',
+  sprout: '<path d="M12 21V11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 11C12 6.6 8.1 5.1 4.6 5.6 4.8 9.4 7.6 11.5 12 11z" fill="currentColor"/><path d="M12 8.2C12 5 15.1 3.9 17.8 4.2 17.5 7 15.2 8.5 12 8.2z" fill="currentColor" opacity="0.6"/>',
+  medal: '<circle cx="12" cy="14.3" r="6.2" fill="currentColor"/><circle cx="12" cy="14.3" r="3.4" fill="var(--cream)" opacity="0.4"/><path d="M9.2 3h5.6l-1.9 7.6h-1.8z" fill="currentColor" opacity="0.7"/>',
+  wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 4.9L3 17.5 5.5 20l6.3-6.3a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2z" fill="currentColor"/>',
+  briefcase: '<rect x="3" y="8" width="18" height="11" rx="2" fill="currentColor"/><path d="M8.5 8V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="8" width="18" height="4" fill="currentColor" opacity="0.55"/>',
+  folder: '<path d="M3 6.5a1.5 1.5 0 0 1 1.5-1.5h4.4l2 2.2H19.5A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" fill="currentColor"/>',
+  box: '<path d="M12 2.5l9 4.7v9.6l-9 4.7-9-4.7V7.2z" fill="currentColor" opacity="0.85"/><path d="M12 2.5l9 4.7-9 4.6-9-4.6z" fill="currentColor"/>',
+  usercheck: '<circle cx="12" cy="8.5" r="3.7" fill="currentColor"/><path d="M4.6 20.2c0-4.1 3.3-6.6 7.4-6.6s7.4 2.5 7.4 6.6" fill="currentColor" opacity="0.55"/>',
+  barchart: '<rect x="4" y="12" width="4" height="8" rx="1" fill="currentColor" opacity="0.55"/><rect x="10" y="7" width="4" height="13" rx="1" fill="currentColor"/><rect x="16" y="3" width="4" height="17" rx="1" fill="currentColor" opacity="0.8"/>',
+  compare: '<rect x="3" y="4" width="8" height="16" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="currentColor"/>',
 };
 function icon(name) { return `<svg viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
+/** Icône fine en ligne, dimensionnée sur le texte environnant (couleur héritée via currentColor) — pour remplacer les emoji dans les titres, la nav, les alertes... */
+function ic(name, size = 14) { return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="vertical-align:-2px;flex:0 0 auto;">${ICONS[name]}</svg>`; }
 
 /** statut : 'warn'/'bad' pour repasser la valeur en orange/rouge selon les seuils réels de l'indicateur — omis (ou 'ok'), la valeur reste dorée comme avant. */
 function kpiCard({ ic, title, value, variation, tone, statut }) {
@@ -1500,9 +1520,9 @@ function renderDashboard(rows) {
 
   const cards = [
     { ic: 'heart', title: 'Santé du Cabinet', value: classement.length ? `${(sum(classement, 'performance') / nbConseillers).toFixed(1)} / 100` : '— / 100', variation: classement.length ? `Niveau : ${niveauEmoji(sum(classement, 'performance') / nbConseillers)}` : 'Aucune donnée saisie' },
-    { ic: 'users', title: 'Moyenne de recommandations', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: '🎯 Objectif : 30' },
+    { ic: 'users', title: 'Moyenne de recommandations', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: 'Objectif : 30' },
     { ic: 'target', title: 'Taux de concrétisation', value: `${(equipe.taux_concretisation * 100).toFixed(1)} %`, variation: `${euro(equipe.commissions)} / ${euro(equipe.potentiel)}` },
-    { ic: 'rotate', title: 'Transformation R1 → R2', value: `${(equipe.taux_r1_r2 * 100).toFixed(1)} %`, variation: `🎯 Objectif : ${OBJECTIFS.r1_r2 * 100} %` },
+    { ic: 'rotate', title: 'Transformation R1 → R2', value: `${(equipe.taux_r1_r2 * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.r1_r2 * 100} %` },
     { ic: 'sack', title: 'Potentiel', value: euro(equipe.potentiel), variation: 'Cumulé sur les semaines saisies' },
     { ic: 'coins', title: 'Commissions réalisées', value: euro(equipe.commissions), variation: 'Cumulé sur les semaines saisies' },
     { ic: 'video', title: 'Taux de RDV Visio', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %` },
@@ -1515,7 +1535,7 @@ function renderDashboard(rows) {
     <div class="watch-row-item">
       <div><div class="watch-name">${c.conseiller}</div><div class="watch-sub">${c.performance.toFixed(1)} / 100</div></div>
       <span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span>
-    </div>`).join('') || `<div class="empty-state">🎉 Personne en dessous du seuil actuellement.</div>`;
+    </div>`).join('') || `<div class="empty-state">Personne en dessous du seuil actuellement.</div>`;
 
   const progression = meilleureProgression(rows);
   const progCard = progression
@@ -1523,7 +1543,7 @@ function renderDashboard(rows) {
     : kpiCard({ ic: 'star', title: 'Plus forte progression', value: '—', variation: 'Pas encore assez d’historique (2 semaines mini).' });
 
   document.getElementById('watch-row').innerHTML = `
-    <div class="card"><div class="card-title">🆘 Conseillers à accompagner</div><div>${watchRows}</div></div>
+    <div class="card"><div class="card-title">${ic('priority', 15)}<span>Conseillers à accompagner</span></div><div>${watchRows}</div></div>
     ${progCard}`;
 
   document.getElementById('leaderboard-body').innerHTML = classement.length
@@ -1800,28 +1820,28 @@ function renderConseillers(rows) {
     </div>
 
     <div class="card">
-      <div class="card-title">📊 Indicateurs clés du pipeline</div>
+      <div class="card-title">${ic('barchart', 15)}<span>Indicateurs clés du pipeline</span></div>
       <div class="pchain">
         ${etapesPipeline.map((e, i) => `${pchainStageHTML(e)}${i < etapesPipeline.length - 1 ? '<div class="pchain-arrow">→</div>' : ''}`).join('')}
       </div>
     </div>
 
-    <div class="card-title" style="margin-top:18px;">💼 Indicateurs personnels</div>
+    <div class="card-title" style="margin-top:18px;">${ic('briefcase', 15)}<span>Indicateurs personnels</span></div>
     <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
       ${kpisIndividuels.join('')}
     </div>
 
-    <div class="card-title" style="margin-top:18px;">🎯 Objectifs vs Réalisé</div>
+    <div class="card-title" style="margin-top:18px;">${ic('target', 15)}<span>Objectifs vs Réalisé</span></div>
     <div class="card"><table>
       <thead><tr><th>Indicateur</th><th class="num">Objectif</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
       <tbody>${lignesObjectifsInd.map(ligneObjectifHTML).join('')}</tbody>
     </table></div>
 
-    <div class="card-title" style="margin-top:18px;">📈 Évolution de la Performance ID</div>
+    <div class="card-title" style="margin-top:18px;">${ic('trending', 15)}<span>Évolution de la Performance ID</span></div>
     <div class="card">${svgEvolution(historique)}</div>
 
-    <div class="card-title" style="margin-top:18px;">🎯 Pour progresser</div>
-    <div class="conseils-box">${conseilsPour(agg).map(c => `<div>${c}</div>`).join('')}</div>
+    <div class="card-title" style="margin-top:18px;">${ic('target', 15)}<span>Pour progresser</span></div>
+    <div class="conseils-box">${conseilsPour(agg).map(c => `<div style="display:flex;align-items:center;gap:8px;">${ic(c.ic, 15)}<span>${c.texte}</span></div>`).join('')}</div>
   `;
 }
 
@@ -1875,7 +1895,7 @@ function renderComparaison(classement) {
   ].join('');
 
   zone.innerHTML = `
-    <div class="card-title">🆚 Comparaison</div>
+    <div class="card-title">${ic('compare', 15)}<span>Comparaison</span></div>
     <div class="card"><table>
       <thead><tr><th>Indicateur</th><th class="num">${a.conseiller}</th><th class="num">${b.conseiller}</th></tr></thead>
       <tbody>
@@ -2048,14 +2068,14 @@ function renderStatistiques(rows) {
   ];
 
   document.getElementById('stats-pipeline').innerHTML = `
-    <div class="card-title">📊 Indicateurs clés (équipe)</div>
+    <div class="card-title">${ic('barchart', 15)}<span>Indicateurs clés (équipe)</span></div>
     <div class="pchain">
       ${etapes.map((e, i) => `${pchainStageHTML(e)}${i < etapes.length - 1 ? '<div class="pchain-arrow">→</div>' : ''}`).join('')}
     </div>`;
 
   const parMois = tauxParMois(rows);
   document.getElementById('stats-evolution').innerHTML = `
-    <div class="card-title">📈 Évolution des taux clés (équipe)</div>
+    <div class="card-title">${ic('trending', 15)}<span>Évolution des taux clés (équipe)</span></div>
     ${multiLineChartSVG(parMois.map(m => m.label), [
       { label: 'Taux Visio', couleur: 'var(--heading)', valeurs: parMois.map(m => m.visio * 100) },
       { label: 'Taux R1 → R2', couleur: 'var(--success)', valeurs: parMois.map(m => m.r1_r2 * 100) },
@@ -2093,7 +2113,7 @@ function renderStatistiques(rows) {
   const statutClassePerf = statutDepuisPerformance(moyennePerformance);
   const claseValeurPerf = statutClassePerf === 'warn' ? ' warn' : statutClassePerf === 'bad' ? ' bad' : '';
   document.getElementById('stats-indicateur-global').innerHTML = classement.length ? `
-    <div class="card-title">🎯 Indicateur global de Performance ID</div>
+    <div class="card-title">${ic('target', 15)}<span>Indicateur global de Performance ID</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:20px;">
       <div>
         <div class="kpi-value${claseValeurPerf}" style="font-size:28px;">${moyennePerformance.toFixed(1)} / 100</div>
@@ -2120,13 +2140,13 @@ function renderAlertes(rows) {
   const classement = classementDe(rows);
 
   const categories = [
-    { titre: '🔴 Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => `${c.conseiller} — ${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})`) },
-    { titre: '🔄 Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${c.conseiller} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (objectif ${OBJECTIFS.r1_r2 * 100} %)`) },
-    { titre: '✍️ Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${c.conseiller} — ${(c.taux_signature * 100).toFixed(1)} % (objectif ${OBJECTIFS.signature * 100} %)`) },
-    { titre: '💰 Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${c.conseiller} — ${(c.taux_concretisation * 100).toFixed(1)} % (objectif ${OBJECTIFS.concretisation * 100} %)`) },
-    { titre: '👥 Recommandations', items: classement.filter(c => c.recommandations < OBJECTIFS.recommandations).map(c => `${c.conseiller} — ${c.recommandations} (objectif ${OBJECTIFS.recommandations})`) },
-    { titre: '📅 RDV posés', items: classement.filter(c => c.rdv_poses < OBJECTIFS.rdv).map(c => `${c.conseiller} — ${c.rdv_poses} (objectif ${OBJECTIFS.rdv})`) },
-    { titre: '📉 Absence de progression (semaine sur semaine)', items: (() => {
+    { ic: 'alerttriangle', titre: 'Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => `${c.conseiller} — ${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})`) },
+    { ic: 'rotate', titre: 'Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${c.conseiller} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (objectif ${OBJECTIFS.r1_r2 * 100} %)`) },
+    { ic: 'pen', titre: 'Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${c.conseiller} — ${(c.taux_signature * 100).toFixed(1)} % (objectif ${OBJECTIFS.signature * 100} %)`) },
+    { ic: 'coins', titre: 'Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${c.conseiller} — ${(c.taux_concretisation * 100).toFixed(1)} % (objectif ${OBJECTIFS.concretisation * 100} %)`) },
+    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => c.recommandations < OBJECTIFS.recommandations).map(c => `${c.conseiller} — ${c.recommandations} (objectif ${OBJECTIFS.recommandations})`) },
+    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => c.rdv_poses < OBJECTIFS.rdv).map(c => `${c.conseiller} — ${c.rdv_poses} (objectif ${OBJECTIFS.rdv})`) },
+    { ic: 'trending', titre: 'Absence de progression (semaine sur semaine)', items: (() => {
         const out = [];
         for (const c of classement) {
           const hist = historiqueDe(rows, c.conseiller);
@@ -2136,18 +2156,18 @@ function renderAlertes(rows) {
         }
         return out;
       })() },
-    { titre: '🤝 Besoin d\'accompagnement déclaré', items: (() => {
+    { ic: 'usercheck', titre: 'Besoin d\'accompagnement déclaré', items: (() => {
         const out = [];
         for (const c of classement) {
           const derniere = derniereLigneDe(rows, c.conseiller);
           if (derniere && derniere.accompagnement.length) {
             const urgent = derniere.accompagnement.includes('Urgent');
-            out.push(`${urgent ? '🆘 ' : ''}${c.conseiller} — ${derniere.accompagnement.join(', ')}`);
+            out.push(`${urgent ? ic('priority', 12) + ' ' : ''}${c.conseiller} — ${derniere.accompagnement.join(', ')}`);
           }
         }
         return out;
       })() },
-    { titre: '😔 Ressenti bas sur la semaine', items: (() => {
+    { ic: 'usercheck', titre: 'Ressenti bas sur la semaine', items: (() => {
         const out = [];
         for (const c of classement) {
           const derniere = derniereLigneDe(rows, c.conseiller);
@@ -2161,15 +2181,15 @@ function renderAlertes(rows) {
 
   const total = categories.reduce((acc, c) => acc + c.items.length, 0);
   document.getElementById('alertes-sub').textContent = total === 0
-    ? '🎉 Aucune alerte active — tout va bien.'
+    ? 'Aucune alerte active — tout va bien.'
     : `${total} alerte(s) active(s) sur l'équipe, détectées automatiquement par rapport aux objectifs.`;
 
   document.getElementById('alertes-body').innerHTML = categories.map(cat => `
     <div class="card alerte-card ${cat.items.length ? 'has-items' : ''}" style="margin-bottom:14px;">
-      <div class="card-title">${cat.titre} — ${cat.items.length} alerte(s)</div>
+      <div class="card-title">${ic(cat.ic, 15)}<span>${cat.titre} — ${cat.items.length} alerte(s)</span></div>
       ${cat.items.length
         ? cat.items.map(t => `<div class="watch-sub" style="padding:4px 0;">${t}</div>`).join('')
-        : `<div class="watch-sub" style="color:var(--success);">✅ Aucune alerte sur cet indicateur.</div>`}
+        : `<div class="watch-sub" style="color:var(--success);">${ic('checkcircle', 13)} Aucune alerte sur cet indicateur.</div>`}
     </div>`).join('');
 }
 
@@ -2205,11 +2225,11 @@ function construireLigneHTML(docId, data) {
   const accompagnementSet = new Set(data.accompagnement || []);
 
   const accompagnementHTML = ACCOMPAGNEMENT_CATEGORIES.map(cat => `
-    <label class="fiche-checkbox"><input type="checkbox" data-field="accompagnement" value="${cat.valeur}" ${accompagnementSet.has(cat.valeur) ? 'checked' : ''}><span>${cat.emoji} ${cat.valeur}</span></label>
+    <label class="fiche-checkbox"><input type="checkbox" data-field="accompagnement" value="${cat.valeur}" ${accompagnementSet.has(cat.valeur) ? 'checked' : ''}><span>${ic(cat.ic, 13)} ${cat.valeur}</span></label>
   `).join('');
 
   const ressentiHTML = RESSENTI_OPTIONS.map(r => `
-    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${docId}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span>${r.emoji} ${r.valeur}</span></label>
+    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${docId}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.couleur};margin-right:2px;"></span> ${r.valeur}</span></label>
   `).join('');
 
   return `<tr data-doc-id="${docId}" data-owner-email="${data.ownerEmail || ''}">
