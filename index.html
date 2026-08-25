@@ -769,10 +769,10 @@
         <select class="topbar-select" id="filtre-mois" title="Filtrer par période (blocs 4-4-5)"><option value="">Tous les mois</option></select>
         <select class="topbar-select" id="filtre-anciennete" title="Filtrer par ancienneté">
           <option value="">Tous les conseillers</option>
-          <option value="nouveau">Nouveau</option>
-          <option value="progression">En progression</option>
-          <option value="confirme">Confirmé</option>
-          <option value="expert">Expert</option>
+          <option value="nouveau">🌱 Nouveau</option>
+          <option value="progression">📈 En progression</option>
+          <option value="confirme">✅ Confirmé</option>
+          <option value="expert">🏅 Expert</option>
         </select>
       </div>
     </div>
@@ -1321,7 +1321,7 @@ function conseilsPour(agg) {
 
 const NIVEAUX_ANCIENNETE = { nouveau: 12, progression: 24, confirme: 36 };
 const LIBELLES_ANCIENNETE = {
-  nouveau: 'Nouveau', progression: 'En progression', confirme: 'Confirmé', expert: 'Expert',
+  nouveau: '🌱 Nouveau', progression: '📈 En progression', confirme: '✅ Confirmé', expert: '🏅 Expert',
 };
 
 function moisDepuis(dateStr) {
