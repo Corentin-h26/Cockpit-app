@@ -798,6 +798,7 @@
                   <th>R1</th>
                   <th>R2</th>
                   <th>Potentiel €</th>
+                  <th>Suivis</th>
                   <th>RDV vus</th>
                   <th>Visio vues</th>
                   <th>R1 vus</th>
@@ -806,6 +807,7 @@
                   <th>R2 signés</th>
                   <th>Recos</th>
                   <th>Commissions €</th>
+                  <th>Suivi fait</th>
                   <th></th>
                 </tr>
               </thead>
@@ -815,7 +817,7 @@
         </div>
 
         <div class="field-hint">
-          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2 = prévu du jeudi. RDV vus → Commissions = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster.
+          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Potentiel/Suivis = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Suivi fait = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster.
         </div>
       </div>
 
@@ -1082,12 +1084,12 @@ function lirePoids() {
   return POIDS;
 }
 
-const FIELDS = ['semaine', 'conseiller', 'rdv_poses', 'visio', 'r1', 'r2', 'potentiel', 'rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'recommandations', 'commissions'];
+const FIELDS = ['semaine', 'conseiller', 'rdv_poses', 'visio', 'r1', 'r2', 'potentiel', 'suivis', 'rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'recommandations', 'commissions', 'suivis_faits'];
 const NUM_FIELDS = FIELDS.slice(2);
 const LABELS_CHAMPS = {
-  semaine: 'Semaine', conseiller: 'Conseiller', rdv_poses: 'RDV posés', visio: 'Visio', r1: 'R1', r2: 'R2', potentiel: 'Potentiel €',
+  semaine: 'Semaine', conseiller: 'Conseiller', rdv_poses: 'RDV posés', visio: 'Visio', r1: 'R1', r2: 'R2', potentiel: 'Potentiel €', suivis: 'Suivis',
   rdv_vus: 'RDV vus', visio_vues: 'Visio vues', r1_vus: 'R1 vus', r2_vus: 'R2 vus',
-  r1_en_r2: 'R1→R2', r2_signes: 'R2 signés', recommandations: 'Recos', commissions: 'Commissions €',
+  r1_en_r2: 'R1→R2', r2_signes: 'R2 signés', recommandations: 'Recos', commissions: 'Commissions €', suivis_faits: 'Suivi fait',
 };
 
 const ACCOMPAGNEMENT_CATEGORIES = [
@@ -1909,8 +1911,8 @@ function celluleChampValeur(f, valeur) {
   return `<td data-label="${label}"><input type="number" inputmode="decimal" data-field="${f}" value="${valeur ?? 0}"></td>`;
 }
 
-const CHAMPS_PREVU = ['rdv_poses', 'visio', 'r1', 'r2', 'potentiel'];
-const CHAMPS_REALISE = ['rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'recommandations', 'commissions'];
+const CHAMPS_PREVU = ['rdv_poses', 'visio', 'r1', 'r2', 'potentiel', 'suivis'];
+const CHAMPS_REALISE = ['rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'recommandations', 'commissions', 'suivis_faits'];
 
 /** Construit le <tr> d'une ligne "semaine" à partir d'un document Firestore — utilisé à la fois pour reconstruire depuis un snapshot et pour l'insertion optimiste juste après création. */
 function construireLigneHTML(docId, data) {
@@ -1952,8 +1954,8 @@ function ligneVideDefaut(conseillerPreRempli, semainePreRemplie) {
   return {
     semaine: semainePreRemplie ?? jeudiCourant(),
     conseiller: conseillerPreRempli || '',
-    rdv_poses: 0, visio: 0, r1: 0, r2: 0, potentiel: 0,
-    rdv_vus: 0, visio_vues: 0, r1_vus: 0, r2_vus: 0, r1_en_r2: 0, r2_signes: 0, recommandations: 0, commissions: 0,
+    rdv_poses: 0, visio: 0, r1: 0, r2: 0, potentiel: 0, suivis: 0,
+    rdv_vus: 0, visio_vues: 0, r1_vus: 0, r2_vus: 0, r1_en_r2: 0, r2_signes: 0, recommandations: 0, commissions: 0, suivis_faits: 0,
     ressenti: null, accompagnement: [],
     ownerEmail: currentUser ? currentUser.email : '',
   };
