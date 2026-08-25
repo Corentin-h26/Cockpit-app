@@ -1123,13 +1123,14 @@ const ACCOMPAGNEMENT_CATEGORIES = [
   { valeur: 'Prospection', ic: 'target' },
   { valeur: 'Produits', ic: 'box' },
   { valeur: 'Urgent', ic: 'priority' },
+  { valeur: 'Pas de besoin', ic: 'checkcircle' },
 ];
 const RESSENTI_OPTIONS = [
-  { valeur: 'Excellente', couleur: 'var(--success)' },
-  { valeur: 'Bonne', couleur: 'var(--gold)' },
-  { valeur: 'Moyenne', couleur: 'var(--warning)' },
-  { valeur: 'Décevante', couleur: '#E8815A' },
-  { valeur: 'Très mauvaise', couleur: 'var(--coral)' },
+  { valeur: 'Excellente', emoji: '😄' },
+  { valeur: 'Bonne', emoji: '🙂' },
+  { valeur: 'Moyenne', emoji: '😐' },
+  { valeur: 'Décevante', emoji: '🙁' },
+  { valeur: 'Très mauvaise', emoji: '😡' },
 ];
 const RESSENTI_SEUIL_ALERTE = new Set(['Très mauvaise', 'Décevante']);
 
@@ -2236,7 +2237,7 @@ function construireLigneHTML(docId, data) {
   `).join('');
 
   const ressentiHTML = RESSENTI_OPTIONS.map(r => `
-    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${docId}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.couleur};margin-right:2px;"></span> ${r.valeur}</span></label>
+    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${docId}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span>${r.emoji} ${r.valeur}</span></label>
   `).join('');
 
   return `<tr data-doc-id="${docId}" data-owner-email="${data.ownerEmail || ''}">
