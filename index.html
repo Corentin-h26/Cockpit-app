@@ -792,6 +792,12 @@
         <div class="section-label">À surveiller</div>
         <div class="watch-row" id="watch-row"></div>
 
+        <div class="section-label">Suivi des saisies</div>
+        <div class="card" id="card-suivi-saisie">
+          <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>N'ont pas rempli leur semaine</span><span id="suivi-saisie-semaine" style="font-weight:400;color:var(--heading-2);font-size:12px;margin-left:auto;"></span></div>
+          <div id="suivi-saisie-body"></div>
+        </div>
+
         <div class="section-label">Performance de l'équipe</div>
         <div class="tables-row">
           <div class="card">
@@ -1530,7 +1536,7 @@ function renderAll() {
   const toutesLignes = readRows();
   populerFiltresSemaineEtMois(toutesLignes);
   const rows = appliquerFiltres(toutesLignes);
-  renderDashboard(rows);
+  renderDashboard(rows, toutesLignes);
   renderClassement(rows);
   renderConseillers(rows);
   renderEquipe();
@@ -1550,7 +1556,7 @@ function renderParametres() {
   label.style.fontWeight = '600';
 }
 
-function renderDashboard(rows) {
+function renderDashboard(rows, toutesLignes) {
   const equipe = agreger(rows);
   const classement = classementDe(rows);
   const nbConseillers = classement.length || 1;
@@ -1583,6 +1589,28 @@ function renderDashboard(rows) {
   document.getElementById('watch-row').innerHTML = `
     <div class="card"><div class="card-title">${ic('priority', 15)}<span>Conseillers à accompagner</span></div><div>${watchRows}</div></div>
     ${progCard}`;
+
+  // Roster vs saisies de la semaine commerciale en cours (jeudiCourant) —
+  // qui n'a pas encore de ligne "Ma semaine" pour cette semaine.
+  const roster = readRoster();
+  const semaineCourante = jeudiCourant();
+  const remplisCetteSemaine = new Set(toutesLignes.filter(r => r.semaine === semaineCourante).map(r => r.conseiller));
+  const nonRemplis = roster.map(r => r.conseiller).filter(nom => !remplisCetteSemaine.has(nom));
+  const [anSC, moSC, jrSC] = semaineCourante.split('-');
+  const suiviSemaineLabel = document.getElementById('suivi-saisie-semaine');
+  if (suiviSemaineLabel) suiviSemaineLabel.textContent = `semaine du ${jrSC}/${moSC}/${anSC}`;
+  const suiviSaisieBody = document.getElementById('suivi-saisie-body');
+  if (suiviSaisieBody) {
+    suiviSaisieBody.innerHTML = !roster.length
+      ? `<div class="empty-state">Aucun conseiller dans le roster — à renseigner dans l'onglet Équipe.</div>`
+      : nonRemplis.length
+        ? nonRemplis.map(nom => `
+          <div class="watch-row-item">
+            <div class="watch-name">${nom}</div>
+            <span class="pill pill-prioritaire">Pas encore rempli</span>
+          </div>`).join('')
+        : `<div class="empty-state">${ic('checkcircle', 13)} Toute l'équipe a rempli sa semaine.</div>`;
+  }
 
   document.getElementById('leaderboard-body').innerHTML = classement.length
     ? classement.map((c, i) => `
