@@ -335,6 +335,8 @@
   .rank { color: var(--heading-2); font-variant-numeric: tabular-nums; }
 
   .tables-row { display: grid; grid-template-columns: 9fr 11fr; gap: 16px; }
+  .leaderboard-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .leaderboard-split table:first-child { border-right: 1px solid var(--border); padding-right: 16px; }
 
   .bar-cell { display: flex; align-items: center; gap: 8px; }
   .bar-track { flex: 1; height: 6px; border-radius: 3px; background: rgba(21, 42, 73, 0.12); overflow: hidden; }
@@ -672,6 +674,8 @@
   @media (max-width: 1000px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .watch-row, .tables-row { grid-template-columns: 1fr; }
+    .leaderboard-split { grid-template-columns: 1fr; gap: 12px 0; }
+    .leaderboard-split table:first-child { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
     .conseiller-layout { grid-template-columns: 1fr; }
     .topbar { flex-direction: column; align-items: flex-start; }
 
@@ -802,10 +806,16 @@
         <div class="tables-row">
           <div class="card">
             <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Leaderboard Performance ID</span></div>
-            <table>
-              <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">Performance</th><th>Niveau</th></tr></thead>
-              <tbody id="leaderboard-body"></tbody>
-            </table>
+            <div class="leaderboard-split">
+              <table>
+                <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">Perf.</th><th>Niveau</th></tr></thead>
+                <tbody id="leaderboard-body-1"></tbody>
+              </table>
+              <table>
+                <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">Perf.</th><th>Niveau</th></tr></thead>
+                <tbody id="leaderboard-body-2"></tbody>
+              </table>
+            </div>
           </div>
           <div class="card">
             <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-3.3a5.7 5.7 0 1 0 0-11.4 5.7 5.7 0 0 0 0 11.4z" fill="currentColor"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg><span>Objectifs vs Réalisé (équipe)</span></div>
@@ -1612,15 +1622,29 @@ function renderDashboard(rows, toutesLignes) {
         : `<div class="empty-state">${ic('checkcircle', 13)} Toute l'équipe a rempli sa semaine.</div>`;
   }
 
-  document.getElementById('leaderboard-body').innerHTML = classement.length
-    ? classement.map((c, i) => `
-      <tr>
-        <td class="num rank">${i + 1}</td>
-        <td>${c.conseiller}</td>
-        <td class="num">${c.performance.toFixed(1)}</td>
-        <td><span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span></td>
-      </tr>`).join('')
-    : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant — remplis "Ma semaine".</td></tr>`;
+  // Top 10 du Leaderboard Dashboard, réparti en 2 colonnes de 5 (classement complet = onglet "Classement").
+  const ligneLeaderboard = (c, rang) => `
+    <tr>
+      <td class="num rank">${rang}</td>
+      <td>${c.conseiller}</td>
+      <td class="num">${c.performance.toFixed(1)}</td>
+      <td><span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span></td>
+    </tr>`;
+  const top10 = classement.slice(0, 10);
+  const lbGauche = top10.slice(0, 5);
+  const lbDroite = top10.slice(5, 10);
+  const lbBody1 = document.getElementById('leaderboard-body-1');
+  const lbBody2 = document.getElementById('leaderboard-body-2');
+  if (lbBody1) {
+    lbBody1.innerHTML = lbGauche.length
+      ? lbGauche.map((c, i) => ligneLeaderboard(c, i + 1)).join('')
+      : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant — remplis "Ma semaine".</td></tr>`;
+  }
+  if (lbBody2) {
+    lbBody2.innerHTML = lbDroite.map((c, i) => ligneLeaderboard(c, i + 6)).join('');
+    const lbTable2 = lbBody2.closest('table');
+    if (lbTable2) lbTable2.style.display = lbDroite.length ? '' : 'none';
+  }
 
   const objectifsLignes = [
     { label: 'RDV posés (moy. hebdo)', realise: equipe.rdv_poses / nbSemaines, objectif: OBJECTIFS.rdv * nbConseillers, fmt: 'entier' },
