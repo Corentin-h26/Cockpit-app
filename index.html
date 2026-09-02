@@ -1002,23 +1002,27 @@
           <div id="poids-fields">
             <div class="poids-row">
               <label>RDV posés</label>
-              <div class="poids-input-wrap"><input type="number" data-field="poids_rdv" value="20" min="0" max="100" step="1"><span>pts</span></div>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_rdv" value="17" min="0" max="100" step="1"><span>pts</span></div>
             </div>
             <div class="poids-row">
               <label>Transformation R1 → R2</label>
-              <div class="poids-input-wrap"><input type="number" data-field="poids_r1_r2" value="20" min="0" max="100" step="1"><span>pts</span></div>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_r1_r2" value="17" min="0" max="100" step="1"><span>pts</span></div>
             </div>
             <div class="poids-row">
               <label>Taux de signature</label>
-              <div class="poids-input-wrap"><input type="number" data-field="poids_signature" value="20" min="0" max="100" step="1"><span>pts</span></div>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_signature" value="17" min="0" max="100" step="1"><span>pts</span></div>
             </div>
             <div class="poids-row">
               <label>Concrétisation</label>
-              <div class="poids-input-wrap"><input type="number" data-field="poids_concretisation" value="20" min="0" max="100" step="1"><span>pts</span></div>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_concretisation" value="17" min="0" max="100" step="1"><span>pts</span></div>
             </div>
             <div class="poids-row">
               <label>Recommandations</label>
-              <div class="poids-input-wrap"><input type="number" data-field="poids_recommandations" value="20" min="0" max="100" step="1"><span>pts</span></div>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_recommandations" value="16" min="0" max="100" step="1"><span>pts</span></div>
+            </div>
+            <div class="poids-row">
+              <label>Taux de casse (RDV non tenus)</label>
+              <div class="poids-input-wrap"><input type="number" data-field="poids_casse" value="16" min="0" max="100" step="1"><span>pts</span></div>
             </div>
           </div>
 
@@ -1133,11 +1137,11 @@ document.getElementById('btn-logout').addEventListener('click', () => auth.signO
    core/score_engine.py et core/stats_engine.py de Cockpit V5.
    ========================================================= */
 
-const OBJECTIFS = { rdv: 18, recommandations: 30, r1_r2: 0.50, signature: 0.25, concretisation: 0.25, visio_max: 0.30 };
+const OBJECTIFS = { rdv: 18, recommandations: 30, r1_r2: 0.50, signature: 0.25, concretisation: 0.25, visio_max: 0.30, casse_max: 0.30 };
 const SEUILS = { elite: 90, excellent: 80, bon: 70, progression: 60 };
 
-let POIDS = { rdv: 20, r1_r2: 20, signature: 20, concretisation: 20, recommandations: 20 };
-const POIDS_CLES = ['rdv', 'r1_r2', 'signature', 'concretisation', 'recommandations'];
+let POIDS = { rdv: 17, r1_r2: 17, signature: 17, concretisation: 17, recommandations: 16, casse: 16 };
+const POIDS_CLES = ['rdv', 'r1_r2', 'signature', 'concretisation', 'recommandations', 'casse'];
 
 function lirePoids() {
   for (const cle of POIDS_CLES) {
@@ -1211,6 +1215,17 @@ function sum(rows, field) {
 function scorePoint(valeur, objectif, points = 20) {
   if (!objectif) return 0;
   return Math.min(points, (valeur / objectif) * points);
+}
+
+/**
+ * Score pour un indicateur "plafond" (rester EN DESSOUS de la valeur
+ * est ce qui est bon, ex. taux de casse) : score maximal tant que
+ * valeur <= plafond, puis dégrade en 1/valeur au-delà — symétrique
+ * de scorePoint() qui dégrade en valeur/objectif.
+ */
+function scorePointPlafond(valeur, plafond, points = 20) {
+  if (valeur <= 0) return points;
+  return Math.min(points, (plafond / valeur) * points);
 }
 
 function statutAtteinte(valeur, objectif, plafond = false, seuilBon = 100, seuilMoyen = 70) {
@@ -1311,25 +1326,32 @@ function agreger(rows) {
   const score_signature = scorePoint(taux_signature, OBJECTIFS.signature, POIDS.signature);
   const score_concretisation = scorePoint(taux_concretisation, OBJECTIFS.concretisation, POIDS.concretisation);
   const score_recommandations = scorePoint(recommandations, OBJECTIFS.recommandations, POIDS.recommandations);
+  const score_casse = scorePointPlafond(taux_casse, OBJECTIFS.casse_max, POIDS.casse);
 
-  const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations;
+  const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations + score_casse;
 
   return {
     rdv_poses, rdv_vus, visio, r1, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis, suivis_faits,
     taux_r1_r2, taux_signature, taux_concretisation, taux_visio, taux_rdv_vu, taux_casse, taux_suivi,
-    score_rdv, score_r1r2, score_signature, score_concretisation, score_recommandations,
+    score_rdv, score_r1r2, score_signature, score_concretisation, score_recommandations, score_casse,
     performance: Math.round(performance * 10) / 10,
   };
 }
 
-const SEUIL_CONSEIL = 15;
+/**
+ * Conseils personnalisés. Seuil en ratio d'atteinte (15/20 à
+ * l'origine) plutôt qu'absolu : les poids ne sont plus tous égaux
+ * depuis l'ajout de la casse.
+ */
+const SEUIL_CONSEIL_RATIO = 0.75;
 function conseilsPour(agg) {
   const conseils = [];
-  if (agg.score_rdv < SEUIL_CONSEIL) conseils.push({ ic: 'calendarcheck', texte: 'Poser davantage de RDV pour se rapprocher de l’objectif.' });
-  if (agg.score_r1r2 < SEUIL_CONSEIL) conseils.push({ ic: 'rotate', texte: 'Améliorer le taux de transformation R1 → R2.' });
-  if (agg.score_signature < SEUIL_CONSEIL) conseils.push({ ic: 'pen', texte: 'Travailler le taux de signature en R2.' });
-  if (agg.score_concretisation < SEUIL_CONSEIL) conseils.push({ ic: 'coins', texte: 'Optimiser le taux de concrétisation des commissions.' });
+  if (agg.score_rdv < POIDS.rdv * SEUIL_CONSEIL_RATIO) conseils.push({ ic: 'calendarcheck', texte: 'Poser davantage de RDV pour se rapprocher de l’objectif.' });
+  if (agg.score_r1r2 < POIDS.r1_r2 * SEUIL_CONSEIL_RATIO) conseils.push({ ic: 'rotate', texte: 'Améliorer le taux de transformation R1 → R2.' });
+  if (agg.score_signature < POIDS.signature * SEUIL_CONSEIL_RATIO) conseils.push({ ic: 'pen', texte: 'Travailler le taux de signature en R2.' });
+  if (agg.score_concretisation < POIDS.concretisation * SEUIL_CONSEIL_RATIO) conseils.push({ ic: 'coins', texte: 'Optimiser le taux de concrétisation des commissions.' });
   if (statutAtteinteReco(agg.recommandations, OBJECTIFS.recommandations) !== 'ok') conseils.push({ ic: 'users', texte: 'Augmenter le nombre de recommandations (moins de 70 % de l’objectif atteint).' });
+  if (agg.score_casse < POIDS.casse * SEUIL_CONSEIL_RATIO) conseils.push({ ic: 'calendarx', texte: 'Réduire le taux de casse (RDV posés qui n’ont pas eu lieu).' });
   if (!conseils.length) conseils.push({ ic: 'checkcircle', texte: 'Excellent travail sur tous les indicateurs, continuez ainsi !' });
   return conseils;
 }
