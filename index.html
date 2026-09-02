@@ -1331,7 +1331,7 @@ function agreger(rows) {
   const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations + score_casse;
 
   return {
-    rdv_poses, rdv_vus, visio, r1, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis, suivis_faits,
+    rdv_poses, rdv_vus, visio, r1, r1_vus, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis, suivis_faits,
     taux_r1_r2, taux_signature, taux_concretisation, taux_visio, taux_rdv_vu, taux_casse, taux_suivi,
     score_rdv, score_r1r2, score_signature, score_concretisation, score_recommandations, score_casse,
     performance: Math.round(performance * 10) / 10,
@@ -1867,12 +1867,13 @@ function renderConseillers(rows) {
   const atteinteR1R2Ind = objectifR1R2PctInd ? ((agg.taux_r1_r2 * 100) / objectifR1R2PctInd) * 100 : 0;
   const atteinteSignatureInd = objectifSignaturePctInd ? ((agg.taux_signature * 100) / objectifSignaturePctInd) * 100 : 0;
   const tauxRdvVuInd = agg.rdv_poses ? (agg.rdv_vus / agg.rdv_poses) * 100 : 0;
+  const tauxR1VuInd = agg.r1 ? (agg.r1_vus / agg.r1) * 100 : 0;
 
   const etapesPipeline = [
     { ic: 'calendarcheck', label: 'RDV posés', valeur: `${agg.rdv_poses}`, ref: `Objectif ${objectifRdvInd.toFixed(0)}`, statut: statutSeuil(atteinteRdvInd, 100, 70) },
     { ic: 'eye', label: 'Taux RDV vu', valeur: `${tauxRdvVuInd.toFixed(0)} %`, ref: 'Objectif > 66 %', statut: statutSeuil(tauxRdvVuInd, 66, 50) },
     { ic: 'video', label: 'Taux de visio', valeur: `${(agg.taux_visio * 100).toFixed(0)} %`, ref: `Max ${objectifVisioPctInd.toFixed(0)} %`, statut: statutSeuil(atteinteVisioInd, 90, 100, true) },
-    { ic: 'rotate', label: 'R1 en R2', valeur: agg.r1 ? `${agg.r1_en_r2}/${agg.r1}` : '—', ref: `Objectif ${objectifR1R2PctInd.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2Ind, 100, 70) },
+    { ic: 'eye', label: 'Taux R1 vu', valeur: `${tauxR1VuInd.toFixed(0)} %`, ref: 'Objectif > 50 %', statut: statutSeuil(tauxR1VuInd, 50, 30) },
     { ic: 'percent', label: 'Taux R1 → R2', valeur: `${(agg.taux_r1_r2 * 100).toFixed(0)} %`, ref: `Objectif ${objectifR1R2PctInd.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2Ind, 100, 70) },
     { ic: 'pen', label: 'R2 signés', valeur: agg.r2 ? `${agg.r2_signes}/${agg.r2}` : '—', ref: `Objectif ${objectifSignaturePctInd.toFixed(0)} %`, statut: statutSeuil(atteinteSignatureInd, 100, 70) },
     { ic: 'target', label: 'Signature', valeur: `${(agg.taux_signature * 100).toFixed(0)} %`, ref: `Objectif ${objectifSignaturePctInd.toFixed(0)} %`, statut: statutSeuil(atteinteSignatureInd, 100, 70) },
@@ -2159,12 +2160,13 @@ function renderStatistiques(rows) {
   const atteinteVisio = objectifVisioPct ? ((equipe.taux_visio * 100) / objectifVisioPct) * 100 : 0;
   const atteinteR1R2 = objectifR1R2Pct ? ((equipe.taux_r1_r2 * 100) / objectifR1R2Pct) * 100 : 0;
   const atteinteSignature = objectifSignaturePct ? ((equipe.taux_signature * 100) / objectifSignaturePct) * 100 : 0;
+  const tauxR1Vu = equipe.r1 ? (equipe.r1_vus / equipe.r1) * 100 : 0;
 
   const etapes = [
     { ic: 'calendarcheck', label: 'RDV posés', valeur: `${equipe.rdv_poses}`, ref: `Objectif ${objectifRdvEquipe.toFixed(0)}`, statut: statutSeuil(atteinteRdv, 100, 70) },
     { ic: 'eye', label: 'Taux RDV vu', valeur: `${(equipe.taux_rdv_vu * 100).toFixed(0)} %`, ref: 'Objectif > 66 %', statut: statutSeuil(equipe.taux_rdv_vu * 100, 66, 50) },
     { ic: 'video', label: 'Taux de visio', valeur: `${(equipe.taux_visio * 100).toFixed(0)} %`, ref: `Max ${objectifVisioPct.toFixed(0)} %`, statut: statutSeuil(atteinteVisio, 90, 100, true) },
-    { ic: 'rotate', label: 'R1 en R2', valeur: equipe.r1 ? `${equipe.r1_en_r2}/${equipe.r1}` : '—', ref: `Objectif ${objectifR1R2Pct.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2, 100, 70) },
+    { ic: 'eye', label: 'Taux R1 vu', valeur: `${tauxR1Vu.toFixed(0)} %`, ref: 'Objectif > 50 %', statut: statutSeuil(tauxR1Vu, 50, 30) },
     { ic: 'percent', label: 'Taux R1 → R2', valeur: `${(equipe.taux_r1_r2 * 100).toFixed(0)} %`, ref: `Objectif ${objectifR1R2Pct.toFixed(0)} %`, statut: statutSeuil(atteinteR1R2, 100, 70) },
     { ic: 'pen', label: 'R2 signés', valeur: equipe.r2 ? `${equipe.r2_signes}/${equipe.r2}` : '—', ref: `Objectif ${objectifSignaturePct.toFixed(0)} %`, statut: statutSeuil(atteinteSignature, 100, 70) },
     { ic: 'target', label: 'Signature', valeur: `${(equipe.taux_signature * 100).toFixed(0)} %`, ref: `Objectif ${objectifSignaturePct.toFixed(0)} %`, statut: statutSeuil(atteinteSignature, 100, 70) },
