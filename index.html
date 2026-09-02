@@ -33,6 +33,7 @@
     --coral: #EF5B6E;
     --success: #2DBE7F;
     --warning: #F0A43A;
+    --lime: #A8C42E;
     --bg: #FFFFFF;
     --cream: #F2EDE6;
     --cream-hover: #E9DFCE;
@@ -323,7 +324,7 @@
   .pill { border-radius: 9px; padding: 3px 10px; font-size: 10px; font-weight: 700; white-space: nowrap; }
   .pill-elite { background: var(--gold); color: var(--navy); }
   .pill-excellent { background: var(--silver); color: var(--navy); }
-  .pill-bon { background: var(--success); color: var(--bg); }
+  .pill-correct { background: var(--lime); color: var(--navy); }
   .pill-accompagner { background: var(--warning); color: var(--navy); }
   .pill-prioritaire { background: var(--coral); color: var(--bg); }
 
@@ -1283,12 +1284,12 @@ function pchainStageHTML(e) {
 function niveauDe(perf) {
   if (perf >= SEUILS.elite) return { texte: 'Elite', classe: 'pill-elite' };
   if (perf >= SEUILS.excellent) return { texte: 'Excellent', classe: 'pill-excellent' };
-  if (perf >= SEUILS.bon) return { texte: 'Bon', classe: 'pill-bon' };
+  if (perf >= SEUILS.bon) return { texte: 'Correct', classe: 'pill-correct' };
   if (perf >= SEUILS.progression) return { texte: 'À accompagner', classe: 'pill-accompagner' };
   return { texte: 'Prioritaire', classe: 'pill-prioritaire' };
 }
 
-const COULEUR_NIVEAU = { 'pill-elite': 'var(--gold)', 'pill-excellent': 'var(--silver)', 'pill-bon': 'var(--success)', 'pill-accompagner': 'var(--warning)', 'pill-prioritaire': 'var(--coral)' };
+const COULEUR_NIVEAU = { 'pill-elite': 'var(--gold)', 'pill-excellent': 'var(--silver)', 'pill-correct': 'var(--lime)', 'pill-accompagner': 'var(--warning)', 'pill-prioritaire': 'var(--coral)' };
 function niveauEmoji(perf) {
   const n = niveauDe(perf);
   return `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:${COULEUR_NIVEAU[n.classe]};display:inline-block;flex:0 0 auto;"></span>${n.texte}</span>`;
@@ -2197,7 +2198,7 @@ function renderStatistiques(rows) {
     else if (c.performance >= SEUILS.progression) compteNiveaux.accompagner++;
     else compteNiveaux.prioritaire++;
   }
-  const NIV = [['elite', 'Elite', 'var(--gold)'], ['excellent', 'Excellent', 'var(--silver)'], ['bon', 'Bon', 'var(--success)'], ['accompagner', 'À accompagner', 'var(--warning)'], ['prioritaire', 'Prioritaire', 'var(--coral)']];
+  const NIV = [['elite', 'Elite', 'var(--gold)'], ['excellent', 'Excellent', 'var(--silver)'], ['bon', 'Correct', 'var(--lime)'], ['accompagner', 'À accompagner', 'var(--warning)'], ['prioritaire', 'Prioritaire', 'var(--coral)']];
   document.getElementById('stats-niveaux').innerHTML = classement.length ? NIV.map(([cle, label, couleur]) => `
     <div class="bar-cell" style="margin-bottom:8px;">
       <div style="width:120px;font-size:12px;">${label}</div>
