@@ -1629,7 +1629,7 @@ function renderDashboard(rows, toutesLignes) {
       <span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span>
     </div>`).join('') || `<div class="empty-state">Personne en dessous du seuil actuellement.</div>`;
 
-  const progression = meilleureProgression(rows);
+  const progression = meilleureProgression(toutesLignes);
   const progCard = progression
     ? kpiCard({ ic: 'star', title: 'Plus forte progression', value: progression.conseiller, variation: `${progression.delta > 0 ? '+' : ''}${progression.delta.toFixed(1)} pts vs semaine précédente`, tone: progression.delta >= 0 ? 'positive' : 'negative' })
     : kpiCard({ ic: 'star', title: 'Plus forte progression', value: '—', variation: 'Pas encore assez d’historique (2 semaines mini).' });
@@ -1867,7 +1867,7 @@ function renderConseillers(rows) {
   const entreeRoster = roster.find(r => r.conseiller === conseillerSelectionne);
   const mois = entreeRoster ? moisDepuis(entreeRoster.date_entree) : null;
   const niveau = niveauDe(agg.performance);
-  const historique = historiqueDe(rows, conseillerSelectionne);
+  const historique = historiqueDe(readRows(), conseillerSelectionne);
 
   const signatures = agg.r2_signes;
 
@@ -2196,7 +2196,7 @@ function renderStatistiques(rows) {
       ${etapes.map((e, i) => `${pchainStageHTML(e)}${i < etapes.length - 1 ? '<div class="pchain-arrow">→</div>' : ''}`).join('')}
     </div>`;
 
-  const parMois = tauxParMois(rows);
+  const parMois = tauxParMois(readRows());
   document.getElementById('stats-evolution').innerHTML = `
     <div class="card-title">${ic('trending', 15)}<span>Évolution des taux clés (équipe)</span></div>
     ${multiLineChartSVG(parMois.map(m => m.label), [
@@ -2272,7 +2272,7 @@ function renderAlertes(rows) {
     { ic: 'trending', titre: 'Absence de progression (semaine sur semaine)', items: (() => {
         const out = [];
         for (const c of classement) {
-          const hist = historiqueDe(rows, c.conseiller);
+          const hist = historiqueDe(readRows(), c.conseiller);
           if (hist.length < 2) continue;
           const delta = Math.round((hist[hist.length - 1].performance - hist[hist.length - 2].performance) * 10) / 10;
           if (delta <= 0) out.push(`${c.conseiller} — ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente`);
@@ -2282,7 +2282,7 @@ function renderAlertes(rows) {
     { ic: 'usercheck', titre: 'Besoin d\'accompagnement déclaré', items: (() => {
         const out = [];
         for (const c of classement) {
-          const derniere = derniereLigneDe(rows, c.conseiller);
+          const derniere = derniereLigneDe(readRows(), c.conseiller);
           if (derniere && derniere.accompagnement.length) {
             const urgent = derniere.accompagnement.includes('Urgent');
             out.push(`${urgent ? ic('priority', 12) + ' ' : ''}${c.conseiller} — ${derniere.accompagnement.join(', ')}`);
@@ -2293,7 +2293,7 @@ function renderAlertes(rows) {
     { ic: 'usercheck', titre: 'Ressenti bas sur la semaine', items: (() => {
         const out = [];
         for (const c of classement) {
-          const derniere = derniereLigneDe(rows, c.conseiller);
+          const derniere = derniereLigneDe(readRows(), c.conseiller);
           if (derniere && derniere.ressenti && RESSENTI_SEUIL_ALERTE.has(derniere.ressenti)) {
             out.push(`${c.conseiller} — ${derniere.ressenti}`);
           }
