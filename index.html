@@ -406,6 +406,12 @@
   .entry-table input[type="text"] { min-width: 100px; }
   .entry-table td.actions { width: 34px; }
 
+  /* "Ma semaine" (table non repliée en fiche) : masque les semaines qui ne
+     sont pas la semaine en cours par défaut — évite que la table s'empile
+     au fil des semaines. Ne s'applique jamais en mode-fiche, qui a déjà sa
+     propre logique de visibilité (tr.fiche-visible). */
+  .entry-table:not(.mode-fiche) tr.semaine-masquee { display: none; }
+
   .entry-table input:disabled, .roster-table input:disabled, .poids-input-wrap input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -833,6 +839,10 @@
         <hr class="rule">
         <div class="saisie-toolbar">
           <button class="btn btn-primary" id="btn-add-row" type="button">+ Ajouter une ligne</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--heading-2);cursor:pointer;margin-left:auto;">
+            <input type="checkbox" id="toggle-historique-saisie" style="width:auto;">
+            <span>Voir les semaines précédentes</span>
+          </label>
         </div>
 
         <div id="saisie-table-slot">
@@ -881,6 +891,10 @@
         </div>
         <div class="saisie-toolbar" id="fiche-toolbar" style="display:none;">
           <button class="btn btn-primary" id="btn-add-ma-semaine" type="button">+ Ajouter ma semaine</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--heading-2);cursor:pointer;margin-left:auto;">
+            <input type="checkbox" id="toggle-historique-fiche" style="width:auto;">
+            <span>Voir mes semaines précédentes</span>
+          </label>
         </div>
 
         <div id="ma-fiche-table-slot"></div>
@@ -1563,6 +1577,7 @@ function appliquerFiltres(rows) {
 
 function renderAll() {
   lirePoids();
+  appliquerFiltreSemaineSaisie();
   populerDatalistRoster();
   validerConseillersSaisis();
   validerCoherenceRDV();
@@ -2485,6 +2500,25 @@ function scheduleRowWrite(tr) {
 
 let modeFicheActif = false;
 
+// Par défaut, "Ma semaine" et "Ma fiche" ne montrent que la semaine
+// commerciale en cours (jeudiCourant()) pour ne pas s'empiler au fil
+// des semaines — l'historique complet reste lisible via Statistiques/
+// Classement (qui lisent readRows() indépendamment de ce filtrage
+// purement visuel). Ces cases à cocher révèlent tout l'historique au
+// besoin, ex. pour corriger une semaine passée.
+let afficherHistoriqueSaisie = false;
+let afficherHistoriqueFiche = false;
+
+/** Masque (tr.semaine-masquee) les lignes qui ne sont pas la semaine en cours, sauf si l'historique est révélé — n'affecte que "Ma semaine" (voir CSS .entry-table:not(.mode-fiche)), jamais readRows(). */
+function appliquerFiltreSemaineSaisie() {
+  const semaineCourante = jeudiCourant();
+  for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
+    const semInput = tr.querySelector('[data-field="semaine"]');
+    const horsSemaine = !semInput || semInput.value.trim() !== semaineCourante;
+    tr.classList.toggle('semaine-masquee', horsSemaine && !afficherHistoriqueSaisie);
+  }
+}
+
 function verrouillerChampsSemaine(verrouille) {
   for (const input of document.getElementById('rows-body').querySelectorAll('[data-field="semaine"]')) {
     input.readOnly = verrouille;
@@ -2522,19 +2556,38 @@ function renderMaFiche() {
   const qui = selQui.value;
   document.getElementById('fiche-toolbar').style.display = qui ? 'flex' : 'none';
 
+  const semaineCourante = jeudiCourant();
   let nbVisibles = 0;
+  let aDesSemainesPassees = false;
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
     const nomInput = tr.querySelector('[data-field="conseiller"]');
-    const correspond = !!qui && !!nomInput && nomInput.value.trim() === qui;
+    const semInput = tr.querySelector('[data-field="semaine"]');
+    const nomOK = !!qui && !!nomInput && nomInput.value.trim() === qui;
+    const estSemaineCourante = !!semInput && semInput.value.trim() === semaineCourante;
+    if (nomOK && !estSemaineCourante) aDesSemainesPassees = true;
+    const correspond = nomOK && (estSemaineCourante || afficherHistoriqueFiche);
     tr.classList.toggle('fiche-visible', correspond);
     if (correspond) nbVisibles++;
   }
+
+  const toggleHistoriqueLabel = document.getElementById('toggle-historique-fiche')?.closest('label');
+  if (toggleHistoriqueLabel) toggleHistoriqueLabel.style.display = aDesSemainesPassees ? 'flex' : 'none';
 
   const hint = document.getElementById('fiche-vide-hint');
   if (!qui) hint.textContent = 'Choisis ton nom dans la liste ci-dessus pour voir tes semaines.';
   else if (nbVisibles === 0) hint.textContent = 'Aucune semaine saisie pour toi pour l’instant — clique sur "+ Ajouter ma semaine".';
   else hint.textContent = '';
 }
+
+document.getElementById('toggle-historique-saisie').addEventListener('change', (e) => {
+  afficherHistoriqueSaisie = e.target.checked;
+  appliquerFiltreSemaineSaisie();
+});
+
+document.getElementById('toggle-historique-fiche').addEventListener('change', (e) => {
+  afficherHistoriqueFiche = e.target.checked;
+  renderMaFiche();
+});
 
 document.getElementById('fiche-qui').addEventListener('change', () => {
   sessionStorage.setItem('cockpit_qui', document.getElementById('fiche-qui').value);
