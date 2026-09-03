@@ -1312,10 +1312,12 @@ function agreger(rows) {
   const suivis_faits = sum(rows, 'suivis_faits');
 
   const denom_r1 = r1_vus > 0 ? r1_vus : r1;
-  const denom_r2 = r2_vus > 0 ? r2_vus : r2;
 
   const taux_r1_r2 = denom_r1 ? r1_en_r2 / denom_r1 : 0;
-  const taux_signature = denom_r2 ? r2_signes / denom_r2 : 0;
+  // Toujours sur R2 prévus (jamais R2 vus) : contrairement à R1→R2,
+  // la signature doit rester lisible par rapport à l'objectif de
+  // départ même une fois le bilan du mercredi rempli.
+  const taux_signature = r2 ? r2_signes / r2 : 0;
   const taux_concretisation = potentiel ? commissions / potentiel : 0;
   const taux_visio = rdv_poses ? visio / rdv_poses : 0;
   const taux_rdv_vu = rdv_poses ? rdv_vus / rdv_poses : 0;
