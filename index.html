@@ -1848,7 +1848,7 @@ function renderConseillers(rows) {
     : `<div class="empty-state">Aucun conseiller — remplis "Ma semaine".</div>`;
 
   document.querySelectorAll('.conseiller-item').forEach(btn => {
-    btn.addEventListener('click', () => { conseillerSelectionne = btn.dataset.nom; renderConseillers(readRows()); });
+    btn.addEventListener('click', () => { conseillerSelectionne = btn.dataset.nom; renderConseillers(appliquerFiltres(readRows())); });
   });
 
   const selCompare = document.getElementById('conseiller-compare-qui');
@@ -2037,12 +2037,12 @@ function renderComparaison(classement) {
 document.getElementById('compare-toggle').addEventListener('change', (e) => {
   document.getElementById('conseiller-compare-qui').style.display = e.target.checked ? '' : 'none';
   if (!e.target.checked) conseillerCompare = null;
-  renderConseillers(readRows());
+  renderConseillers(appliquerFiltres(readRows()));
 });
 
 document.getElementById('conseiller-compare-qui').addEventListener('change', (e) => {
   conseillerCompare = e.target.value || null;
-  renderConseillers(readRows());
+  renderConseillers(appliquerFiltres(readRows()));
 });
 
 /* =========================================================
