@@ -1875,12 +1875,21 @@ function renderConseillers(rows) {
   // évaluées sur leurs propres seuils (pas un objectif générique par
   // conseiller — R1/R2 bruts n'ont pas d'objectif défini, ils apparaissent
   // en contexte dans les fractions R1 en R2 / R2 signés).
+  // RDV posés / Recommandations ont un objectif HEBDOMADAIRE fixe — dès que
+  // la période sélectionnée couvre plusieurs semaines (filtre Mois, ou
+  // "Toutes les semaines"), leur total additionne les semaines et n'est
+  // plus comparable à cet objectif tel quel : on ramène à une moyenne par
+  // semaine, comme déjà fait pour l'équipe (renderStatistiques).
+  const nbSemainesInd = Math.max(new Set(rows.filter(r => r.conseiller === conseillerSelectionne).map(r => r.semaine)).size, 1);
+  const rdvPosesMoyInd = agg.rdv_poses / nbSemainesInd;
+  const recommandationsMoyInd = agg.recommandations / nbSemainesInd;
+
   const objectifRdvInd = OBJECTIFS.rdv;
   const objectifVisioPctInd = OBJECTIFS.visio_max * 100;
   const objectifR1R2PctInd = OBJECTIFS.r1_r2 * 100;
   const objectifSignaturePctInd = OBJECTIFS.signature * 100;
 
-  const atteinteRdvInd = objectifRdvInd ? (agg.rdv_poses / objectifRdvInd) * 100 : 0;
+  const atteinteRdvInd = objectifRdvInd ? (rdvPosesMoyInd / objectifRdvInd) * 100 : 0;
   const atteinteVisioInd = objectifVisioPctInd ? ((agg.taux_visio * 100) / objectifVisioPctInd) * 100 : 0;
   const atteinteR1R2Ind = objectifR1R2PctInd ? ((agg.taux_r1_r2 * 100) / objectifR1R2PctInd) * 100 : 0;
   const atteinteSignatureInd = objectifSignaturePctInd ? ((agg.taux_signature * 100) / objectifSignaturePctInd) * 100 : 0;
@@ -1888,7 +1897,7 @@ function renderConseillers(rows) {
   const tauxR1VuInd = agg.r1 ? (agg.r1_vus / agg.r1) * 100 : 0;
 
   const etapesPipeline = [
-    { ic: 'calendarcheck', label: 'RDV posés', valeur: `${agg.rdv_poses}`, ref: `Objectif ${objectifRdvInd.toFixed(0)}`, statut: statutSeuil(atteinteRdvInd, 100, 70) },
+    { ic: 'calendarcheck', label: 'RDV posés', valeur: `${rdvPosesMoyInd.toFixed(0)}`, ref: `Objectif ${objectifRdvInd.toFixed(0)}`, statut: statutSeuil(atteinteRdvInd, 100, 70) },
     { ic: 'eye', label: 'Taux RDV vu', valeur: `${tauxRdvVuInd.toFixed(0)} %`, ref: 'Objectif > 66 %', statut: statutSeuil(tauxRdvVuInd, 66, 50) },
     { ic: 'video', label: 'Taux de visio', valeur: `${(agg.taux_visio * 100).toFixed(0)} %`, ref: `Max ${objectifVisioPctInd.toFixed(0)} %`, statut: statutSeuil(atteinteVisioInd, 90, 100, true) },
     { ic: 'eye', label: 'Taux R1 vu', valeur: `${tauxR1VuInd.toFixed(0)} %`, ref: 'Objectif > 50 %', statut: statutSeuil(tauxR1VuInd, 50, 30) },
@@ -1902,25 +1911,26 @@ function renderConseillers(rows) {
   // omise ici (donnée non collectée dans ce formulaire web).
   const kpisIndividuels = [
     kpiCard({ ic: 'coins', title: 'Commissions', value: euro(agg.commissions), variation: `Potentiel : ${euro(agg.potentiel)}` }),
-    kpiCard({ ic: 'calendarcheck', title: 'RDV posés', value: agg.rdv_poses, variation: `Objectif : ${OBJECTIFS.rdv}`, statut: statutAtteinte(agg.rdv_poses, OBJECTIFS.rdv) }),
+    kpiCard({ ic: 'calendarcheck', title: 'RDV posés (moy. hebdo)', value: rdvPosesMoyInd.toFixed(1), variation: `Objectif : ${OBJECTIFS.rdv}`, statut: statutAtteinte(rdvPosesMoyInd, OBJECTIFS.rdv) }),
     kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.r1}`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) }),
     kpiCard({ ic: 'pen', title: 'Taux de signature', value: `${(agg.taux_signature * 100).toFixed(1)} %`, variation: `Signatures : ${signatures}`, statut: statutAtteinte(agg.taux_signature, OBJECTIFS.signature) }),
-    kpiCard({ ic: 'users', title: 'Recommandations', value: agg.recommandations, variation: `Objectif : ${OBJECTIFS.recommandations}`, statut: statutAtteinteReco(agg.recommandations, OBJECTIFS.recommandations) }),
+    kpiCard({ ic: 'users', title: 'Recommandations (moy. hebdo)', value: recommandationsMoyInd.toFixed(1), variation: `Total période : ${agg.recommandations}`, statut: statutAtteinteReco(recommandationsMoyInd, OBJECTIFS.recommandations) }),
     kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés`, statut: statutAtteinte(agg.taux_visio, OBJECTIFS.visio_max, true) }),
     kpiCard({ ic: 'calendarx', title: 'Taux de casse', value: `${(agg.taux_casse * 100).toFixed(1)} %`, variation: `${agg.rdv_vus} vus sur ${agg.rdv_poses} posés`, statut: statutVersOkWarnBad(statutSeuil(agg.taux_rdv_vu * 100, 66, 50)) }),
     kpiCard({ ic: 'target', title: 'Concrétisation', value: `${(agg.taux_concretisation * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.concretisation * 100} %`, statut: statutAtteinte(agg.taux_concretisation, OBJECTIFS.concretisation) }),
     kpiCard({ ic: 'percent', title: 'Taux de suivi', value: `${(agg.taux_suivi * 100).toFixed(1)} %`, variation: `${agg.suivis} suivis prévus sur ${agg.rdv_poses} RDV posés` }),
   ];
 
-  // "Objectifs vs Réalisé" du conseiller — même table que Statistiques,
-  // mais sans mise à l'échelle par nb. de conseillers/semaines (ici c'est
-  // déjà la donnée d'une seule personne).
+  // "Objectifs vs Réalisé" du conseiller — même table que Statistiques ;
+  // pas de mise à l'échelle par nb. de conseillers (ici c'est déjà la
+  // donnée d'une seule personne), mais RDV posés/Recommandations restent
+  // ramenés à une moyenne par semaine (nbSemainesInd) comme côté équipe.
   const lignesObjectifsInd = [
-    { label: 'RDV posés', realise: agg.rdv_poses, objectif: OBJECTIFS.rdv, fmt: 'entier' },
+    { label: 'RDV posés (moy. hebdo)', realise: rdvPosesMoyInd, objectif: OBJECTIFS.rdv, fmt: 'entier' },
     { label: 'Transformation R1 → R2', realise: agg.taux_r1_r2 * 100, objectif: OBJECTIFS.r1_r2 * 100, fmt: 'pct' },
     { label: 'Taux de signature', realise: agg.taux_signature * 100, objectif: OBJECTIFS.signature * 100, fmt: 'pct' },
     { label: 'Concrétisation', realise: agg.taux_concretisation * 100, objectif: OBJECTIFS.concretisation * 100, fmt: 'pct' },
-    { label: 'Recommandations', realise: agg.recommandations, objectif: OBJECTIFS.recommandations, fmt: 'entier', seuilBon: 70, seuilMoyen: 50 },
+    { label: 'Recommandations (moy. hebdo)', realise: recommandationsMoyInd, objectif: OBJECTIFS.recommandations, fmt: 'entier', seuilBon: 70, seuilMoyen: 50 },
     { label: 'Taux de Visio', realise: agg.taux_visio * 100, objectif: OBJECTIFS.visio_max * 100, fmt: 'pct', plafond: true },
   ];
 
@@ -2174,14 +2184,14 @@ function renderStatistiques(rows) {
       <tbody>${lignesObjectifs.map(ligneObjectifHTML).join('')}</tbody>
     </table></div>` : `<div class="card empty-state">Aucune saisie pour l'instant.</div>`;
 
-  const atteinteRdv = objectifRdvEquipe ? (equipe.rdv_poses / objectifRdvEquipe) * 100 : 0;
+  const atteinteRdv = objectifRdvEquipe ? ((equipe.rdv_poses / nbSemaines) / objectifRdvEquipe) * 100 : 0;
   const atteinteVisio = objectifVisioPct ? ((equipe.taux_visio * 100) / objectifVisioPct) * 100 : 0;
   const atteinteR1R2 = objectifR1R2Pct ? ((equipe.taux_r1_r2 * 100) / objectifR1R2Pct) * 100 : 0;
   const atteinteSignature = objectifSignaturePct ? ((equipe.taux_signature * 100) / objectifSignaturePct) * 100 : 0;
   const tauxR1Vu = equipe.r1 ? (equipe.r1_vus / equipe.r1) * 100 : 0;
 
   const etapes = [
-    { ic: 'calendarcheck', label: 'RDV posés', valeur: `${equipe.rdv_poses}`, ref: `Objectif ${objectifRdvEquipe.toFixed(0)}`, statut: statutSeuil(atteinteRdv, 100, 70) },
+    { ic: 'calendarcheck', label: 'RDV posés', valeur: `${(equipe.rdv_poses / nbSemaines).toFixed(0)}`, ref: `Objectif ${objectifRdvEquipe.toFixed(0)}`, statut: statutSeuil(atteinteRdv, 100, 70) },
     { ic: 'eye', label: 'Taux RDV vu', valeur: `${(equipe.taux_rdv_vu * 100).toFixed(0)} %`, ref: 'Objectif > 66 %', statut: statutSeuil(equipe.taux_rdv_vu * 100, 66, 50) },
     { ic: 'video', label: 'Taux de visio', valeur: `${(equipe.taux_visio * 100).toFixed(0)} %`, ref: `Max ${objectifVisioPct.toFixed(0)} %`, statut: statutSeuil(atteinteVisio, 90, 100, true) },
     { ic: 'eye', label: 'Taux R1 vu', valeur: `${tauxR1Vu.toFixed(0)} %`, ref: 'Objectif > 50 %', statut: statutSeuil(tauxR1Vu, 50, 30) },
@@ -2248,7 +2258,7 @@ function renderStatistiques(rows) {
   const totalSignatures = sum(classement, 'r2_signes');
   const commissionParSignature = totalSignatures ? equipe.commissions / totalSignatures : 0;
   document.getElementById('stats-moyennes').innerHTML = [
-    kpiCard({ ic: 'users', title: 'Recommandations / conseiller', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: `Total équipe : ${equipe.recommandations}`, statut: statutAtteinteReco(equipe.recommandations / nbConseillers, OBJECTIFS.recommandations) }),
+    kpiCard({ ic: 'users', title: 'Recommandations / conseiller (moy. hebdo)', value: (equipe.recommandations / nbConseillers / nbSemaines).toFixed(1), variation: `Total équipe (période) : ${equipe.recommandations}`, statut: statutAtteinteReco(equipe.recommandations / nbConseillers / nbSemaines, OBJECTIFS.recommandations) }),
     kpiCard({ ic: 'coins', title: 'Commission moyenne / signature', value: euro(commissionParSignature), variation: `${totalSignatures} signature(s)` }),
     kpiCard({ ic: 'calendarx', title: 'Taux de casse moyen', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: 'Équipe', statut: statutVersOkWarnBad(statutSeuil(equipe.taux_rdv_vu * 100, 66, 50)) }),
     kpiCard({ ic: 'video', title: 'Taux de visio moyen', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: 'Équipe', statut: statutAtteinte(equipe.taux_visio, OBJECTIFS.visio_max, true) }),
