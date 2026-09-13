@@ -1348,7 +1348,7 @@ function agreger(rows) {
   const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations + score_casse;
 
   return {
-    rdv_poses, rdv_vus, visio, r1, r1_vus, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis, suivis_faits,
+    rdv_poses, rdv_vus, visio, r1, r1_vus, denom_r1, r2, r1_en_r2, r2_signes, recommandations, potentiel, commissions, suivis, suivis_faits,
     taux_r1_r2, taux_signature, taux_concretisation, taux_visio, taux_rdv_vu, taux_casse, taux_suivi,
     score_rdv, score_r1r2, score_signature, score_concretisation, score_recommandations, score_casse,
     performance: Math.round(performance * 10) / 10,
@@ -1917,7 +1917,7 @@ function renderConseillers(rows) {
   const kpisIndividuels = [
     kpiCard({ ic: 'coins', title: 'Commissions', value: euro(agg.commissions), variation: `Potentiel : ${euro(agg.potentiel)}` }),
     kpiCard({ ic: 'calendarcheck', title: 'RDV posés (moy. hebdo)', value: rdvPosesMoyInd.toFixed(1), variation: `Objectif : ${OBJECTIFS.rdv}`, statut: statutAtteinte(rdvPosesMoyInd, OBJECTIFS.rdv) }),
-    kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.r1}`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) }),
+    kpiCard({ ic: 'rotate', title: 'Transformation R1 → R2', value: `${(agg.taux_r1_r2 * 100).toFixed(1)} %`, variation: `R1 en R2 : ${agg.r1_en_r2}/${agg.denom_r1}`, statut: statutAtteinte(agg.taux_r1_r2, OBJECTIFS.r1_r2) }),
     kpiCard({ ic: 'pen', title: 'Taux de signature', value: `${(agg.taux_signature * 100).toFixed(1)} %`, variation: `Signatures : ${signatures}`, statut: statutAtteinte(agg.taux_signature, OBJECTIFS.signature) }),
     kpiCard({ ic: 'users', title: 'Recommandations (moy. hebdo)', value: recommandationsMoyInd.toFixed(1), variation: `Total période : ${agg.recommandations}`, statut: statutAtteinteReco(recommandationsMoyInd, OBJECTIFS.recommandations) }),
     kpiCard({ ic: 'video', title: 'Taux de Visio', value: `${(agg.taux_visio * 100).toFixed(1)} %`, variation: `${agg.visio} visio sur ${agg.rdv_poses} RDV posés`, statut: statutAtteinte(agg.taux_visio, OBJECTIFS.visio_max, true) }),
