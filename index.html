@@ -1727,6 +1727,11 @@ function historiqueDe(rows, nom) {
   }));
 }
 
+/** Nb de semaines distinctes saisies par ce conseiller dans `rows` — sert à ramener RDV posés/Recommandations (objectif hebdomadaire fixe) à une moyenne par semaine sur une période multi-semaines. */
+function nbSemainesDe(rows, nom) {
+  return Math.max(new Set(rows.filter(r => r.conseiller === nom).map(r => r.semaine)).size, 1);
+}
+
 function derniereLigneDe(rows, nom) {
   const lignes = rows.filter(r => r.conseiller === nom).sort((a, b) => a.semaine.localeCompare(b.semaine));
   return lignes.length ? lignes[lignes.length - 1] : null;
@@ -2277,8 +2282,12 @@ function renderAlertes(rows) {
     { ic: 'rotate', titre: 'Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${c.conseiller} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (objectif ${OBJECTIFS.r1_r2 * 100} %)`) },
     { ic: 'pen', titre: 'Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${c.conseiller} — ${(c.taux_signature * 100).toFixed(1)} % (objectif ${OBJECTIFS.signature * 100} %)`) },
     { ic: 'coins', titre: 'Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${c.conseiller} — ${(c.taux_concretisation * 100).toFixed(1)} % (objectif ${OBJECTIFS.concretisation * 100} %)`) },
-    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => c.recommandations < OBJECTIFS.recommandations).map(c => `${c.conseiller} — ${c.recommandations} (objectif ${OBJECTIFS.recommandations})`) },
-    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => c.rdv_poses < OBJECTIFS.rdv).map(c => `${c.conseiller} — ${c.rdv_poses} (objectif ${OBJECTIFS.rdv})`) },
+    // Objectif hebdomadaire fixe : ramené à une moyenne par semaine (propre
+    // à chaque conseiller) pour rester comparable sur une période de
+    // plusieurs semaines — sinon un total qui s'additionne semble toujours
+    // "en dessous" ou "au dessus" indépendamment de la vraie performance.
+    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => (c.recommandations / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.recommandations).map(c => `${c.conseiller} — ${(c.recommandations / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (objectif ${OBJECTIFS.recommandations})`) },
+    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => (c.rdv_poses / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.rdv).map(c => `${c.conseiller} — ${(c.rdv_poses / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (objectif ${OBJECTIFS.rdv})`) },
     { ic: 'trending', titre: 'Absence de progression (semaine sur semaine)', items: (() => {
         const out = [];
         for (const c of classement) {
