@@ -1832,7 +1832,12 @@ function tauxParMois(rows) {
     });
     const sousAgg = agreger(sousLignes);
     const nbConseillersMois = Math.max(new Set(sousLignes.map(r => r.conseiller)).size, 1);
-    const objectifRecoMois = OBJECTIFS.recommandations * nbConseillersMois;
+    // Recommandations = objectif HEBDOMADAIRE : sans le multiplier aussi par
+    // le nombre de semaines du mois, l'atteinte grimpe avec le nombre de
+    // semaines saisies au lieu de refléter la vraie performance (un mois à
+    // 4 semaines semblerait ~4x plus "performant" qu'un mois à 1 semaine).
+    const nbSemainesMois = Math.max(new Set(sousLignes.map(r => r.semaine)).size, 1);
+    const objectifRecoMois = OBJECTIFS.recommandations * nbConseillersMois * nbSemainesMois;
     const atteinteReco = objectifRecoMois ? sousAgg.recommandations / objectifRecoMois : 0;
     return {
       label: MOIS_FR_COURT[moisIdx],
