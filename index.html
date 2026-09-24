@@ -1338,11 +1338,18 @@ function agreger(rows) {
   const taux_casse = rdv_poses ? (rdv_poses - rdv_vus) / rdv_poses : 0;
   const taux_suivi = rdv_poses ? suivis / rdv_poses : 0;
 
-  const score_rdv = scorePoint(rdv_poses, OBJECTIFS.rdv, POIDS.rdv);
+  // RDV posés / Recommandations ont un objectif HEBDOMADAIRE fixe dans le
+  // score : sans ramener leur total à une moyenne par semaine avant de le
+  // comparer à cet objectif, le Performance ID plafonne artificiellement
+  // dès que la période regroupe plusieurs semaines (ex. Classement, Santé
+  // du Cabinet) — un conseiller à 76 RDV sur 5 semaines (~15/semaine)
+  // plafonnait comme s'il en faisait 76 en une seule semaine.
+  const nbSemainesScore = Math.max(new Set(rows.map(r => r.semaine)).size, 1);
+  const score_rdv = scorePoint(rdv_poses / nbSemainesScore, OBJECTIFS.rdv, POIDS.rdv);
   const score_r1r2 = scorePoint(taux_r1_r2, OBJECTIFS.r1_r2, POIDS.r1_r2);
   const score_signature = scorePoint(taux_signature, OBJECTIFS.signature, POIDS.signature);
   const score_concretisation = scorePoint(taux_concretisation, OBJECTIFS.concretisation, POIDS.concretisation);
-  const score_recommandations = scorePoint(recommandations, OBJECTIFS.recommandations, POIDS.recommandations);
+  const score_recommandations = scorePoint(recommandations / nbSemainesScore, OBJECTIFS.recommandations, POIDS.recommandations);
   const score_casse = scorePointPlafond(taux_casse, OBJECTIFS.casse_max, POIDS.casse);
 
   const performance = score_rdv + score_r1r2 + score_signature + score_concretisation + score_recommandations + score_casse;
