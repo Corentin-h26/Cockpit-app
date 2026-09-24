@@ -1650,7 +1650,7 @@ function renderDashboard(rows, toutesLignes) {
 
   const cards = [
     { ic: 'heart', title: 'Santé du Cabinet', value: classement.length ? `${(sum(classement, 'performance') / nbConseillers).toFixed(1)} / 100` : '— / 100', variation: classement.length ? `Niveau : ${niveauEmoji(sum(classement, 'performance') / nbConseillers)}` : 'Aucune donnée saisie' },
-    { ic: 'users', title: 'Moyenne de recommandations', value: (equipe.recommandations / nbConseillers).toFixed(1), variation: 'Objectif : 30' },
+    { ic: 'users', title: 'Moyenne de recommandations (hebdo)', value: (equipe.recommandations / nbConseillers / nbSemaines).toFixed(1), variation: `Objectif : ${OBJECTIFS.recommandations}` },
     { ic: 'target', title: 'Taux de concrétisation', value: `${(equipe.taux_concretisation * 100).toFixed(1)} %`, variation: `${euro(equipe.commissions)} / ${euro(equipe.potentiel)}` },
     { ic: 'rotate', title: 'Transformation R1 → R2', value: `${(equipe.taux_r1_r2 * 100).toFixed(1)} %`, variation: `Objectif : ${OBJECTIFS.r1_r2 * 100} %` },
     { ic: 'sack', title: 'Potentiel', value: euro(equipe.potentiel), variation: 'Cumulé sur les semaines saisies' },
