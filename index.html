@@ -1784,17 +1784,20 @@ function derniereLigneDe(rows, nom) {
 
 function svgEvolution(points) {
   if (points.length < 2) return `<div class="empty-state">Pas encore assez d'historique (2 semaines mini).</div>`;
-  const w = 560, h = 160, pad = 24;
+  const w = 560, h = 160, pad = 24, padHaut = 34;
   const xs = points.map((p, i) => pad + (i * (w - 2 * pad)) / (points.length - 1));
-  const ys = points.map(p => h - pad - (Math.max(Math.min(p.performance, 100), 0) / 100) * (h - 2 * pad));
+  const ys = points.map(p => h - pad - (Math.max(Math.min(p.performance, 100), 0) / 100) * (h - pad - padHaut));
   const ligne = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
   const aire = `${ligne} L${xs[xs.length - 1].toFixed(1)},${h - pad} L${xs[0].toFixed(1)},${h - pad} Z`;
   const points_svg = xs.map((x, i) => `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3" fill="var(--gold)"/>`).join('');
+  // Note affichée au-dessus de chaque point — sans ça la courbe seule
+  // (sans axe gradué) ne permettait pas de lire la valeur réelle.
+  const valeurs = points.map((p, i) => `<text x="${xs[i].toFixed(1)}" y="${(ys[i] - 10).toFixed(1)}" font-size="11" font-weight="700" fill="var(--heading)" text-anchor="middle">${p.performance.toFixed(1)}</text>`).join('');
   const labels = points.map((p, i) => `<text x="${xs[i].toFixed(1)}" y="${h - 4}" font-size="9" fill="var(--heading-2)" text-anchor="middle">${p.semaine}</text>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;overflow:visible;">
     <path d="${aire}" fill="var(--gold)" opacity="0.12"/>
     <path d="${ligne}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>
-    ${points_svg}${labels}
+    ${points_svg}${valeurs}${labels}
   </svg>`;
 }
 
