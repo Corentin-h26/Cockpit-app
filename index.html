@@ -1507,36 +1507,51 @@ function libellePlage(debutStr, finStr) {
   return `${libelleDateCourte(debutStr)} ${debut.getFullYear()} → ${droite}`;
 }
 
-// Blocs mensuels définis à la main avec Corentin (cycle annuel fixe,
-// pas un 4-4-5 recalculé sur les semaines présentes) — à reconduire
-// pour l'année suivante une fois le cycle terminé (Bloc 12 → 25/08).
-const BLOCS_MOIS_FIXES = [
-  { nom: 'Bloc 1', debut: '2026-08-27', fin: '2026-09-30' },
-  { nom: 'Bloc 2', debut: '2026-10-01', fin: '2026-10-28' },
-  { nom: 'Bloc 3', debut: '2026-10-29', fin: '2026-12-02' },
-  { nom: 'Bloc 4', debut: '2026-12-03', fin: '2026-12-30' },
-  { nom: 'Bloc 5', debut: '2026-12-31', fin: '2027-01-27' },
-  { nom: 'Bloc 6', debut: '2027-01-28', fin: '2027-02-24' },
-  { nom: 'Bloc 7', debut: '2027-02-25', fin: '2027-03-31' },
-  { nom: 'Bloc 8', debut: '2027-04-01', fin: '2027-04-28' },
-  { nom: 'Bloc 9', debut: '2027-04-29', fin: '2027-05-26' },
-  { nom: 'Bloc 10', debut: '2027-05-27', fin: '2027-06-30' },
-  { nom: 'Bloc 11', debut: '2027-07-01', fin: '2027-07-28' },
-  { nom: 'Bloc 12', debut: '2027-07-29', fin: '2027-08-25' },
-];
+// Blocs mensuels définis avec Corentin le 24/09/2026 à partir de 12
+// dates exactes (Bloc 1 : 27/08→30/09/2026, Bloc 2 : 01/10→28/10, ...
+// Bloc 12 : 29/07→25/08/2027). Cette cadence — le nombre de semaines
+// de chaque bloc, dans l'ordre — fait exactement 52 semaines et
+// s'enchaîne sans décalage (le lendemain du Bloc 12 retombe un jeudi,
+// même jour de semaine que l'ancre) : elle se répète donc indéfiniment
+// d'année en année à partir de ANCRE_BLOCS_MOIS, jamais besoin de
+// redéfinir de nouvelles dates.
+const ANCRE_BLOCS_MOIS = '2026-08-27';
+const CADENCE_BLOCS_MOIS = [5, 4, 5, 4, 4, 4, 5, 4, 4, 5, 4, 4];
+
+function ajouterJoursISO(dateISO, jours) {
+  const [annee, mois, jour] = dateISO.split('-').map(Number);
+  const t = Date.UTC(annee, mois - 1, jour) + jours * 86400000;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Génère les blocs sur `nbCycles` répétitions de CADENCE_BLOCS_MOIS à partir de ANCRE_BLOCS_MOIS (5 cycles = 5 ans d'avance, largement de quoi ne jamais tomber à court). */
+function genererBlocsMois(nbCycles) {
+  const blocs = [];
+  let curseur = ANCRE_BLOCS_MOIS;
+  const total = CADENCE_BLOCS_MOIS.length * nbCycles;
+  for (let i = 0; i < total; i++) {
+    const nbSemaines = CADENCE_BLOCS_MOIS[i % CADENCE_BLOCS_MOIS.length];
+    const debut = curseur;
+    const fin = ajouterJoursISO(debut, nbSemaines * 7 - 1);
+    blocs.push({ nom: `Bloc ${(i % CADENCE_BLOCS_MOIS.length) + 1}`, debut, fin });
+    curseur = ajouterJoursISO(debut, nbSemaines * 7);
+  }
+  return blocs;
+}
 
 /**
- * Regroupe les semaines présentes dans `rows` selon BLOCS_MOIS_FIXES
- * (comparaison de chaînes ISO "YYYY-MM-DD", valide car les semaines
- * sont déjà dans ce format). Ne garde que les blocs contenant au
- * moins une semaine saisie — sert à la fois au filtre "Mois" du
- * bandeau ET au graphique "Évolution mensuelle" (Statistiques), qui
- * utilisaient auparavant deux découpages différents (4-4-5 vs mois
- * calendaire) : un seul découpage partagé désormais.
+ * Regroupe les semaines présentes dans `rows` selon les blocs générés
+ * par genererBlocsMois() (comparaison de chaînes ISO "YYYY-MM-DD",
+ * valide car les semaines sont déjà dans ce format). Ne garde que les
+ * blocs contenant au moins une semaine saisie — sert à la fois au
+ * filtre "Mois" du bandeau ET au graphique "Évolution mensuelle"
+ * (Statistiques), qui utilisaient auparavant deux découpages
+ * différents (4-4-5 vs mois calendaire) : un seul découpage partagé
+ * désormais.
  */
 function blocsSemaines(rows) {
   const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
-  return BLOCS_MOIS_FIXES
+  return genererBlocsMois(5)
     .map(({ nom, debut, fin }) => ({
       libelle: `${nom} (${libellePlage(debut, fin)})`,
       labelCourt: nom,
