@@ -776,7 +776,7 @@
       </div>
       <div class="topbar-filtres">
         <select class="topbar-select" id="filtre-semaine" title="Filtrer par semaine"><option value="">Toutes les semaines</option></select>
-        <select class="topbar-select" id="filtre-mois" title="Filtrer par période (blocs 4-4-5)"><option value="">Tous les mois</option></select>
+        <select class="topbar-select" id="filtre-mois" title="Filtrer par bloc mensuel"><option value="">Tous les mois</option></select>
         <select class="topbar-select" id="filtre-anciennete" title="Filtrer par ancienneté">
           <option value="">Tous les conseillers</option>
           <option value="nouveau">🌱 Nouveau</option>
@@ -1491,7 +1491,6 @@ function kpiCard({ ic, title, value, variation, tone, statut }) {
    FILTRES GLOBAUX (barre du haut)
    ========================================================= */
 
-const PATRON_MOIS = [4, 4, 5];
 const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
 function libelleDateCourte(dateStr) {
@@ -1508,18 +1507,42 @@ function libellePlage(debutStr, finStr) {
   return `${libelleDateCourte(debutStr)} ${debut.getFullYear()} → ${droite}`;
 }
 
+// Blocs mensuels définis à la main avec Corentin (cycle annuel fixe,
+// pas un 4-4-5 recalculé sur les semaines présentes) — à reconduire
+// pour l'année suivante une fois le cycle terminé (Bloc 12 → 25/08).
+const BLOCS_MOIS_FIXES = [
+  { nom: 'Bloc 1', debut: '2026-08-27', fin: '2026-09-30' },
+  { nom: 'Bloc 2', debut: '2026-10-01', fin: '2026-10-28' },
+  { nom: 'Bloc 3', debut: '2026-10-29', fin: '2026-12-02' },
+  { nom: 'Bloc 4', debut: '2026-12-03', fin: '2026-12-30' },
+  { nom: 'Bloc 5', debut: '2026-12-31', fin: '2027-01-27' },
+  { nom: 'Bloc 6', debut: '2027-01-28', fin: '2027-02-24' },
+  { nom: 'Bloc 7', debut: '2027-02-25', fin: '2027-03-31' },
+  { nom: 'Bloc 8', debut: '2027-04-01', fin: '2027-04-28' },
+  { nom: 'Bloc 9', debut: '2027-04-29', fin: '2027-05-26' },
+  { nom: 'Bloc 10', debut: '2027-05-27', fin: '2027-06-30' },
+  { nom: 'Bloc 11', debut: '2027-07-01', fin: '2027-07-28' },
+  { nom: 'Bloc 12', debut: '2027-07-29', fin: '2027-08-25' },
+];
+
+/**
+ * Regroupe les semaines présentes dans `rows` selon BLOCS_MOIS_FIXES
+ * (comparaison de chaînes ISO "YYYY-MM-DD", valide car les semaines
+ * sont déjà dans ce format). Ne garde que les blocs contenant au
+ * moins une semaine saisie — sert à la fois au filtre "Mois" du
+ * bandeau ET au graphique "Évolution mensuelle" (Statistiques), qui
+ * utilisaient auparavant deux découpages différents (4-4-5 vs mois
+ * calendaire) : un seul découpage partagé désormais.
+ */
 function blocsSemaines(rows) {
   const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
-  const blocs = [];
-  let debut = 0, cycle = 0;
-  while (debut < semaines.length) {
-    const taille = PATRON_MOIS[cycle % PATRON_MOIS.length];
-    const groupe = semaines.slice(debut, debut + taille);
-    blocs.push({ libelle: libellePlage(groupe[0], groupe[groupe.length - 1]), semaines: groupe });
-    debut += taille;
-    cycle += 1;
-  }
-  return blocs;
+  return BLOCS_MOIS_FIXES
+    .map(({ nom, debut, fin }) => ({
+      libelle: `${nom} (${libellePlage(debut, fin)})`,
+      labelCourt: nom,
+      semaines: semaines.filter(s => s >= debut && s <= fin),
+    }))
+    .filter(bloc => bloc.semaines.length > 0);
 }
 
 let dernierBlocsMois = [];
@@ -1812,35 +1835,28 @@ function multiLineChartSVG(labelsX, series) {
     <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin-top:10px;">${legende}</div>`;
 }
 
-const MOIS_FR_COURT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-
-/** Reprend StatsEngine.taux_par_mois() : recalculé mois calendaire par mois calendaire (pas les blocs 4-4-5 du filtre Mois), "Recommandations" ramené à une atteinte d'objectif équipe du mois pour rester comparable 0-100 % aux autres taux. */
+/**
+ * Reprend StatsEngine.taux_par_mois(), mais recalculé sur les mêmes
+ * blocs fixes que le filtre "Mois" du bandeau (blocsSemaines) au lieu
+ * des mois calendaires — les deux vues "par mois" de l'appli utilisent
+ * désormais un seul et même découpage. "Recommandations" ramené à une
+ * atteinte d'objectif équipe du bloc pour rester comparable 0-100 %
+ * aux autres taux.
+ */
 function tauxParMois(rows) {
-  const cles = new Map();
-  for (const r of rows) {
-    const d = new Date(r.semaine);
-    if (isNaN(d)) continue;
-    const cle = `${d.getFullYear()}-${d.getMonth()}`;
-    if (!cles.has(cle)) cles.set(cle, { annee: d.getFullYear(), moisIdx: d.getMonth() });
-  }
-  const triees = [...cles.values()].sort((a, b) => (a.annee * 12 + a.moisIdx) - (b.annee * 12 + b.moisIdx));
-
-  return triees.map(({ annee, moisIdx }) => {
-    const sousLignes = rows.filter(r => {
-      const d = new Date(r.semaine);
-      return !isNaN(d) && d.getFullYear() === annee && d.getMonth() === moisIdx;
-    });
+  return blocsSemaines(rows).map(bloc => {
+    const sousLignes = rows.filter(r => bloc.semaines.includes(r.semaine));
     const sousAgg = agreger(sousLignes);
     const nbConseillersMois = Math.max(new Set(sousLignes.map(r => r.conseiller)).size, 1);
     // Recommandations = objectif HEBDOMADAIRE : sans le multiplier aussi par
-    // le nombre de semaines du mois, l'atteinte grimpe avec le nombre de
-    // semaines saisies au lieu de refléter la vraie performance (un mois à
-    // 4 semaines semblerait ~4x plus "performant" qu'un mois à 1 semaine).
-    const nbSemainesMois = Math.max(new Set(sousLignes.map(r => r.semaine)).size, 1);
+    // le nombre de semaines du bloc, l'atteinte grimpe avec le nombre de
+    // semaines saisies au lieu de refléter la vraie performance (un bloc à
+    // 5 semaines semblerait plus "performant" qu'un bloc à 4 semaines).
+    const nbSemainesMois = bloc.semaines.length || 1;
     const objectifRecoMois = OBJECTIFS.recommandations * nbConseillersMois * nbSemainesMois;
     const atteinteReco = objectifRecoMois ? sousAgg.recommandations / objectifRecoMois : 0;
     return {
-      label: MOIS_FR_COURT[moisIdx],
+      label: bloc.labelCourt,
       visio: sousAgg.taux_visio, r1_r2: sousAgg.taux_r1_r2, signature: sousAgg.taux_signature,
       concretisation: sousAgg.taux_concretisation, recommandations: atteinteReco,
     };
