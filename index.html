@@ -607,6 +607,12 @@
   .roster-table input { padding: 0; border: 1px solid transparent; background: transparent; font-size: 13px; color: var(--heading); font-family: inherit; }
   .roster-table input:focus { border-color: var(--gold); background: var(--bg); border-radius: 6px; padding: 5px 7px; outline: none; }
   .roster-table input[type="date"] { font-variant-numeric: tabular-nums; }
+
+  /* ---------------------------------------------------- Classement (tri) */
+
+  .classement-table th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+  .classement-table th[data-sort]:hover { color: var(--gold); }
+  .classement-table .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--gold); width: 8px; }
   .roster-table .anc-duree,
   .roster-table .anc-niveau { color: var(--heading); }
 
@@ -908,10 +914,24 @@
         <div class="page-sub">Performance ID cumulée sur toutes les semaines saisies.</div>
         <hr class="rule">
         <div class="card">
-          <table>
-            <thead><tr><th class="num">#</th><th>Conseiller</th><th class="num">RDV posés</th><th class="num">Transfo. R1→R2</th><th class="num">Signature</th><th class="num">Concrétisation</th><th class="num">Performance</th><th>Niveau</th></tr></thead>
+          <div style="overflow-x:auto;">
+          <table class="classement-table">
+            <thead><tr>
+              <th class="num">#</th>
+              <th data-sort="conseiller">Conseiller<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="rdv_poses">RDV posés<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="taux_r1_r2">Transfo. R1→R2<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="taux_signature">Signature<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="taux_concretisation">Concrétisation<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="recommandations">Recos<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="taux_visio">Taux visio<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="taux_casse">Taux casse<span class="sort-arrow"></span></th>
+              <th class="num" data-sort="performance">Performance<span class="sort-arrow"></span></th>
+              <th>Niveau</th>
+            </tr></thead>
             <tbody id="classement-body"></tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -1742,8 +1762,21 @@ function renderDashboard(rows, toutesLignes) {
     : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
 }
 
+let classementSort = { key: 'performance', dir: 'desc' };
+
+function trierClassementData(classement) {
+  const { key, dir } = classementSort;
+  return [...classement].sort((a, b) => {
+    const va = a[key], vb = b[key];
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), 'fr');
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
+
 function renderClassement(rows) {
-  const classement = classementDe(rows);
+  const classement = trierClassementData(classementDe(rows));
   document.getElementById('classement-body').innerHTML = classement.length ? classement.map((c, i) => `
     <tr>
       <td class="num rank">${i + 1}</td>
@@ -1752,9 +1785,16 @@ function renderClassement(rows) {
       <td class="num">${(c.taux_r1_r2 * 100).toFixed(0)} %</td>
       <td class="num">${(c.taux_signature * 100).toFixed(0)} %</td>
       <td class="num">${(c.taux_concretisation * 100).toFixed(0)} %</td>
+      <td class="num">${c.recommandations}</td>
+      <td class="num">${(c.taux_visio * 100).toFixed(0)} %</td>
+      <td class="num">${(c.taux_casse * 100).toFixed(0)} %</td>
       <td class="num">${c.performance.toFixed(1)}</td>
       <td><span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span></td>
-    </tr>`).join('') : `<tr><td colspan="8" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="11" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
+
+  document.querySelectorAll('.classement-table th[data-sort] .sort-arrow').forEach(el => { el.textContent = ''; });
+  const flecheActive = document.querySelector(`.classement-table th[data-sort="${classementSort.key}"] .sort-arrow`);
+  if (flecheActive) flecheActive.textContent = classementSort.dir === 'asc' ? '▴' : '▾';
 }
 
 /* =========================================================
@@ -2877,6 +2917,15 @@ document.querySelectorAll('.roster-table th[data-sort]').forEach(th => {
     if (rosterSort.key === cle) rosterSort.dir = rosterSort.dir === 'asc' ? 'desc' : 'asc';
     else rosterSort = { key: cle, dir: (cle === 'conseiller' || cle === 'date_entree') ? 'asc' : 'desc' };
     trierRoster();
+  });
+});
+
+document.querySelectorAll('.classement-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const cle = th.dataset.sort;
+    if (classementSort.key === cle) classementSort.dir = classementSort.dir === 'asc' ? 'desc' : 'asc';
+    else classementSort = { key: cle, dir: cle === 'conseiller' ? 'asc' : 'desc' };
+    renderAll();
   });
 });
 
