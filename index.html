@@ -712,6 +712,13 @@
   .pdf-marque { font-size: 10.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--gold); }
   .pdf-entete h1 { margin: 4px 0 0; font-size: 21px; font-weight: 700; color: #fff; }
   .pdf-meta { margin: 10px 0 16px; font-size: 11px; color: var(--heading-2); line-height: 1.5; }
+  .pdf-question {
+    margin: 0 0 14px; padding: 9px 12px; font-size: 12px; font-weight: 600; color: var(--navy);
+    background: var(--cream); border-left: 3px solid var(--gold); border-radius: 4px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .ia-echange-actions { margin-top: 8px; }
+  .ia-echange-actions .btn { padding: 5px 12px; font-size: 12px; }
   .pdf-corps h3 {
     margin: 20px 0 8px; padding-bottom: 5px; font-size: 14px; color: var(--navy);
     border-bottom: 2px solid var(--gold); break-after: avoid;
@@ -3571,7 +3578,7 @@ function rendreAnalyseIA(texte, conteneur, codes) {
   }
 }
 
-/* ---- Export PDF de la synthèse (fenêtre d'impression du navigateur, mise en page dédiée) ---- */
+/* ---- Export PDF (fenêtre d'impression du navigateur, mise en page dédiée) : synthèse et réponses aux questions ---- */
 
 let derniereAnalyseIA = null;   // { periode, nbConseillers, date } — de la dernière synthèse affichée
 
@@ -3580,21 +3587,17 @@ function dateFR(iso) {
   return `${j}/${m}/${a}`;
 }
 
-/** Construit dans #zone-impression le document à imprimer : en-tête, période, synthèse (un bloc par conseiller), pied de page. Retourne false s'il n'y a pas de synthèse. */
-function preparerImpressionIA() {
-  const source = document.getElementById('ia-resultat');
-  if (!derniereAnalyseIA || !source.childElementCount) return false;
-
+/** Construit dans #zone-impression le document à imprimer : en-tête, période, (question), contenu — un bloc d'un seul tenant par conseiller —, pied de page. */
+function construireDocumentImpressionIA({ titre, question, periode, nbConseillers, date, source }) {
   const el = (tag, classe, texte) => {
     const n = document.createElement(tag);
     if (classe) n.className = classe;
     if (texte !== undefined) n.textContent = texte;
     return n;
   };
-  const { periode, nbConseillers, date } = derniereAnalyseIA;
 
   const entete = el('div', 'pdf-entete');
-  entete.append(el('div', 'pdf-marque', 'Cockpit Commercial Premium'), el('h1', '', 'Synthèse de l’équipe'));
+  entete.append(el('div', 'pdf-marque', 'Cockpit Commercial Premium'), el('h1', '', titre));
 
   const s = periode.semaines;
   const plage = s.length > 1 ? `du ${dateFR(s[0])} au ${dateFR(s[s.length - 1])}` : (s.length ? `semaine du ${dateFR(s[0])}` : '');
@@ -3602,7 +3605,6 @@ function preparerImpressionIA() {
     `Période : ${plage} (${periode.nb_semaines} semaine${periode.nb_semaines > 1 ? 's' : ''}) · ${nbConseillers} conseiller${nbConseillers > 1 ? 's' : ''} · ` +
     `généré le ${date.toLocaleDateString('fr-FR')} à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`);
 
-  // Chaque conseiller (titre + puces qui suivent) reste d'un seul tenant sur la page.
   const corps = el('div', 'pdf-corps');
   let bloc = null;
   for (const noeud of source.children) {
@@ -3614,22 +3616,19 @@ function preparerImpressionIA() {
   }
 
   const pied = el('div', 'pdf-pied',
-    'Document confidentiel : contient des données individuelles de performance. Synthèse rédigée par IA (Claude) à partir des indicateurs calculés par Cockpit ; à interpréter avec la connaissance du terrain.');
+    'Document confidentiel : contient des données individuelles de performance. Rédigé par IA (Claude) à partir des indicateurs calculés par Cockpit ; à interpréter avec la connaissance du terrain.');
 
   const zone = document.getElementById('zone-impression');
   zone.textContent = '';
-  zone.append(entete, meta, corps, pied);
-  return true;
+  zone.append(entete, meta);
+  if (question) zone.append(el('div', 'pdf-question', `Question : ${question}`));
+  zone.append(corps, pied);
 }
 
-function exporterSyntheseIAEnPDF() {
-  if (!preparerImpressionIA()) {
-    document.getElementById('ia-statut').textContent = 'Génère d’abord une analyse.';
-    return;
-  }
-  // Le titre de la page devient le nom de fichier proposé par "Enregistrer au format PDF".
+/** Ouvre l'impression sur #zone-impression ; le titre de page devient le nom de fichier proposé par "Enregistrer au format PDF". */
+function lancerImpressionIA(nomFichier) {
   const ancienTitre = document.title;
-  document.title = `Cockpit - Synthèse équipe - ${dateLocaleISO()}`;
+  document.title = nomFichier;
   document.body.classList.add('impression-ia');
   const nettoyer = () => {
     document.body.classList.remove('impression-ia');
@@ -3638,6 +3637,21 @@ function exporterSyntheseIAEnPDF() {
   };
   window.addEventListener('afterprint', nettoyer);
   window.print();
+}
+
+function exporterSyntheseIAEnPDF() {
+  const source = document.getElementById('ia-resultat');
+  if (!derniereAnalyseIA || !source.childElementCount) {
+    document.getElementById('ia-statut').textContent = 'Génère d’abord une analyse.';
+    return;
+  }
+  construireDocumentImpressionIA({ titre: 'Synthèse de l’équipe', ...derniereAnalyseIA, source });
+  lancerImpressionIA(`Cockpit - Synthèse équipe - ${dateLocaleISO()}`);
+}
+
+function exporterReponseIAEnPDF(echange) {
+  construireDocumentImpressionIA({ titre: 'Réponse à une question', ...echange });
+  lancerImpressionIA(`Cockpit - Réponse - ${dateLocaleISO()}`);
 }
 
 async function genererAnalyseIA() {
@@ -3796,6 +3810,19 @@ async function poserQuestionIA() {
       p.textContent = '(Réponse tronquée : limite de longueur atteinte.)';
       r.append(p);
     }
+
+    const actions = document.createElement('div');
+    actions.className = 'ia-echange-actions';
+    const boutonPdf = document.createElement('button');
+    boutonPdf.type = 'button';
+    boutonPdf.className = 'btn';
+    boutonPdf.textContent = 'Exporter en PDF';
+    const dateReponse = new Date();
+    boutonPdf.addEventListener('click', () => exporterReponseIAEnPDF({
+      question, periode: payload.periode, nbConseillers: payload.equipe.nb_conseillers, date: dateReponse, source: r,
+    }));
+    actions.append(boutonPdf);
+    bloc.append(actions);
   } catch (err) {
     console.error('Question IA', err);
     conversationIA.messages.pop();   // la question sans réponse ne doit pas rester dans le contexte
