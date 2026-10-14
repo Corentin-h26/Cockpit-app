@@ -894,12 +894,12 @@
                   <th>RDV vus</th>
                   <th>Visio vues</th>
                   <th>R1 vus</th>
-                  <th>R2 vus</th>
                   <th>R1→R2</th>
+                  <th>R2 vus</th>
                   <th>R2 signés</th>
                   <th>Suivi fait</th>
-                  <th>Recos</th>
                   <th>Commissions €</th>
+                  <th>Recos</th>
                   <th></th>
                 </tr>
               </thead>
@@ -909,7 +909,7 @@
         </div>
 
         <div class="field-hint">
-          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Commissions = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster. Un champ en orange signale un écart : RDV posés doit égaler R1 + R2 + Suivis, RDV vus doit égaler R1 vus + R2 vus + Suivi fait, et RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
+          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Équipe — un champ en rouge signale un nom qui ne correspond à personne du roster. Un champ en orange signale un écart : RDV posés doit égaler R1 + R2 + Suivis, RDV vus doit égaler R1 vus + R2 vus + Suivi fait, et RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
         </div>
       </div>
 
@@ -1214,7 +1214,7 @@ function lirePoids() {
   return POIDS;
 }
 
-const FIELDS = ['semaine', 'conseiller', 'rdv_poses', 'visio', 'r1', 'r2', 'suivis', 'potentiel', 'rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'suivis_faits', 'recommandations', 'commissions'];
+const FIELDS = ['semaine', 'conseiller', 'rdv_poses', 'visio', 'r1', 'r2', 'suivis', 'potentiel', 'rdv_vus', 'visio_vues', 'r1_vus', 'r1_en_r2', 'r2_vus', 'r2_signes', 'suivis_faits', 'commissions', 'recommandations'];
 const NUM_FIELDS = FIELDS.slice(2);
 const LABELS_CHAMPS = {
   semaine: 'Semaine', conseiller: 'Conseiller', rdv_poses: 'RDV posés', visio: 'Visio', r1: 'R1', r2: 'R2', potentiel: 'Potentiel €', suivis: 'Suivis',
@@ -2471,7 +2471,7 @@ function celluleChampValeur(f, valeur) {
 }
 
 const CHAMPS_PREVU = ['rdv_poses', 'visio', 'r1', 'r2', 'suivis', 'potentiel'];
-const CHAMPS_REALISE = ['rdv_vus', 'visio_vues', 'r1_vus', 'r2_vus', 'r1_en_r2', 'r2_signes', 'suivis_faits', 'recommandations', 'commissions'];
+const CHAMPS_REALISE = ['rdv_vus', 'visio_vues', 'r1_vus', 'r1_en_r2', 'r2_vus', 'r2_signes', 'suivis_faits', 'commissions', 'recommandations'];
 
 /** Construit le <tr> d'une ligne "semaine" à partir d'un document Firestore — utilisé à la fois pour reconstruire depuis un snapshot et pour l'insertion optimiste juste après création. */
 function construireLigneHTML(docId, data) {
