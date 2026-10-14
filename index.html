@@ -684,6 +684,14 @@
   .ia-resultat ul { margin: 4px 0 8px 18px; padding: 0; }
   .ia-resultat li { margin: 3px 0; font-size: 13px; line-height: 1.45; }
   .ia-resultat p { margin: 6px 0; font-size: 13px; line-height: 1.5; }
+  .ia-resultat .ia-tableau, .pdf-corps .ia-tableau { overflow-x: auto; margin: 8px 0 12px; }
+  .ia-resultat table, .pdf-corps table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .ia-resultat th, .ia-resultat td, .pdf-corps th, .pdf-corps td {
+    text-align: left; padding: 7px 10px; border: 1px solid var(--border); vertical-align: top;
+    text-transform: none; letter-spacing: 0; font-size: 12.5px; color: var(--heading);
+  }
+  .ia-resultat th, .pdf-corps th { background: var(--cream); font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ia-resultat ol, .pdf-corps ol { margin: 4px 0 8px 20px; padding: 0; }
   .ia-echange { margin-top: 16px; }
   .ia-question-texte { font-size: 13px; font-weight: 700; color: var(--heading); margin-bottom: 6px; }
   .ia-reponse { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
@@ -1165,7 +1173,7 @@
 
         <div class="saisie-toolbar">
           <button class="btn btn-primary" id="btn-ia-analyser" type="button">Générer l'analyse</button>
-          <button class="btn" id="btn-ia-pdf" type="button" style="display:none;">Exporter en PDF</button>
+          <button class="btn" id="btn-ia-pdf" type="button" title="Exporte la synthèse générée au format PDF">Exporter en PDF</button>
           <span class="ia-statut" id="ia-statut"></span>
         </div>
 
@@ -3474,16 +3482,73 @@ function ajouterTexteInlineIA(parent, texte) {
   }
 }
 
-/** Rendu Markdown minimal (titres, puces, gras) construit en DOM + textContent : le texte de l'IA n'est jamais injecté comme HTML. */
+/** Rendu Markdown minimal (titres, puces, listes numérotées, tableaux, gras) construit en DOM + textContent : le texte de l'IA n'est jamais injecté comme HTML. */
 function rendreAnalyseIA(texte, conteneur, codes) {
   conteneur.textContent = '';
   const avecNoms = texte.replace(/\bC\d{2}\b/g, code => codes.get(code) || code);
+  const lignes = avecNoms.split('\n').map(l => l.trimEnd());
+
+  const estLigneTableau = l => /^\s*\|.*\|\s*$/.test(l);
+  const estSeparateur = l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+  const cellules = l => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(x => x.trim());
+
+  const construireTableau = (bloc) => {
+    const aEnTete = bloc.length > 1 && estSeparateur(bloc[1]);
+    const donnees = bloc.filter(l => !estSeparateur(l)).map(cellules);
+    const enveloppe = document.createElement('div');
+    enveloppe.className = 'ia-tableau';
+    const table = document.createElement('table');
+    const ajouterLigne = (parent, cases, balise) => {
+      const tr = document.createElement('tr');
+      for (const texteCase of cases) {
+        const td = document.createElement(balise);
+        ajouterTexteInlineIA(td, texteCase);
+        tr.append(td);
+      }
+      parent.append(tr);
+    };
+    if (aEnTete) {
+      const thead = document.createElement('thead');
+      ajouterLigne(thead, donnees[0], 'th');
+      table.append(thead);
+    }
+    const tbody = document.createElement('tbody');
+    for (const ligne of (aEnTete ? donnees.slice(1) : donnees)) ajouterLigne(tbody, ligne, 'td');
+    table.append(tbody);
+    enveloppe.append(table);
+    return enveloppe;
+  };
+
   let liste = null;
-  for (const brut of avecNoms.split('\n')) {
-    const ligne = brut.trimEnd();
+  let typeListe = null;
+  const ajouterElementListe = (type, contenu) => {
+    if (!liste || typeListe !== type) {
+      liste = document.createElement(type);
+      typeListe = type;
+      conteneur.append(liste);
+    }
+    const li = document.createElement('li');
+    ajouterTexteInlineIA(li, contenu);
+    liste.append(li);
+  };
+
+  for (let i = 0; i < lignes.length; i++) {
+    const ligne = lignes[i];
     if (!ligne.trim()) { liste = null; continue; }
+
+    if (estLigneTableau(ligne)) {
+      liste = null;
+      const bloc = [];
+      while (i < lignes.length && estLigneTableau(lignes[i])) { bloc.push(lignes[i]); i++; }
+      i--;
+      conteneur.append(construireTableau(bloc));
+      continue;
+    }
+
     let m;
-    if ((m = ligne.match(/^#{1,2}\s+(.*)/))) {
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(ligne)) {
+      liste = null;   // filet horizontal : ignoré
+    } else if ((m = ligne.match(/^#{1,2}\s+(.*)/))) {
       liste = null;
       const h = document.createElement('h3');
       ajouterTexteInlineIA(h, m[1]);
@@ -3494,10 +3559,9 @@ function rendreAnalyseIA(texte, conteneur, codes) {
       ajouterTexteInlineIA(h, m[1]);
       conteneur.append(h);
     } else if ((m = ligne.match(/^\s*[-*•]\s+(.*)/))) {
-      if (!liste) { liste = document.createElement('ul'); conteneur.append(liste); }
-      const li = document.createElement('li');
-      ajouterTexteInlineIA(li, m[1]);
-      liste.append(li);
+      ajouterElementListe('ul', m[1]);
+    } else if ((m = ligne.match(/^\s*\d+[.)]\s+(.*)/))) {
+      ajouterElementListe('ol', m[1]);
     } else {
       liste = null;
       const p = document.createElement('p');
@@ -3593,7 +3657,6 @@ async function genererAnalyseIA() {
 
   bouton.disabled = true;
   document.getElementById('ia-resultat').style.display = 'none';
-  document.getElementById('btn-ia-pdf').style.display = 'none';
   derniereAnalyseIA = null;
   statut.textContent = `Analyse en cours (${payload.equipe.nb_conseillers} conseillers, ${payload.periode.nb_semaines} semaine(s))…`;
   try {
@@ -3602,7 +3665,6 @@ async function genererAnalyseIA() {
     rendreAnalyseIA(reponse.texte, zone, codes);
     zone.style.display = '';
     derniereAnalyseIA = { periode: payload.periode, nbConseillers: payload.equipe.nb_conseillers, date: new Date() };
-    document.getElementById('btn-ia-pdf').style.display = '';
     const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     statut.textContent = reponse.tronque
       ? `Analyse générée à ${heure}, mais tronquée : la limite de longueur a été atteinte (réduis la période ou filtre l’ancienneté).`
@@ -3621,7 +3683,7 @@ const PROMPT_SYSTEME_QUESTIONS_IA = `Tu es l'assistant d'analyse de Cockpit, l'o
 
 Les données sont déjà calculées : ne les recalcule pas à partir d'autre chose et n'invente rien. Les conseillers sont désignés par des codes (C01, C02…) : n'utilise que ces codes. "totaux_periode" donne les totaux de la période, les champs "_moy_hebdo" des moyennes par semaine, "par_semaine" le détail semaine par semaine quand il est présent (sinon il n'est pas disponible).
 
-Réponds en français, brièvement et directement. Si la question demande un classement ("top 3", "les 5 plus…"), donne une liste numérotée avec le code, la valeur chiffrée et l'unité ; précise l'indicateur utilisé (total de la période ou moyenne hebdomadaire) et signale les ex æquo. Si l'information n'existe pas dans les données, dis-le simplement au lieu de l'estimer. Pas de jugement sur les personnes, uniquement sur les indicateurs.`;
+Réponds en français, brièvement et directement. Pour comparer des conseillers ou des périodes, utilise un tableau Markdown (une ligne par indicateur). Si la question demande un classement ("top 3", "les 5 plus…"), donne une liste numérotée avec le code, la valeur chiffrée et l'unité ; précise l'indicateur utilisé (total de la période ou moyenne hebdomadaire) et signale les ex æquo. Si l'information n'existe pas dans les données, dis-le simplement au lieu de l'estimer. Pas de jugement sur les personnes, uniquement sur les indicateurs.`;
 
 let conversationIA = null;   // { json, codes, messages } — repart de zéro quand la période change
 
