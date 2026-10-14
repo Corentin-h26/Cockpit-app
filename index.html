@@ -778,6 +778,9 @@
   .res-titre { flex: 1 1 180px; }
   .res-url { flex: 2 1 240px; }
   .res-texte { flex: 1 1 100%; resize: vertical; line-height: 1.45; }
+  .res-fichier { flex: 2 1 240px; display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12.5px; }
+  .res-fichier-nom { font-weight: 600; color: var(--heading); word-break: break-word; }
+  .res-fichier input[type="file"] { font: inherit; font-size: 12px; max-width: 100%; }
   .res-vide { font-size: 12px; color: var(--heading-2); margin: 0 0 8px; }
 
   /* ---------------------------------------------------- Analyse IA */
@@ -3903,9 +3906,10 @@ const AXES_PERF = [
 
 const TYPES_RESSOURCE = [
   { valeur: 'formation', libelle: 'Formation', ic: 'target' },
-  { valeur: 'pdf', libelle: 'PDF / document', ic: 'folder' },
-  { valeur: 'trame', libelle: 'Trame', ic: 'pen' },
+  { valeur: 'fichier', libelle: 'Fichier à envoyer (PDF, Word, image…)', ic: 'folder' },
   { valeur: 'texte', libelle: 'Texte à copier (trame, script…)', ic: 'pen' },
+  { valeur: 'pdf', libelle: 'PDF / document (lien)', ic: 'folder' },
+  { valeur: 'trame', libelle: 'Trame (lien)', ic: 'pen' },
   { valeur: 'video', libelle: 'Vidéo', ic: 'video' },
   { valeur: 'lien', libelle: 'Lien', ic: 'briefcase' },
 ];
@@ -3933,13 +3937,18 @@ function normaliserRessources(axes) {
         type: TYPES_RESSOURCE.some(t => t.valeur === r.type) ? r.type : 'lien',
         url: String(r.url || ''),
         contenu: String(r.contenu || ''),
+        fichier: r.fichier && r.fichier.id
+          ? { id: String(r.fichier.id), nom: String(r.fichier.nom || 'document'), taille: Number(r.fichier.taille) || 0 }
+          : null,
       }));
   }
   return sortie;
 }
 
 /** Un lien https, ou un texte à copier renseigné. */
-const ressourceValide = r => r.type === 'texte' ? r.contenu.trim() !== '' : urlSure(r.url) !== '';
+const ressourceValide = r => r.type === 'texte' ? r.contenu.trim() !== ''
+  : r.type === 'fichier' ? !!r.fichier
+  : urlSure(r.url) !== '';
 
 const ressourcesDe = cle => (bibliothequeRessources || normaliserRessources(RESSOURCES_PAR_DEFAUT))[cle] || [];
 
@@ -3980,6 +3989,86 @@ function ouvrirPointFaibleDepuisLigne(tr) {
   }
   ouvrirPointFaible({ conseiller: data.conseiller, semaine: data.semaine, agg });
   return true;
+}
+
+/* ---- Fichiers envoyés : stockés dans cockpit_parametres/fichier_<id> (une seule collection, donc les règles
+   existantes s'appliquent : lecture @capfinances.fr, écriture admin). Limite Firestore : 1 Mo par document. ---- */
+
+const TAILLE_MAX_FICHIER = 600 * 1024;   // en base64 : ~800 Ko, sous la limite de 1 Mo par document
+const MIME_PAR_EXTENSION = {
+  pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain',
+};
+// Seuls ces types sont affichés dans un onglet ; les autres sont téléchargés (jamais de HTML/SVG exécuté sur notre origine).
+const MIMES_AFFICHABLES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const EXTENSIONS_ACCEPTEES = '.' + Object.keys(MIME_PAR_EXTENSION).join(',.');
+
+const mimeDepuisNom = nom => MIME_PAR_EXTENSION[(String(nom).split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
+const tailleEnKo = octets => Math.max(1, Math.round(octets / 1024));
+
+function enBase64(buffer) {
+  const octets = new Uint8Array(buffer);
+  let binaire = '';
+  for (let i = 0; i < octets.length; i += 0x8000) binaire += String.fromCharCode.apply(null, octets.subarray(i, i + 0x8000));
+  return btoa(binaire);
+}
+
+async function televerserFichierRessource(fichier) {
+  if (!isAdmin) throw new Error('Réservé à l’administrateur.');
+  if (mimeDepuisNom(fichier.name) === 'application/octet-stream') {
+    throw new Error('Format non pris en charge (PDF, Word, Excel, PowerPoint, image ou texte).');
+  }
+  if (fichier.size > TAILLE_MAX_FICHIER) {
+    throw new Error(`Fichier trop volumineux (${tailleEnKo(fichier.size)} Ko, maximum ${tailleEnKo(TAILLE_MAX_FICHIER)} Ko). Mets-le sur SharePoint et colle le lien.`);
+  }
+  const id = nouvelId() + nouvelId();
+  await db.collection('cockpit_parametres').doc('fichier_' + id).set({
+    nom: String(fichier.name),
+    taille: fichier.size,
+    data: enBase64(await fichier.arrayBuffer()),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  return { id, nom: String(fichier.name), taille: fichier.size };
+}
+
+function supprimerFichierRessource(meta) {
+  if (!isAdmin || !meta || !meta.id) return Promise.resolve();
+  return db.collection('cockpit_parametres').doc('fichier_' + meta.id).delete()
+    .catch(err => console.error('Suppression du fichier', err));
+}
+
+async function ouvrirFichierRessource(meta) {
+  // Fenêtre ouverte tout de suite, sur le clic : sinon le navigateur bloquerait l'ouverture après l'attente réseau.
+  const fenetre = window.open('', '_blank');
+  try {
+    const snap = await db.collection('cockpit_parametres').doc('fichier_' + meta.id).get();
+    if (!snap.exists) throw new Error('Fichier introuvable.');
+    const donnees = snap.data();
+    const binaire = atob(donnees.data || '');
+    const octets = new Uint8Array(binaire.length);
+    for (let i = 0; i < binaire.length; i++) octets[i] = binaire.charCodeAt(i);
+    const mime = mimeDepuisNom(donnees.nom || meta.nom);   // jamais le type stocké en base : on ne s'y fie pas
+    const url = URL.createObjectURL(new Blob([octets], { type: mime }));
+    if (MIMES_AFFICHABLES.has(mime) && fenetre) {
+      fenetre.location.href = url;
+    } else {
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = donnees.nom || meta.nom || 'document';
+      document.body.append(lien);
+      lien.click();
+      lien.remove();
+      if (fenetre) fenetre.close();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  } catch (err) {
+    if (fenetre) fenetre.close();
+    console.error('Ouverture du fichier', err);
+    alert('Impossible d’ouvrir ce fichier : ' + err.message);
+  }
 }
 
 function copierTexteRessource(texte, bouton) {
@@ -4087,13 +4176,20 @@ function rendrePointFaible(cleAxe) {
         continue;
       }
       const lien = el('a', 'pf-ressource');
-      lien.href = urlSure(r.url);
-      lien.target = '_blank';
-      lien.rel = 'noopener noreferrer';
+      if (r.type === 'fichier') {
+        lien.href = '#';
+        lien.addEventListener('click', e => { e.preventDefault(); ouvrirFichierRessource(r.fichier); });
+      } else {
+        lien.href = urlSure(r.url);
+        lien.target = '_blank';
+        lien.rel = 'noopener noreferrer';
+      }
       const pict = el('span', 'pf-ressource-ic');
       pict.innerHTML = ic(type.ic, 18);
       const texte = el('div');
-      texte.append(el('div', 'pf-ressource-titre', r.titre || r.url), el('div', 'pf-ressource-type', type.libelle));
+      texte.append(
+        el('div', 'pf-ressource-titre', r.titre || (r.fichier ? r.fichier.nom : r.url)),
+        el('div', 'pf-ressource-type', r.type === 'fichier' ? `Document${r.fichier ? ' — ' + tailleEnKo(r.fichier.taille) + ' Ko' : ''}` : type.libelle));
       lien.append(pict, texte, el('span', 'pf-ressource-go', 'Ouvrir ↗'));
       modal.append(lien);
     }
@@ -4180,7 +4276,8 @@ function renderEditeurRessources() {
   carte.style.display = isAdmin ? '' : 'none';
   if (!isAdmin) return;
   // Pas de reconstruction pendant la frappe : on le fera à la sortie du champ.
-  if (zone.contains(document.activeElement) && ['INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+  const actif = document.activeElement;
+  if (zone.contains(actif) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(actif.tagName) && actif.type !== 'file') {
     editeurRessourcesEnAttente = true;
     return;
   }
@@ -4219,7 +4316,38 @@ function renderEditeurRessources() {
       choixType.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).type = choixType.value; }));
 
       let champContenu;
-      if (r.type === 'texte') {
+      if (r.type === 'fichier') {
+        champContenu = el('div', 'res-fichier');
+        const etat = el('span', 'res-fichier-nom', r.fichier ? `${r.fichier.nom} (${tailleEnKo(r.fichier.taille)} Ko)` : 'Aucun fichier envoyé');
+        const choisir = el('input');
+        choisir.type = 'file';
+        choisir.accept = EXTENSIONS_ACCEPTEES;
+        choisir.addEventListener('change', async () => {
+          const fichier = choisir.files && choisir.files[0];
+          if (!fichier) return;
+          const texteAvant = etat.textContent;
+          choisir.disabled = true;
+          etat.textContent = 'Envoi en cours…';
+          try {
+            if (!ressourcesChargees) throw new Error('Chargement en cours, réessaie dans un instant.');
+            const meta = await televerserFichierRessource(fichier);
+            const ancien = r.fichier;
+            modifierRessources(b => {
+              const x = b[axe.cle].find(y => y.id === r.id);
+              if (!x) return;
+              x.fichier = meta;
+              if (!x.titre) x.titre = fichier.name.replace(/\.[^.]+$/, '');
+            });
+            if (ancien) supprimerFichierRessource(ancien);
+          } catch (err) {
+            alert('Envoi impossible : ' + err.message);
+            etat.textContent = texteAvant;
+            choisir.disabled = false;
+            choisir.value = '';
+          }
+        });
+        champContenu.append(etat, choisir);
+      } else if (r.type === 'texte') {
         champContenu = el('textarea', 'res-input res-texte');
         champContenu.rows = 6;
         champContenu.placeholder = 'Colle ici le texte (trame, script d’appel…) : le conseiller pourra le copier en un clic.';
@@ -4236,16 +4364,19 @@ function renderEditeurRessources() {
       const suppr = el('button', 'org-mini-btn danger', '✕');
       suppr.type = 'button';
       suppr.title = 'Supprimer cette ressource';
-      suppr.addEventListener('click', () => modifierRessources(b => { b[axe.cle] = b[axe.cle].filter(x => x.id !== r.id); }));
+      suppr.addEventListener('click', () => {
+        supprimerFichierRessource(r.fichier);
+        modifierRessources(b => { b[axe.cle] = b[axe.cle].filter(x => x.id !== r.id); });
+      });
 
       ligne.append(champTitre, choixType, champContenu, suppr);
-      if (r.type !== 'texte' && r.url && !urlSure(r.url)) ligne.append(el('div', 'res-vide', 'Le lien doit commencer par https://'));
+      if (!['texte', 'fichier'].includes(r.type) && r.url && !urlSure(r.url)) ligne.append(el('div', 'res-vide', 'Le lien doit commencer par https://'));
       bloc.append(ligne);
     }
 
     const ajout = el('button', 'org-mini-btn', '+ Ajouter une ressource');
     ajout.type = 'button';
-    ajout.addEventListener('click', () => modifierRessources(b => { b[axe.cle].push({ id: nouvelId(), titre: '', type: 'lien', url: '', contenu: '' }); }));
+    ajout.addEventListener('click', () => modifierRessources(b => { b[axe.cle].push({ id: nouvelId(), titre: '', type: 'lien', url: '', contenu: '', fichier: null }); }));
     bloc.append(ajout);
     zone.append(bloc);
   }
