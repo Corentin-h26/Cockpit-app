@@ -704,6 +704,13 @@
   }
   .org-chip.fixe { cursor: default; }
   .org-chip.glisse { opacity: 0.45; }
+  .org-rtc { background: var(--cream); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); margin-bottom: 16px; max-width: 420px; }
+  .org-lien { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--heading-2); }
+  .org-lien strong { color: var(--heading); font-weight: 600; }
+  .org-lien-select {
+    flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 4px 6px; color: var(--heading);
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  }
   .org-pool { margin-top: 18px; }
   .org-pool h3 { margin: 0 0 4px; font-size: 14px; color: var(--heading); }
   .org-pool .org-chip { background: var(--heading-2); }
@@ -1339,8 +1346,10 @@ let isAdmin = false;
 
 // Organisation RT → SA → conseillers (document cockpit_parametres/equipes, écriture admin).
 // Déclaré ici, tôt dans le script : appliquerFiltres() y accède à chaque rendu.
-let organisation = { rts: [], affectations: [] };
+let organisation = { rts: [], affectations: [], rtc: { nom: 'RTC', personne: null } };
 let affectationParConseiller = new Map();   // conseiller -> id du SA
+let equipeParConseiller = new Map();        // personne -> { rt, sa, role } ; role : rtc | rt | sa | conseiller
+let organisationChargee = false;            // vrai dès que le document Firestore a été reçu (garde-fou avant toute écriture)
 
 /* ---- Connexion / inscription ---- */
 
@@ -1874,8 +1883,8 @@ function appliquerFiltres(rows) {
       const equipe = equipeDe(r.conseiller);
       if (rtSel === '__aucune__') return !equipe;
       if (!equipe) return false;
-      if (saSel) return equipe.sa.id === saSel;
-      return equipe.rt.id === rtSel;
+      if (saSel) return !!equipe.sa && equipe.sa.id === saSel;
+      return !!equipe.rt && equipe.rt.id === rtSel;
     });
   }
 
@@ -3366,37 +3375,90 @@ document.querySelectorAll('.classement-table th[data-sort]').forEach(th => {
 const nouvelId = () => 'o' + Math.random().toString(36).slice(2, 9);
 
 function normaliserOrganisation(data) {
+  // personne : nom du roster qui occupe la fonction ; '' = personne ; null = pas encore décidé (liaison automatique à faire).
+  const personne = v => (typeof v === 'string' ? v : null);
   const rts = Array.isArray(data && data.rts) ? data.rts.map(rt => ({
     id: String(rt.id),
     nom: String(rt.nom || ''),
-    sas: Array.isArray(rt.sas) ? rt.sas.map(sa => ({ id: String(sa.id), nom: String(sa.nom || '') })) : [],
+    personne: personne(rt.personne),
+    sas: Array.isArray(rt.sas)
+      ? rt.sas.map(sa => ({ id: String(sa.id), nom: String(sa.nom || ''), personne: personne(sa.personne) }))
+      : [],
   })) : [];
   const affectations = Array.isArray(data && data.affectations)
     ? data.affectations.filter(a => a && a.conseiller && a.sa).map(a => ({ conseiller: String(a.conseiller), sa: String(a.sa) }))
     : [];
-  return { rts, affectations };
+  const rtc = data && data.rtc
+    ? { nom: String(data.rtc.nom || 'RTC'), personne: personne(data.rtc.personne) }
+    : { nom: 'Corentin', personne: null };   // d'après l'organigramme : RTC Corentin
+  return { rts, affectations, rtc };
+}
+
+const jetonsNom = texte => String(texte).normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+const aDesLiensAChoisir = org => org.rtc.personne === null
+  || org.rts.some(rt => rt.personne === null || rt.sas.some(sa => sa.personne === null));
+
+/** Rattache chaque RTC / RT / SA encore « non décidé » à la personne du roster dont le nom contient
+ *  tous les mots du sien (accents et ordre ignorés). Ambigu ou introuvable : laissé vide, à choisir à la main. */
+function lierPersonnesAutomatiquement(org, noms) {
+  const utilises = new Set([org.rtc.personne, ...org.rts.flatMap(rt => [rt.personne, ...rt.sas.map(sa => sa.personne)])].filter(Boolean));
+  const proposer = noeud => {
+    if (noeud.personne !== null) return noeud;
+    const jetons = jetonsNom(noeud.nom);
+    const candidats = jetons.length
+      ? noms.filter(n => !utilises.has(n) && jetons.every(j => jetonsNom(n).includes(j)))
+      : [];
+    const personne = candidats.length === 1 ? candidats[0] : '';
+    if (personne) utilises.add(personne);
+    return { ...noeud, personne };
+  };
+  const rtc = proposer(org.rtc);
+  const rts = org.rts.map(rt => ({ ...proposer(rt), sas: rt.sas.map(proposer) }));
+  // Une personne désormais « responsable » ne reste pas affectée comme conseiller.
+  const affectations = org.affectations.filter(a => !utilises.has(a.conseiller));
+  return { ...org, rtc, rts, affectations };
+}
+
+/** N'agit que pour l'admin et une fois le roster chargé ; renvoie la même instance si rien à faire. */
+function avecLiensAutomatiques(org) {
+  if (!isAdmin || !aDesLiensAChoisir(org)) return org;
+  const noms = readRoster().map(r => r.conseiller);
+  return noms.length ? lierPersonnesAutomatiquement(org, noms) : org;
 }
 
 function indexerOrganisation() {
   affectationParConseiller = new Map(organisation.affectations.map(a => [a.conseiller, a.sa]));
+  equipeParConseiller = new Map();
+  const poser = (personne, valeur) => { if (personne && !equipeParConseiller.has(personne)) equipeParConseiller.set(personne, valeur); };
+  poser(organisation.rtc.personne, { rt: null, sa: null, role: 'rtc' });
+  for (const rt of organisation.rts) {
+    poser(rt.personne, { rt, sa: null, role: 'rt' });
+    for (const sa of rt.sas) poser(sa.personne, { rt, sa, role: 'sa' });
+  }
+  for (const [conseiller, saId] of affectationParConseiller) {
+    if (equipeParConseiller.has(conseiller)) continue;
+    for (const rt of organisation.rts) {
+      const sa = rt.sas.find(s => s.id === saId);
+      if (sa) { equipeParConseiller.set(conseiller, { rt, sa, role: 'conseiller' }); break; }
+    }
+  }
 }
 
-/** { rt, sa } du conseiller, ou null s'il n'est dans aucune équipe (ou rattaché à un SA supprimé). */
+/** { rt, sa, role } de la personne, ou null si elle n'est dans aucune équipe.
+ *  RTC : rt et sa nuls ; RT : sa nul ; SA : son propre SA (il compte dans son équipe). */
 function equipeDe(conseiller) {
-  const saId = affectationParConseiller.get(conseiller);
-  if (!saId) return null;
-  for (const rt of organisation.rts) {
-    const sa = rt.sas.find(s => s.id === saId);
-    if (sa) return { rt, sa };
-  }
-  return null;
+  return equipeParConseiller.get(conseiller) || null;
 }
 
 function sauvegarderOrganisation() {
-  if (!isAdmin) return Promise.resolve();
+  // Jamais avant d'avoir reçu le document : on écraserait l'organisation existante par l'état vide initial.
+  if (!isAdmin || !organisationChargee) return Promise.resolve();
   return db.collection('cockpit_parametres').doc('equipes').set({
     rts: organisation.rts,
     affectations: organisation.affectations,
+    rtc: organisation.rtc,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   }).catch(err => {
     console.error('Organisation', err);
@@ -3458,8 +3520,11 @@ function renderOrganisation() {
   const roster = readRoster().map(r => r.conseiller);
   const affectes = new Map();   // saId -> noms (conseillers présents au roster)
   const sansEquipe = [];
+  const personnesLiees = new Set([organisation.rtc.personne,
+    ...organisation.rts.flatMap(rt => [rt.personne, ...rt.sas.map(sa => sa.personne)])].filter(Boolean));
   for (const nom of roster) {
     const eq = equipeDe(nom);
+    if (eq && eq.role !== 'conseiller') continue;   // RTC / RT / SA : déjà représentés par leur propre case
     if (eq) {
       if (!affectes.has(eq.sa.id)) affectes.set(eq.sa.id, []);
       affectes.get(eq.sa.id).push(nom);
@@ -3519,7 +3584,36 @@ function renderOrganisation() {
     return input;
   };
 
+  // Ligne « Personne » d'un RTC / RT / SA : qui, dans le roster, occupe cette fonction.
+  const lignePersonne = (noeud, surChangement) => {
+    if (!isAdmin) {
+      if (!noeud.personne) return document.createDocumentFragment();
+      const ligne = el('div', 'org-lien');
+      ligne.append(el('span', '', 'Personne :'), el('strong', '', noeud.personne));
+      return ligne;
+    }
+    const ligne = el('div', 'org-lien');
+    ligne.append(el('span', '', 'Personne :'));
+    const select = el('select', 'org-lien-select');
+    const choix = new Set(roster.filter(n => n === noeud.personne || !personnesLiees.has(n)));
+    if (noeud.personne) choix.add(noeud.personne);
+    select.append(new Option('— non renseignée —', ''));
+    [...choix].sort(compare).forEach(n => select.append(new Option(n, n)));
+    select.value = noeud.personne || '';
+    select.addEventListener('change', () => surChangement(select.value));
+    ligne.append(select);
+    return ligne;
+  };
+
   zone.textContent = '';
+
+  const carteRtc = el('div', 'org-rtc');
+  const enteteRtc = el('div', 'org-rt-entete');
+  enteteRtc.append(el('span', 'org-badge', 'RTC'));
+  enteteRtc.append(champNom(organisation.rtc.nom, 'Nom du RTC', nom => renommerOrganisation('rtc', nom), 'rtc'));
+  carteRtc.append(enteteRtc, lignePersonne(organisation.rtc, nom => lierPersonneOrganisation('rtc', nom)));
+  zone.append(carteRtc);
+
   const grille = el('div', 'org-grille');
 
   if (!organisation.rts.length) {
@@ -3546,6 +3640,7 @@ function renderOrganisation() {
       entete.append(ajoutSa, suppr);
     }
     carte.append(entete);
+    carte.append(lignePersonne(rt, nom => lierPersonneOrganisation(rt.id, nom)));
 
     for (const sa of rt.sas) {
       const boite = el('div', 'org-sa');
@@ -3562,6 +3657,7 @@ function renderOrganisation() {
         enteteSa.append(suppr);
       }
       boite.append(enteteSa);
+      boite.append(lignePersonne(sa, nom => lierPersonneOrganisation(sa.id, nom)));
 
       const depot = el('div', 'org-depot');
       if (noms.length) noms.forEach(nom => depot.append(creerPuce(nom)));
@@ -3591,7 +3687,7 @@ function renderOrganisation() {
 }
 
 function majOrganisation(nouvelle) {
-  organisation = nouvelle;
+  organisation = avecLiensAutomatiques(nouvelle);
   indexerOrganisation();
   populerFiltresOrganisation();
   renderAll();
@@ -3603,10 +3699,25 @@ function deplacerConseillerOrganisation(nom, saId) {
   majOrganisation({ ...organisation, affectations: saId ? [...autres, { conseiller: nom, sa: saId }] : autres });
 }
 
+function lierPersonneOrganisation(idNoeud, nom) {
+  const lier = noeud => ({ ...noeud, personne: nom });
+  majOrganisation({
+    ...organisation,
+    rtc: idNoeud === 'rtc' ? lier(organisation.rtc) : organisation.rtc,
+    rts: organisation.rts.map(rt => ({
+      ...(rt.id === idNoeud ? lier(rt) : rt),
+      sas: rt.sas.map(sa => sa.id === idNoeud ? lier(sa) : sa),
+    })),
+    // Un responsable n'est plus affecté comme simple conseiller.
+    affectations: nom ? organisation.affectations.filter(a => a.conseiller !== nom) : organisation.affectations,
+  });
+}
+
 function renommerOrganisation(id, nom) {
   if (!nom) { renderOrganisation(); return; }   // nom vidé : on garde l'ancien
   majOrganisation({
     ...organisation,
+    rtc: id === 'rtc' ? { ...organisation.rtc, nom } : organisation.rtc,
     rts: organisation.rts.map(rt => ({
       ...rt,
       nom: rt.id === id ? nom : rt.nom,
@@ -3618,7 +3729,7 @@ function renommerOrganisation(id, nom) {
 function ajouterRTOrganisation() {
   const id = nouvelId();
   focusNomOrganisation = id;
-  majOrganisation({ ...organisation, rts: [...organisation.rts, { id, nom: 'Nouveau RT', sas: [] }] });
+  majOrganisation({ ...organisation, rts: [...organisation.rts, { id, nom: 'Nouveau RT', personne: '', sas: [] }] });
 }
 
 function ajouterSAOrganisation(rtId) {
@@ -3626,7 +3737,7 @@ function ajouterSAOrganisation(rtId) {
   focusNomOrganisation = id;
   majOrganisation({
     ...organisation,
-    rts: organisation.rts.map(rt => rt.id === rtId ? { ...rt, sas: [...rt.sas, { id, nom: 'Nouveau SA' }] } : rt),
+    rts: organisation.rts.map(rt => rt.id === rtId ? { ...rt, sas: [...rt.sas, { id, nom: 'Nouveau SA', personne: '' }] } : rt),
   });
 }
 
@@ -3634,6 +3745,7 @@ function supprimerSAOrganisation(saId) {
   const nb = organisation.affectations.filter(a => a.sa === saId).length;
   if (nb && !confirm(`Ce SA a ${nb} conseiller${nb > 1 ? 's' : ''} : ils repasseront en « Non affectés ». Supprimer ?`)) return;
   majOrganisation({
+    ...organisation,
     rts: organisation.rts.map(rt => ({ ...rt, sas: rt.sas.filter(sa => sa.id !== saId) })),
     affectations: organisation.affectations.filter(a => a.sa !== saId),
   });
@@ -3646,21 +3758,23 @@ function supprimerRTOrganisation(rtId) {
   const nb = organisation.affectations.filter(a => idsSa.has(a.sa)).length;
   if ((rt.sas.length || nb) && !confirm(`Supprimer ce RT, ses ${rt.sas.length} SA et désaffecter ${nb} conseiller${nb > 1 ? 's' : ''} ?`)) return;
   majOrganisation({
+    ...organisation,
     rts: organisation.rts.filter(r => r.id !== rtId),
     affectations: organisation.affectations.filter(a => !idsSa.has(a.sa)),
   });
 }
 
 function preRemplirOrganisationDepuisOrganigramme() {
-  if (!confirm('Créer les 3 RT (Merwan, Alexandre Paris, Enzo) et leurs 7 SA d’après l’organigramme ? Tu pourras ensuite tout renommer, ajouter ou supprimer.')) return;
-  const sas = noms => noms.map(nom => ({ id: nouvelId(), nom }));
+  if (!confirm('Créer les 3 RT (Merwan, Alexandre Paris, Enzo) et leurs 7 SA d’après l’organigramme, et les relier aux personnes du roster ? Tu pourras ensuite tout renommer, ajouter ou supprimer.')) return;
+  // personne: null → rattachée automatiquement à la personne du roster dont le nom correspond.
+  const sas = noms => noms.map(nom => ({ id: nouvelId(), nom, personne: null }));
   majOrganisation({
+    ...organisation,
     rts: [
-      { id: nouvelId(), nom: 'Merwan', sas: sas(['Pierre', 'Alexis', 'Cécile']) },
-      { id: nouvelId(), nom: 'Alexandre Paris', sas: sas(['Margot', 'Audrey', 'Étienne']) },
-      { id: nouvelId(), nom: 'Enzo', sas: sas(['Grégoire']) },
+      { id: nouvelId(), nom: 'Merwan', personne: null, sas: sas(['Pierre', 'Alexis', 'Cécile']) },
+      { id: nouvelId(), nom: 'Alexandre Paris', personne: null, sas: sas(['Margot', 'Audrey', 'Étienne']) },
+      { id: nouvelId(), nom: 'Enzo', personne: null, sas: sas(['Grégoire']) },
     ],
-    affectations: organisation.affectations,
   });
 }
 
@@ -4343,6 +4457,7 @@ function appliquerRosterSnapshot(snap) {
   appliquerVerrouillageRoster();
   trierRoster();
   document.getElementById('btn-importer-roster').style.display = (isAdmin && snap.empty) ? '' : 'none';
+  completerLiensOrganisation();
   renderAll();
 }
 
@@ -4363,10 +4478,24 @@ function appliquerPoidsSnapshot(snap) {
 }
 
 function appliquerEquipesSnapshot(snap) {
-  organisation = normaliserOrganisation(snap.exists ? snap.data() : null);
+  const recue = normaliserOrganisation(snap.exists ? snap.data() : null);
+  organisationChargee = true;
+  organisation = avecLiensAutomatiques(recue);
   indexerOrganisation();
   populerFiltresOrganisation();
   renderAll();
+  if (organisation !== recue) sauvegarderOrganisation();   // liaisons automatiques calculées : on les enregistre
+}
+
+/** Le roster peut arriver après l'organisation : on complète alors les liaisons restées « non décidées ». */
+function completerLiensOrganisation() {
+  if (!organisationChargee) return;
+  const liee = avecLiensAutomatiques(organisation);
+  if (liee === organisation) return;
+  organisation = liee;
+  indexerOrganisation();
+  populerFiltresOrganisation();
+  sauvegarderOrganisation();
 }
 
 function marquerSynchronise(ok) {
@@ -4377,6 +4506,7 @@ function marquerSynchronise(ok) {
 let unsubscribers = [];
 
 function demarrerEcoutes() {
+  organisationChargee = false;
   const unsubRows = db.collection('cockpit_semaines').onSnapshot(snap => {
     marquerSynchronise(true);
     if (rowsFocused) { pendingRowsSnap = snap; return; }
