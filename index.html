@@ -1139,7 +1139,7 @@
 
         <div class="card" style="margin-top:16px;">
           <div class="card-title"><span>Poser une question sur les chiffres</span></div>
-          <div class="field-hint">Exemples : « Top 3 recommandations », « Qui a le plus fort taux de casse ? », « Compare C01 et C05 », « Combien de R2 signés au total ? ». Répond sur la période sélectionnée en haut de page ; les questions de suivi tiennent compte des réponses précédentes.</div>
+          <div class="field-hint">Exemples : « Top 3 recommandations », « Qui a le plus fort taux de casse ? », « Compare <span id="ia-exemple-noms">deux conseillers</span> », « Combien de R2 signés au total ? ». Tape les vrais noms : ils sont remplacés par des codes anonymes avant l'envoi. Répond sur la période sélectionnée en haut de page ; les questions de suivi tiennent compte des réponses précédentes.</div>
           <div class="ia-cle-ligne">
             <input type="text" id="ia-question" placeholder="Ta question…" autocomplete="off">
             <button class="btn btn-primary" id="btn-ia-demander" type="button">Demander</button>
@@ -3675,6 +3675,11 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
     document.getElementById('topbar-title').textContent = TITLES[btn.dataset.view];
+
+    if (btn.dataset.view === 'analyse') {
+      const noms = readRoster().map(r => r.conseiller);
+      if (noms.length >= 2) document.getElementById('ia-exemple-noms').textContent = `${noms[0]} et ${noms[1]}`;
+    }
 
     if (btn.dataset.view === 'ma-fiche') {
       activerModeFiche();
