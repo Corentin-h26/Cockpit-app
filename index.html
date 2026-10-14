@@ -3480,7 +3480,7 @@ function populerFiltresOrganisation() {
   selRt.replaceChildren(
     new Option('Tous les centres', ''),
     ...organisation.rts.map(rt => new Option(`RT ${rt.nom}`, rt.id)),
-    new Option('Sans équipe', '__aucune__'),
+    new Option('Sans centre', '__aucune__'),
   );
   const rtExiste = organisation.rts.some(rt => rt.id === rtAvant) || rtAvant === '__aucune__';
   selRt.value = rtExiste ? rtAvant : '';
