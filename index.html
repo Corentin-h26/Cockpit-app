@@ -684,6 +684,10 @@
   .ia-resultat ul { margin: 4px 0 8px 18px; padding: 0; }
   .ia-resultat li { margin: 3px 0; font-size: 13px; line-height: 1.45; }
   .ia-resultat p { margin: 6px 0; font-size: 13px; line-height: 1.5; }
+  .ia-echange { margin-top: 16px; }
+  .ia-question-texte { font-size: 13px; font-weight: 700; color: var(--heading); margin-bottom: 6px; }
+  .ia-reponse { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .ia-reponse.erreur { color: var(--coral); font-size: 13px; }
   .ia-donnees summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
   .ia-donnees pre {
     max-height: 280px; overflow: auto; font-size: 11px; line-height: 1.4;
@@ -1132,6 +1136,18 @@
         </div>
 
         <div class="card ia-resultat" id="ia-resultat" style="display:none;"></div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-title"><span>Poser une question sur les chiffres</span></div>
+          <div class="field-hint">Exemples : « Top 3 recommandations », « Qui a le plus fort taux de casse ? », « Compare C01 et C05 », « Combien de R2 signés au total ? ». Répond sur la période sélectionnée en haut de page ; les questions de suivi tiennent compte des réponses précédentes.</div>
+          <div class="ia-cle-ligne">
+            <input type="text" id="ia-question" placeholder="Ta question…" autocomplete="off">
+            <button class="btn btn-primary" id="btn-ia-demander" type="button">Demander</button>
+            <button class="btn" id="btn-ia-nouvelle-conversation" type="button">Nouvelle conversation</button>
+          </div>
+          <div class="ia-statut" id="ia-question-statut" style="margin-top:8px;"></div>
+          <div id="ia-echanges"></div>
+        </div>
 
         <details class="ia-donnees" id="ia-donnees" style="display:none;margin-top:14px;">
           <summary>Données transmises à l'API (noms remplacés par des codes)</summary>
@@ -3298,6 +3314,26 @@ function construirePayloadAnalyseIA(rows, toutesLignes) {
         recommandations: arrondi(POIDS.recommandations - c.score_recommandations),
         casse: arrondi(POIDS.casse - c.score_casse),
       },
+      totaux_periode: {
+        rdv_poses: c.rdv_poses, rdv_vus: c.rdv_vus, visio: c.visio,
+        r1_poses: c.r1, r1_vus: c.r1_vus, r1_vers_r2: c.r1_en_r2,
+        r2_poses: c.r2, r2_signes: c.r2_signes,
+        suivis_prevus: c.suivis, suivis_faits: c.suivis_faits,
+        recommandations: c.recommandations,
+      },
+      // Détail semaine par semaine (questions de type "évolution", "meilleure
+      // semaine"...) — borné pour ne pas gonfler l'envoi sur de longues périodes.
+      ...(nbSemaines <= 8 ? {
+        par_semaine: semaines
+          .filter(s => rows.some(r => r.conseiller === c.conseiller && r.semaine === s))
+          .map(s => {
+            const a = agreger(rows.filter(r => r.conseiller === c.conseiller && r.semaine === s));
+            return {
+              semaine: s, performance_id: arrondi(a.performance), rdv_poses: a.rdv_poses, rdv_vus: a.rdv_vus,
+              recommandations: a.recommandations, r1_vus: a.r1_vus, r1_vers_r2: a.r1_en_r2, r2_signes: a.r2_signes,
+            };
+          }),
+      } : {}),
       evolution_performance: historiqueDe(toutesLignes, c.conseiller).slice(-4)
         .map(h => ({ semaine: h.semaine, performance_id: arrondi(h.performance) })),
       accompagnement_declare: derniere ? derniere.accompagnement : [],
@@ -3313,7 +3349,7 @@ function construirePayloadAnalyseIA(rows, toutesLignes) {
   }
 
   const payload = {
-    periode: { semaines, nb_semaines: nbSemaines },
+    periode: { semaines, nb_semaines: nbSemaines, detail_par_semaine_inclus: nbSemaines <= 8 },
     objectifs_hebdomadaires: {
       rdv_poses_par_conseiller: OBJECTIFS.rdv,
       recommandations_par_conseiller: OBJECTIFS.recommandations,
@@ -3345,7 +3381,9 @@ function construirePayloadAnalyseIA(rows, toutesLignes) {
   return { payload, codes };
 }
 
-async function appelerClaudeIA(cle, systeme, contenu) {
+/** `contenu` : une chaîne (un seul message) ou un tableau de messages { role, content } (conversation). */
+async function appelerClaudeIA(cle, systeme, contenu, maxTokens = 8000) {
+  const messages = typeof contenu === 'string' ? [{ role: 'user', content: contenu }] : contenu;
   let reponse;
   try {
     reponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -3358,14 +3396,14 @@ async function appelerClaudeIA(cle, systeme, contenu) {
       },
       body: JSON.stringify({
         model: MODELE_ANALYSE_IA,
-        max_tokens: 8000,
+        max_tokens: maxTokens,
         // Sur Claude Sonnet 5 la réflexion est active par défaut et ses tokens
         // comptent dans max_tokens (texte masqué) : sur une longue synthèse elle
         // pouvait consommer tout le budget et ne laisser aucun texte. Inutile ici,
         // les chiffres sont déjà calculés.
         thinking: { type: 'disabled' },
         system: systeme,
-        messages: [{ role: 'user', content: contenu }],
+        messages,
       }),
     });
   } catch (e) {
@@ -3467,6 +3505,145 @@ async function genererAnalyseIA() {
     bouton.disabled = false;
   }
 }
+
+/* ---- Questions libres sur les chiffres ("top 3 recommandations"...) ---- */
+
+const PROMPT_SYSTEME_QUESTIONS_IA = `Tu es l'assistant d'analyse de Cockpit, l'outil de pilotage commercial d'un cabinet de conseil en gestion de patrimoine. Tu réponds aux questions du manager sur les chiffres de son équipe, fournis en JSON pour la période sélectionnée.
+
+Les données sont déjà calculées : ne les recalcule pas à partir d'autre chose et n'invente rien. Les conseillers sont désignés par des codes (C01, C02…) : n'utilise que ces codes. "totaux_periode" donne les totaux de la période, les champs "_moy_hebdo" des moyennes par semaine, "par_semaine" le détail semaine par semaine quand il est présent (sinon il n'est pas disponible).
+
+Réponds en français, brièvement et directement. Si la question demande un classement ("top 3", "les 5 plus…"), donne une liste numérotée avec le code, la valeur chiffrée et l'unité ; précise l'indicateur utilisé (total de la période ou moyenne hebdomadaire) et signale les ex æquo. Si l'information n'existe pas dans les données, dis-le simplement au lieu de l'estimer. Pas de jugement sur les personnes, uniquement sur les indicateurs.`;
+
+let conversationIA = null;   // { json, codes, messages } — repart de zéro quand la période change
+
+const sansAccents = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+const echapperRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Remplace dans la question les noms de conseillers (nom complet, ou prénom/nom s'il est unique) par leur code : le nom en clair ne doit pas partir vers l'API. */
+function anonymiserQuestionIA(question, codes) {
+  let texte = question;
+  const entrees = [...codes.entries()];
+
+  const remplacer = (motif, code) => {
+    const re = new RegExp(`(^|[^\\p{L}])(${echapperRegex(motif)})(?![\\p{L}])`, 'giu');
+    texte = texte.replace(re, (m, avant) => `${avant}${code}`);
+  };
+
+  // 1) noms complets (avec puis sans accents), les plus longs d'abord
+  for (const [code, nom] of [...entrees].sort((a, b) => b[1].length - a[1].length)) {
+    remplacer(nom, code);
+    const sans = sansAccents(nom);
+    if (sans !== nom) remplacer(sans, code);
+  }
+
+  // 2) un mot du nom (prénom ou nom de famille) : son code s'il n'identifie
+  //    qu'un conseiller, sinon la liste des codes possibles (pas de nom en clair).
+  //    Les mots courants (que, des, les…) sont ignorés pour ne pas abîmer la question.
+  const MOTS_COURANTS = new Set(['que', 'qui', 'des', 'les', 'une', 'par', 'sur', 'pour', 'avec', 'dans', 'est', 'mon', 'ton', 'son', 'mes', 'tes', 'ses', 'pas', 'ils', 'elle', 'sont', 'plus', 'top']);
+  const codesParMot = new Map();
+  for (const [code, nom] of entrees) {
+    for (const mot of new Set(nom.split(/\s+/))) {
+      const cle = mot.toLowerCase();
+      if (mot.length < 3 || MOTS_COURANTS.has(cle)) continue;
+      if (!codesParMot.has(cle)) codesParMot.set(cle, []);
+      codesParMot.get(cle).push(code);
+    }
+  }
+  const motsDistincts = new Map();   // mot (casse d'origine) -> codes
+  for (const [, nom] of entrees) for (const mot of new Set(nom.split(/\s+/))) {
+    const codesMot = codesParMot.get(mot.toLowerCase());
+    if (codesMot) motsDistincts.set(mot, codesMot);
+  }
+  const remplacement = codesMot => codesMot.length === 1 ? codesMot[0] : `[${codesMot.join(' ou ')}]`;
+  for (const [mot, codesMot] of motsDistincts) remplacer(mot, remplacement(codesMot));
+
+  // 3) variantes sans accents (ex. "Gregoire" pour "Grégoire")
+  for (const [mot, codesMot] of motsDistincts) {
+    const motSans = sansAccents(mot);
+    if (motSans !== mot) remplacer(motSans, remplacement(codesMot));
+  }
+  return texte;
+}
+
+async function poserQuestionIA() {
+  const champ = document.getElementById('ia-question');
+  const statut = document.getElementById('ia-question-statut');
+  const bouton = document.getElementById('btn-ia-demander');
+  const question = champ.value.trim();
+  if (!question) return;
+
+  const cle = lireCleIA();
+  if (!cle) { statut.textContent = 'Enregistre d’abord ta clé API Anthropic.'; return; }
+
+  const toutes = readRows();
+  const rows = appliquerFiltres(toutes);
+  if (!rows.length) { statut.textContent = 'Aucune donnée sur la période sélectionnée.'; return; }
+
+  const { payload, codes } = construirePayloadAnalyseIA(rows, toutes);
+  const json = JSON.stringify(payload);
+  const echanges = document.getElementById('ia-echanges');
+
+  if (!conversationIA || conversationIA.json !== json) {
+    if (conversationIA && echanges.childElementCount) {
+      const note = document.createElement('div');
+      note.className = 'field-hint';
+      note.textContent = 'Période ou données modifiées : nouvelle conversation.';
+      echanges.append(note);
+    }
+    conversationIA = { json, codes, messages: [] };
+  }
+  document.getElementById('ia-donnees-json').textContent = JSON.stringify(payload, null, 1);
+  document.getElementById('ia-donnees').style.display = '';
+
+  const envoyee = anonymiserQuestionIA(question, conversationIA.codes);
+  const contenu = conversationIA.messages.length === 0
+    ? `Voici les données de la période (JSON) :\n\n${conversationIA.json}\n\nQuestion : ${envoyee}`
+    : envoyee;
+  conversationIA.messages.push({ role: 'user', content: contenu });
+
+  const bloc = document.createElement('div');
+  bloc.className = 'ia-echange';
+  const q = document.createElement('div');
+  q.className = 'ia-question-texte';
+  q.textContent = question;
+  const r = document.createElement('div');
+  r.className = 'ia-resultat ia-reponse';
+  r.textContent = 'Analyse en cours…';
+  bloc.append(q, r);
+  echanges.append(bloc);
+  champ.value = '';
+  statut.textContent = '';
+  bouton.disabled = true;
+  bloc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    const rep = await appelerClaudeIA(cle, PROMPT_SYSTEME_QUESTIONS_IA, conversationIA.messages, 4000);
+    conversationIA.messages.push({ role: 'assistant', content: rep.texte });
+    rendreAnalyseIA(rep.texte, r, conversationIA.codes);
+    if (rep.tronque) {
+      const p = document.createElement('p');
+      p.textContent = '(Réponse tronquée : limite de longueur atteinte.)';
+      r.append(p);
+    }
+  } catch (err) {
+    console.error('Question IA', err);
+    conversationIA.messages.pop();   // la question sans réponse ne doit pas rester dans le contexte
+    r.classList.add('erreur');
+    r.textContent = err.message;
+  } finally {
+    bouton.disabled = false;
+  }
+}
+
+document.getElementById('btn-ia-demander').addEventListener('click', poserQuestionIA);
+document.getElementById('ia-question').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); poserQuestionIA(); }
+});
+document.getElementById('btn-ia-nouvelle-conversation').addEventListener('click', () => {
+  conversationIA = null;
+  document.getElementById('ia-echanges').textContent = '';
+  document.getElementById('ia-question-statut').textContent = '';
+});
 
 document.getElementById('btn-ia-cle-enregistrer').addEventListener('click', () => {
   const champ = document.getElementById('ia-cle');
