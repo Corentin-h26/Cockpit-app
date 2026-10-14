@@ -2520,9 +2520,9 @@ function construireLigneHTML(docId, data) {
     ${prevuHTML}
     <td class="fiche-section-titre" data-titre="Réalisé"></td>
     ${realiseHTML}
-    <td class="fiche-section-titre" data-titre="Souhaites-tu un accompagnement cette semaine ?"></td>
+    <td class="fiche-section-titre" data-titre="Souhaites-tu un accompagnement cette semaine ? (obligatoire pour le bilan)"></td>
     <td class="fiche-groupe">${accompagnementHTML}</td>
-    <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ?"></td>
+    <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ? (obligatoire pour le bilan)"></td>
     <td class="fiche-groupe">${ressentiHTML}</td>
     <td class="cell-erreurs"></td>
     <td class="fiche-proprio"></td>
@@ -2642,13 +2642,37 @@ function calculerErreursLigne(tr) {
   if (r2_signes > r2_vus) {
     erreurs.push({ champ: 'r2_signes', message: `R2 signés (${r2_signes}) ne peut pas dépasser R2 vus (${r2_vus}).` });
   }
+
+  // Questions du bilan : obligatoires dès que le bilan est commencé (un
+  // chiffre "réalisé" saisi) ou que la semaine est terminée (à partir du
+  // mercredi qui la clôt) — mais pas avant, sinon le prévu du jeudi ne
+  // pourrait pas être enregistré sans évaluer une semaine pas encore vécue.
+  const realiseCommence = CHAMPS_REALISE.some(champ => valeur(champ) > 0);
+  const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
+  const semaineTerminee = /^\d{4}-\d{2}-\d{2}$/.test(semaine) && dateLocaleISO() >= ajouterJoursISO(semaine, 6);
+  if (realiseCommence || semaineTerminee) {
+    if (!lireAccompagnement(tr).length) {
+      erreurs.push({ champ: 'accompagnement', questionnaire: true, message: 'Réponds à « Souhaites-tu un accompagnement cette semaine ? » : coche au moins une case (ou « Pas de besoin »).' });
+    }
+    if (!lireRessenti(tr)) {
+      erreurs.push({ champ: 'ressenti', questionnaire: true, message: 'Réponds à « Comment évalues-tu ta semaine ? » : choisis une option.' });
+    }
+  }
   return erreurs;
+}
+
+function dateLocaleISO(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /** Affiche les erreurs de cohérence : champ en rouge + message dans la colonne "Contrôle" (tableau) / l'encadré de la carte (Ma fiche). Pas de message sur les lignes qu'on ne peut pas corriger (celles des autres). */
 function validerCoherenceRDV() {
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
-    const erreurs = calculerErreursLigne(tr);
+    // Les questions du bilan ne s'affichent en erreur qu'une fois qu'un
+    // enregistrement a été refusé : sinon toutes les anciennes lignes sans
+    // réponse s'afficheraient en rouge sans que personne n'y touche.
+    const refuse = brouillonsBloques.has(tr.dataset.docId);
+    const erreurs = calculerErreursLigne(tr).filter(e => !e.questionnaire || refuse);
 
     const parChamp = {};
     for (const e of erreurs) (parChamp[e.champ] = parChamp[e.champ] || []).push(e.message);
@@ -2728,7 +2752,8 @@ function scheduleRowWrite(tr) {
   clearTimeout(rowWriteTimers.get(docId));
   rowWriteTimers.set(docId, setTimeout(() => {
     writeRowNow(tr).catch(err => {
-      if (err.code !== 'incoherent') console.error('Écriture ligne échouée', err);
+      if (err.code === 'incoherent') validerCoherenceRDV();   // affiche aussi les questions du bilan restées sans réponse
+      else console.error('Écriture ligne échouée', err);
     });
   }, 600));
 }
@@ -2913,6 +2938,7 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     }).catch(err => {
       btnValider.disabled = false;
       if (err.code === 'incoherent') {
+        validerCoherenceRDV();
         alert('Validation impossible, corrige d’abord :\n\n• ' + err.erreurs.map(e => e.message).join('\n• '));
         const premier = tr.querySelector(`[data-field="${err.erreurs[0].champ}"]`);
         if (premier) premier.focus();
