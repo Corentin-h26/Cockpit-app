@@ -756,6 +756,10 @@
   .pf-ressource-titre { font-size: 13.5px; font-weight: 600; word-break: break-word; }
   .pf-ressource-type { font-size: 11.5px; color: var(--heading-2); }
   .pf-ressource-go { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--gold); flex: 0 0 auto; }
+  .pf-texte { border: 1px solid var(--border); border-radius: 12px; background: var(--bg); margin-bottom: 8px; overflow: hidden; }
+  .pf-texte-entete { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); background: var(--cream); }
+  .pf-texte-entete .org-mini-btn { margin-left: auto; flex: 0 0 auto; }
+  .pf-texte-corps { padding: 14px; font-size: 13.5px; line-height: 1.55; color: var(--heading); white-space: pre-wrap; }
   .pf-vide { font-size: 12.5px; color: var(--heading-2); padding: 12px; border: 1px dashed var(--border); border-radius: 12px; margin: 0; }
   .pf-fete { margin-top: 16px; padding: 18px; border-radius: 14px; background: var(--cream); border: 1px solid var(--border); font-size: 14px; color: var(--heading); line-height: 1.45; }
   .pf-admin {
@@ -773,6 +777,7 @@
   }
   .res-titre { flex: 1 1 180px; }
   .res-url { flex: 2 1 240px; }
+  .res-texte { flex: 1 1 100%; resize: vertical; line-height: 1.45; }
   .res-vide { font-size: 12px; color: var(--heading-2); margin: 0 0 8px; }
 
   /* ---------------------------------------------------- Analyse IA */
@@ -3900,6 +3905,7 @@ const TYPES_RESSOURCE = [
   { valeur: 'formation', libelle: 'Formation', ic: 'target' },
   { valeur: 'pdf', libelle: 'PDF / document', ic: 'folder' },
   { valeur: 'trame', libelle: 'Trame', ic: 'pen' },
+  { valeur: 'texte', libelle: 'Texte à copier (trame, script…)', ic: 'pen' },
   { valeur: 'video', libelle: 'Vidéo', ic: 'video' },
   { valeur: 'lien', libelle: 'Lien', ic: 'briefcase' },
 ];
@@ -3926,10 +3932,14 @@ function normaliserRessources(axes) {
         titre: String(r.titre || ''),
         type: TYPES_RESSOURCE.some(t => t.valeur === r.type) ? r.type : 'lien',
         url: String(r.url || ''),
+        contenu: String(r.contenu || ''),
       }));
   }
   return sortie;
 }
+
+/** Un lien https, ou un texte à copier renseigné. */
+const ressourceValide = r => r.type === 'texte' ? r.contenu.trim() !== '' : urlSure(r.url) !== '';
 
 const ressourcesDe = cle => (bibliothequeRessources || normaliserRessources(RESSOURCES_PAR_DEFAUT))[cle] || [];
 
@@ -3947,7 +3957,7 @@ function pointFaibleDe(agg) {
   return pire && pire.ratio < 0.999 ? pire : null;
 }
 
-const bibliothequeAUneRessource = () => AXES_PERF.some(a => ressourcesDe(a.cle).some(r => urlSure(r.url)));
+const bibliothequeAUneRessource = () => AXES_PERF.some(a => ressourcesDe(a.cle).some(ressourceValide));
 
 /** Le bouton « Mon point à travailler » n'apparaît pour les conseillers qu'une fois la bibliothèque alimentée. */
 function majBoutonPointFaible() {
@@ -3966,10 +3976,31 @@ function ouvrirPointFaibleDepuisLigne(tr) {
   if (!isAdmin) {
     if (!bibliothequeAUneRessource()) return false;
     const detecte = pointFaibleDe(agg);
-    if (detecte && !ressourcesDe(detecte.axe.cle).some(r => urlSure(r.url))) return false;
+    if (detecte && !ressourcesDe(detecte.axe.cle).some(ressourceValide)) return false;
   }
   ouvrirPointFaible({ conseiller: data.conseiller, semaine: data.semaine, agg });
   return true;
+}
+
+function copierTexteRessource(texte, bouton) {
+  const confirmer = () => {
+    const initial = bouton.dataset.initial || bouton.textContent;
+    bouton.dataset.initial = initial;
+    bouton.textContent = 'Copié ✓';
+    setTimeout(() => { bouton.textContent = initial; }, 1800);
+  };
+  const secours = () => {
+    const zone = document.createElement('textarea');
+    zone.value = texte;
+    zone.style.position = 'fixed';
+    zone.style.opacity = '0';
+    document.body.append(zone);
+    zone.select();
+    try { document.execCommand('copy'); confirmer(); } catch (e) { console.error('Copie impossible', e); }
+    zone.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texte).then(confirmer, secours);
+  else secours();
 }
 
 function fermerPointFaible() {
@@ -4034,12 +4065,27 @@ function rendrePointFaible(cleAxe) {
     modal.append(panneau);
 
     modal.append(el('div', 'pf-section-titre', 'Pour progresser'));
-    const liste = ressourcesDe(axe.cle).filter(r => urlSure(r.url));
+    const liste = ressourcesDe(axe.cle).filter(ressourceValide);
     if (!liste.length) {
       modal.append(el('p', 'pf-vide', 'Aucune ressource n’a encore été ajoutée pour cet axe.'));
     }
     for (const r of liste) {
       const type = TYPES_RESSOURCE.find(t => t.valeur === r.type) || TYPES_RESSOURCE[TYPES_RESSOURCE.length - 1];
+      if (r.type === 'texte') {
+        const carteTexte = el('div', 'pf-texte');
+        const enteteTexte = el('div', 'pf-texte-entete');
+        const pictTexte = el('span', 'pf-ressource-ic');
+        pictTexte.innerHTML = ic(type.ic, 18);
+        const nomTexte = el('div');
+        nomTexte.append(el('div', 'pf-ressource-titre', r.titre || 'Texte'), el('div', 'pf-ressource-type', 'À copier et adapter'));
+        const copier = el('button', 'org-mini-btn', 'Copier');
+        copier.type = 'button';
+        copier.addEventListener('click', () => copierTexteRessource(r.contenu, copier));
+        enteteTexte.append(pictTexte, nomTexte, copier);
+        carteTexte.append(enteteTexte, el('div', 'pf-texte-corps', r.contenu));
+        modal.append(carteTexte);
+        continue;
+      }
       const lien = el('a', 'pf-ressource');
       lien.href = urlSure(r.url);
       lien.target = '_blank';
@@ -4172,25 +4218,34 @@ function renderEditeurRessources() {
       choixType.value = r.type;
       choixType.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).type = choixType.value; }));
 
-      const champUrl = el('input', 'res-input res-url');
-      champUrl.type = 'url';
-      champUrl.placeholder = 'https://… (lien SharePoint, OneDrive, formation…)';
-      champUrl.value = r.url;
-      champUrl.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).url = champUrl.value.trim(); }));
+      let champContenu;
+      if (r.type === 'texte') {
+        champContenu = el('textarea', 'res-input res-texte');
+        champContenu.rows = 6;
+        champContenu.placeholder = 'Colle ici le texte (trame, script d’appel…) : le conseiller pourra le copier en un clic.';
+        champContenu.value = r.contenu;
+        champContenu.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).contenu = champContenu.value; }));
+      } else {
+        champContenu = el('input', 'res-input res-url');
+        champContenu.type = 'url';
+        champContenu.placeholder = 'https://… (lien SharePoint, OneDrive, formation…)';
+        champContenu.value = r.url;
+        champContenu.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).url = champContenu.value.trim(); }));
+      }
 
       const suppr = el('button', 'org-mini-btn danger', '✕');
       suppr.type = 'button';
       suppr.title = 'Supprimer cette ressource';
       suppr.addEventListener('click', () => modifierRessources(b => { b[axe.cle] = b[axe.cle].filter(x => x.id !== r.id); }));
 
-      ligne.append(champTitre, choixType, champUrl, suppr);
-      if (r.url && !urlSure(r.url)) ligne.append(el('div', 'res-vide', 'Le lien doit commencer par https://'));
+      ligne.append(champTitre, choixType, champContenu, suppr);
+      if (r.type !== 'texte' && r.url && !urlSure(r.url)) ligne.append(el('div', 'res-vide', 'Le lien doit commencer par https://'));
       bloc.append(ligne);
     }
 
     const ajout = el('button', 'org-mini-btn', '+ Ajouter une ressource');
     ajout.type = 'button';
-    ajout.addEventListener('click', () => modifierRessources(b => { b[axe.cle].push({ id: nouvelId(), titre: '', type: 'lien', url: '' }); }));
+    ajout.addEventListener('click', () => modifierRessources(b => { b[axe.cle].push({ id: nouvelId(), titre: '', type: 'lien', url: '', contenu: '' }); }));
     bloc.append(ajout);
     zone.append(bloc);
   }
