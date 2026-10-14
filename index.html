@@ -694,6 +694,39 @@
     background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 10px;
   }
 
+  /* ---------------------------------------------------- Export PDF de la synthèse IA (impression) */
+
+  #zone-impression { display: none; }
+  .pdf-entete {
+    background: var(--navy); color: #fff; border-radius: 8px; padding: 16px 20px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .pdf-marque { font-size: 10.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--gold); }
+  .pdf-entete h1 { margin: 4px 0 0; font-size: 21px; font-weight: 700; color: #fff; }
+  .pdf-meta { margin: 10px 0 16px; font-size: 11px; color: var(--heading-2); line-height: 1.5; }
+  .pdf-corps h3 {
+    margin: 20px 0 8px; padding-bottom: 5px; font-size: 14px; color: var(--navy);
+    border-bottom: 2px solid var(--gold); break-after: avoid;
+  }
+  .pdf-corps h4 { margin: 0 0 4px; font-size: 12.5px; color: var(--navy); break-after: avoid; }
+  .pdf-corps ul { margin: 4px 0 8px 18px; padding: 0; }
+  .pdf-corps li { margin: 3px 0; font-size: 11.5px; line-height: 1.45; color: var(--heading); }
+  .pdf-corps p { margin: 5px 0; font-size: 11.5px; line-height: 1.5; color: var(--heading); }
+  .pdf-corps .ia-bloc {
+    break-inside: avoid; margin: 8px 0; padding: 8px 12px;
+    background: var(--cream); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 6px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .pdf-pied { margin-top: 22px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 9.5px; color: var(--heading-2); line-height: 1.45; }
+
+  @media print {
+    @page { size: A4; margin: 15mm 13mm; }
+    body.impression-ia .login-screen,
+    body.impression-ia .app { display: none !important; }
+    body.impression-ia #zone-impression { display: block; }
+    body.impression-ia { background: #fff; }
+  }
+
   /* ---------------------------------------------------- Classement (tri) */
 
   .classement-table th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -1132,6 +1165,7 @@
 
         <div class="saisie-toolbar">
           <button class="btn btn-primary" id="btn-ia-analyser" type="button">Générer l'analyse</button>
+          <button class="btn" id="btn-ia-pdf" type="button" style="display:none;">Exporter en PDF</button>
           <span class="ia-statut" id="ia-statut"></span>
         </div>
 
@@ -1203,6 +1237,8 @@
     </div>
   </div>
 </div>
+
+<div id="zone-impression" aria-hidden="true"></div>
 
 <script>
 /* =========================================================
@@ -3471,6 +3507,75 @@ function rendreAnalyseIA(texte, conteneur, codes) {
   }
 }
 
+/* ---- Export PDF de la synthèse (fenêtre d'impression du navigateur, mise en page dédiée) ---- */
+
+let derniereAnalyseIA = null;   // { periode, nbConseillers, date } — de la dernière synthèse affichée
+
+function dateFR(iso) {
+  const [a, m, j] = iso.split('-');
+  return `${j}/${m}/${a}`;
+}
+
+/** Construit dans #zone-impression le document à imprimer : en-tête, période, synthèse (un bloc par conseiller), pied de page. Retourne false s'il n'y a pas de synthèse. */
+function preparerImpressionIA() {
+  const source = document.getElementById('ia-resultat');
+  if (!derniereAnalyseIA || !source.childElementCount) return false;
+
+  const el = (tag, classe, texte) => {
+    const n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  };
+  const { periode, nbConseillers, date } = derniereAnalyseIA;
+
+  const entete = el('div', 'pdf-entete');
+  entete.append(el('div', 'pdf-marque', 'Cockpit Commercial Premium'), el('h1', '', 'Synthèse de l’équipe'));
+
+  const s = periode.semaines;
+  const plage = s.length > 1 ? `du ${dateFR(s[0])} au ${dateFR(s[s.length - 1])}` : (s.length ? `semaine du ${dateFR(s[0])}` : '');
+  const meta = el('div', 'pdf-meta',
+    `Période : ${plage} (${periode.nb_semaines} semaine${periode.nb_semaines > 1 ? 's' : ''}) · ${nbConseillers} conseiller${nbConseillers > 1 ? 's' : ''} · ` +
+    `généré le ${date.toLocaleDateString('fr-FR')} à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`);
+
+  // Chaque conseiller (titre + puces qui suivent) reste d'un seul tenant sur la page.
+  const corps = el('div', 'pdf-corps');
+  let bloc = null;
+  for (const noeud of source.children) {
+    const copie = noeud.cloneNode(true);
+    if (noeud.tagName === 'H3') { bloc = null; corps.append(copie); }
+    else if (noeud.tagName === 'H4') { bloc = el('div', 'ia-bloc'); bloc.append(copie); corps.append(bloc); }
+    else if (bloc) bloc.append(copie);
+    else corps.append(copie);
+  }
+
+  const pied = el('div', 'pdf-pied',
+    'Document confidentiel : contient des données individuelles de performance. Synthèse rédigée par IA (Claude) à partir des indicateurs calculés par Cockpit ; à interpréter avec la connaissance du terrain.');
+
+  const zone = document.getElementById('zone-impression');
+  zone.textContent = '';
+  zone.append(entete, meta, corps, pied);
+  return true;
+}
+
+function exporterSyntheseIAEnPDF() {
+  if (!preparerImpressionIA()) {
+    document.getElementById('ia-statut').textContent = 'Génère d’abord une analyse.';
+    return;
+  }
+  // Le titre de la page devient le nom de fichier proposé par "Enregistrer au format PDF".
+  const ancienTitre = document.title;
+  document.title = `Cockpit - Synthèse équipe - ${dateLocaleISO()}`;
+  document.body.classList.add('impression-ia');
+  const nettoyer = () => {
+    document.body.classList.remove('impression-ia');
+    document.title = ancienTitre;
+    window.removeEventListener('afterprint', nettoyer);
+  };
+  window.addEventListener('afterprint', nettoyer);
+  window.print();
+}
+
 async function genererAnalyseIA() {
   const statut = document.getElementById('ia-statut');
   const bouton = document.getElementById('btn-ia-analyser');
@@ -3488,12 +3593,16 @@ async function genererAnalyseIA() {
 
   bouton.disabled = true;
   document.getElementById('ia-resultat').style.display = 'none';
+  document.getElementById('btn-ia-pdf').style.display = 'none';
+  derniereAnalyseIA = null;
   statut.textContent = `Analyse en cours (${payload.equipe.nb_conseillers} conseillers, ${payload.periode.nb_semaines} semaine(s))…`;
   try {
     const reponse = await appelerClaudeIA(cle, PROMPT_SYSTEME_ANALYSE_IA, `Voici les données de la période (JSON) :\n\n${json}`);
     const zone = document.getElementById('ia-resultat');
     rendreAnalyseIA(reponse.texte, zone, codes);
     zone.style.display = '';
+    derniereAnalyseIA = { periode: payload.periode, nbConseillers: payload.equipe.nb_conseillers, date: new Date() };
+    document.getElementById('btn-ia-pdf').style.display = '';
     const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     statut.textContent = reponse.tronque
       ? `Analyse générée à ${heure}, mais tronquée : la limite de longueur a été atteinte (réduis la période ou filtre l’ancienneté).`
@@ -3660,6 +3769,7 @@ document.getElementById('btn-ia-cle-supprimer').addEventListener('click', () => 
 });
 
 document.getElementById('btn-ia-analyser').addEventListener('click', genererAnalyseIA);
+document.getElementById('btn-ia-pdf').addEventListener('click', exporterSyntheseIAEnPDF);
 majEtatCleIA();
 
 const TITLES = {
