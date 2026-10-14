@@ -965,7 +965,7 @@
       <div class="topbar-filtres">
         <select class="topbar-select" id="filtre-semaine" title="Filtrer par semaine"><option value="">Toutes les semaines</option></select>
         <select class="topbar-select" id="filtre-mois" title="Filtrer par bloc mensuel"><option value="">Tous les mois</option></select>
-        <select class="topbar-select" id="filtre-rt" title="Filtrer par RT" style="display:none;"><option value="">Toutes les équipes</option></select>
+        <select class="topbar-select" id="filtre-rt" title="Filtrer par RT" style="display:none;"><option value="">Tous les centres</option></select>
         <select class="topbar-select" id="filtre-sa" title="Filtrer par SA" style="display:none;"><option value="">Tous les SA</option></select>
         <select class="topbar-select" id="filtre-anciennete" title="Filtrer par ancienneté">
           <option value="">Tous les conseillers</option>
@@ -3478,7 +3478,7 @@ function populerFiltresOrganisation() {
   selSa.style.display = aUneStructure ? '' : 'none';
 
   selRt.replaceChildren(
-    new Option('Toutes les équipes', ''),
+    new Option('Tous les centres', ''),
     ...organisation.rts.map(rt => new Option(`RT ${rt.nom}`, rt.id)),
     new Option('Sans équipe', '__aucune__'),
   );
