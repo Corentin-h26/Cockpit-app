@@ -425,11 +425,25 @@
     background: rgba(239, 91, 110, 0.08);
   }
 
-  /* RDV posés ≠ R1 + R2 + Suivis (ou RDV vus ≠ R1 vus + R2 vus + Suivi fait) — la répartition ne correspond pas au total saisi. */
+  /* Incohérence bloquante (RDV posés ≠ R1 + R2 + Suivis, RDV vus ≠ R1 vus + R2 vus + Suivi fait,
+     sous-total > total) — la ligne n'est pas enregistrée tant que ce n'est pas corrigé. */
   .entry-table input.champ-incoherent {
-    border-color: var(--warning);
-    background: rgba(240, 164, 58, 0.1);
+    border-color: var(--coral);
+    background: rgba(239, 91, 110, 0.1);
   }
+
+  /* Message d'erreur de la ligne : colonne "Contrôle" en mode tableau, encadré dans la carte en mode fiche. */
+  .entry-table td.cell-erreurs {
+    min-width: 230px;
+    max-width: 320px;
+    white-space: normal;
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: var(--coral);
+    vertical-align: top;
+  }
+  .cell-erreurs .erreurs-titre { font-weight: 700; margin-bottom: 2px; }
+  .cell-erreurs .erreurs-ligne + .erreurs-ligne { margin-top: 2px; }
 
   /* ---------------------------------------------------- Ma fiche */
 
@@ -552,6 +566,18 @@
     padding: 8px 10px;
   }
   .mode-fiche .fiche-proprio:empty { display: none; }
+
+  .mode-fiche td.cell-erreurs {
+    display: block;
+    grid-column: 1 / -1;
+    max-width: none;
+    font-size: 12.5px;
+    background: rgba(239, 91, 110, 0.1);
+    border: 1px solid var(--coral);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .mode-fiche td.cell-erreurs:empty { display: none; }
   .btn-reattribuer {
     font: inherit;
     font-size: 12px;
@@ -900,6 +926,7 @@
                   <th>Suivi fait</th>
                   <th>Commissions €</th>
                   <th>Recos</th>
+                  <th>Contrôle</th>
                   <th></th>
                 </tr>
               </thead>
@@ -2497,6 +2524,7 @@ function construireLigneHTML(docId, data) {
     <td class="fiche-groupe">${accompagnementHTML}</td>
     <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ?"></td>
     <td class="fiche-groupe">${ressentiHTML}</td>
+    <td class="cell-erreurs"></td>
     <td class="fiche-proprio"></td>
     <td class="fiche-valider"><button class="btn-valider-fiche" type="button">${ic('checkcircle', 15)} Valider ma semaine</button></td>
     <td class="actions"><button class="row-delete" type="button" title="Supprimer">✕</button></td>
@@ -2580,39 +2608,73 @@ function validerConseillersSaisis() {
   }
 }
 
-/** RDV posés doit égaler R1 + R2 + Suivis (répartition du prévu), RDV vus doit égaler R1 vus + R2 vus + Suivi fait (répartition du réalisé) — signale l'écart en orange sans bloquer la saisie. */
-/** Signale (orange, sans bloquer) les écarts de répartition (RDV posés/vus vs leur détail) et les dépassements logiquement impossibles (un sous-total ne peut pas dépasser son total). */
+/**
+ * Contrôles de cohérence d'une ligne, BLOQUANTS : tant qu'il reste une
+ * erreur la ligne n'est pas enregistrée (voir writeRowNow).
+ *  - RDV posés = R1 + R2 + Suivis (répartition du prévu)
+ *  - RDV vus = R1 vus + R2 vus + Suivi fait (répartition du réalisé)
+ *  - un sous-total ne peut pas dépasser son total (RDV vus ≤ RDV posés,
+ *    R1→R2 ≤ R1 vus, R2 signés ≤ R2 vus)
+ * Retourne [{ champ, message }].
+ */
+function calculerErreursLigne(tr) {
+  const valeur = champ => parseFloat(tr.querySelector(`[data-field="${champ}"]`)?.value) || 0;
+  const rdv_poses = valeur('rdv_poses'), r1 = valeur('r1'), r2 = valeur('r2'), suivis = valeur('suivis');
+  const rdv_vus = valeur('rdv_vus'), r1_vus = valeur('r1_vus'), r2_vus = valeur('r2_vus'), suivis_faits = valeur('suivis_faits');
+  const r1_en_r2 = valeur('r1_en_r2'), r2_signes = valeur('r2_signes');
+  const erreurs = [];
+
+  const sommePrevu = r1 + r2 + suivis;
+  if (rdv_poses !== sommePrevu) {
+    erreurs.push({ champ: 'rdv_poses', message: `RDV posés (${rdv_poses}) doit être égal à R1 + R2 + Suivis (${r1} + ${r2} + ${suivis} = ${sommePrevu}).` });
+  }
+
+  const sommeRealise = r1_vus + r2_vus + suivis_faits;
+  if (rdv_vus !== sommeRealise) {
+    erreurs.push({ champ: 'rdv_vus', message: `RDV vus (${rdv_vus}) doit être égal à R1 vus + R2 vus + Suivi fait (${r1_vus} + ${r2_vus} + ${suivis_faits} = ${sommeRealise}).` });
+  }
+  if (rdv_vus > rdv_poses) {
+    erreurs.push({ champ: 'rdv_vus', message: `RDV vus (${rdv_vus}) ne peut pas dépasser RDV posés (${rdv_poses}).` });
+  }
+  if (r1_en_r2 > r1_vus) {
+    erreurs.push({ champ: 'r1_en_r2', message: `R1→R2 (${r1_en_r2}) ne peut pas dépasser R1 vus (${r1_vus}).` });
+  }
+  if (r2_signes > r2_vus) {
+    erreurs.push({ champ: 'r2_signes', message: `R2 signés (${r2_signes}) ne peut pas dépasser R2 vus (${r2_vus}).` });
+  }
+  return erreurs;
+}
+
+/** Affiche les erreurs de cohérence : champ en rouge + message dans la colonne "Contrôle" (tableau) / l'encadré de la carte (Ma fiche). Pas de message sur les lignes qu'on ne peut pas corriger (celles des autres). */
 function validerCoherenceRDV() {
-  const valeur = (tr, champ) => parseFloat(tr.querySelector(`[data-field="${champ}"]`)?.value) || 0;
-  const marquer = (input, problemes) => {
-    if (!input) return;
-    const actifs = problemes.filter(Boolean);
-    input.classList.toggle('champ-incoherent', actifs.length > 0);
-    input.title = actifs.join(' — ');
-  };
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
-    const rdv_poses = valeur(tr, 'rdv_poses'), r1 = valeur(tr, 'r1'), r2 = valeur(tr, 'r2'), suivis = valeur(tr, 'suivis');
-    const rdv_vus = valeur(tr, 'rdv_vus'), r1_vus = valeur(tr, 'r1_vus'), r2_vus = valeur(tr, 'r2_vus'), suivis_faits = valeur(tr, 'suivis_faits');
-    const r1_en_r2 = valeur(tr, 'r1_en_r2'), r2_signes = valeur(tr, 'r2_signes');
+    const erreurs = calculerErreursLigne(tr);
 
-    const sommePrevu = r1 + r2 + suivis;
-    marquer(tr.querySelector('[data-field="rdv_poses"]'), [
-      rdv_poses !== sommePrevu ? `Devrait égaler R1 + R2 + Suivis = ${sommePrevu}` : null,
-    ]);
+    const parChamp = {};
+    for (const e of erreurs) (parChamp[e.champ] = parChamp[e.champ] || []).push(e.message);
+    for (const champ of ['rdv_poses', 'rdv_vus', 'r1_en_r2', 'r2_signes']) {
+      const input = tr.querySelector(`[data-field="${champ}"]`);
+      if (!input) continue;
+      const messages = parChamp[champ] || [];
+      input.classList.toggle('champ-incoherent', messages.length > 0);
+      input.title = messages.join(' — ');
+    }
 
-    const sommeRealise = r1_vus + r2_vus + suivis_faits;
-    marquer(tr.querySelector('[data-field="rdv_vus"]'), [
-      rdv_vus !== sommeRealise ? `Devrait égaler R1 vus + R2 vus + Suivi fait = ${sommeRealise}` : null,
-      rdv_vus > rdv_poses ? `Ne peut pas dépasser RDV posés (${rdv_poses})` : null,
-    ]);
+    const cellule = tr.querySelector('.cell-erreurs');
+    if (!cellule) continue;
+    cellule.textContent = '';
+    if (!erreurs.length || tr.classList.contains('row-readonly')) continue;
 
-    marquer(tr.querySelector('[data-field="r1_en_r2"]'), [
-      r1_en_r2 > r1_vus ? `Ne peut pas dépasser R1 vus (${r1_vus})` : null,
-    ]);
-
-    marquer(tr.querySelector('[data-field="r2_signes"]'), [
-      r2_signes > r2_vus ? `Ne peut pas dépasser R2 vus (${r2_vus})` : null,
-    ]);
+    const titre = document.createElement('div');
+    titre.className = 'erreurs-titre';
+    titre.textContent = 'Non enregistré — à corriger :';
+    cellule.append(titre);
+    for (const e of erreurs) {
+      const ligne = document.createElement('div');
+      ligne.className = 'erreurs-ligne';
+      ligne.textContent = e.message;
+      cellule.append(ligne);
+    }
   }
 }
 
@@ -2636,11 +2698,27 @@ function rowDataFromTr(tr) {
   data.accompagnement = lireAccompagnement(tr);
   return data;
 }
+// Saisies refusées pour incohérence : gardées ici pour ne pas être écrasées
+// par le prochain snapshot Firestore (qui reconstruit le tableau depuis les
+// données enregistrées) tant que l'utilisateur n'a pas fini de corriger.
+const brouillonsBloques = new Map();
+
 function writeRowNow(tr) {
   const docId = tr.dataset.docId;
   if (!docId) return Promise.reject(new Error('Ligne pas encore créée'));
   clearTimeout(rowWriteTimers.get(docId));
   const data = rowDataFromTr(tr);
+
+  const erreurs = calculerErreursLigne(tr);
+  if (erreurs.length) {
+    brouillonsBloques.set(docId, data);
+    const err = new Error('Données incohérentes : ' + erreurs.map(e => e.message).join(' '));
+    err.code = 'incoherent';
+    err.erreurs = erreurs;
+    return Promise.reject(err);
+  }
+
+  brouillonsBloques.delete(docId);
   data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   return db.collection('cockpit_semaines').doc(docId).set(data, { merge: true });
 }
@@ -2649,9 +2727,18 @@ function scheduleRowWrite(tr) {
   if (!docId) return;
   clearTimeout(rowWriteTimers.get(docId));
   rowWriteTimers.set(docId, setTimeout(() => {
-    writeRowNow(tr).catch(err => console.error('Écriture ligne échouée', err));
+    writeRowNow(tr).catch(err => {
+      if (err.code !== 'incoherent') console.error('Écriture ligne échouée', err);
+    });
   }, 600));
 }
+
+window.addEventListener('beforeunload', (e) => {
+  if (brouillonsBloques.size) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 /* =========================================================
    MA FICHE
@@ -2779,7 +2866,10 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     const docId = tr.dataset.docId;
     tr.remove();
     renderAll();
-    if (docId) db.collection('cockpit_semaines').doc(docId).delete().catch(err => console.error(err));
+    if (docId) {
+      brouillonsBloques.delete(docId);
+      db.collection('cockpit_semaines').doc(docId).delete().catch(err => console.error(err));
+    }
     return;
   }
 
@@ -2821,9 +2911,15 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
         btnValider.disabled = false;
       }, 2200);
     }).catch(err => {
+      btnValider.disabled = false;
+      if (err.code === 'incoherent') {
+        alert('Validation impossible, corrige d’abord :\n\n• ' + err.erreurs.map(e => e.message).join('\n• '));
+        const premier = tr.querySelector(`[data-field="${err.erreurs[0].champ}"]`);
+        if (premier) premier.focus();
+        return;
+      }
       console.error('Validation échouée', err);
       alert("La validation a échoué : " + err.message);
-      btnValider.disabled = false;
     });
   }
 });
@@ -3074,7 +3170,12 @@ armerGardeFocus('poids-fields', () => { if (pendingPoidsSnap) { appliquerPoidsSn
 
 function appliquerRowsSnapshot(snap) {
   const body = document.getElementById('rows-body');
-  body.innerHTML = snap.docs.map(doc => construireLigneHTML(doc.id, doc.data())).join('');
+  // Les saisies refusées pour incohérence (brouillonsBloques) priment sur la
+  // version enregistrée : sinon elles disparaîtraient dès qu'un snapshot arrive.
+  body.innerHTML = snap.docs.map(doc => {
+    const brouillon = brouillonsBloques.get(doc.id);
+    return construireLigneHTML(doc.id, brouillon ? { ...doc.data(), ...brouillon } : doc.data());
+  }).join('');
   body.querySelectorAll('tr').forEach(appliquerVerrouillageLigne);
   renderAll();
   if (modeFicheActif) renderMaFiche();
