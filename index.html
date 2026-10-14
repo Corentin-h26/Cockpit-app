@@ -491,7 +491,7 @@
   .entry-table.mode-fiche tr:hover td[data-label] { background: var(--bg); }
   .entry-table.mode-fiche tr:hover td[data-label]:has(input[readonly]) { background: var(--cream); }
 
-  .fiche-section-titre, .fiche-groupe, .fiche-valider { display: none; }
+  .fiche-section-titre, .fiche-groupe, .fiche-valider, .fiche-proprio { display: none; }
 
   .mode-fiche .fiche-section-titre {
     display: block;
@@ -538,6 +538,33 @@
   }
   .btn-valider-fiche:hover { background: var(--navy-hover); }
   .btn-valider-fiche.valide { background: var(--success); border-color: var(--success); }
+  .btn-valider-fiche:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Propriétaire de la ligne : explique pourquoi une fiche est verrouillée
+     (non-admin) ou permet de la réattribuer (admin). Masqué hors mode-fiche. */
+  .mode-fiche .fiche-proprio {
+    display: block;
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--heading-2);
+    background: rgba(240, 164, 58, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .mode-fiche .fiche-proprio:empty { display: none; }
+  .btn-reattribuer {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+    padding: 3px 9px;
+    border: 1px solid var(--gold);
+    background: var(--bg);
+    color: var(--heading);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-reattribuer:hover { background: var(--gold); color: var(--bg); }
 
   .fiche-checkbox, .fiche-radio {
     display: flex;
@@ -2470,6 +2497,7 @@ function construireLigneHTML(docId, data) {
     <td class="fiche-groupe">${accompagnementHTML}</td>
     <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ?"></td>
     <td class="fiche-groupe">${ressentiHTML}</td>
+    <td class="fiche-proprio"></td>
     <td class="fiche-valider"><button class="btn-valider-fiche" type="button">${ic('checkcircle', 15)} Valider ma semaine</button></td>
     <td class="actions"><button class="row-delete" type="button" title="Supprimer">✕</button></td>
   </tr>`;
@@ -2481,6 +2509,32 @@ function appliquerVerrouillageLigne(tr) {
   const editable = isAdmin || (!!currentUser && owner === currentUser.email);
   tr.querySelectorAll('input').forEach(inp => { inp.disabled = !editable; });
   tr.classList.toggle('row-readonly', !editable);
+
+  const btnValider = tr.querySelector('.btn-valider-fiche');
+  if (btnValider) btnValider.disabled = !editable;
+
+  // Une ligne appartient au compte qui l'a créée (ownerEmail) : si un
+  // conseiller se retrouve bloqué, c'est que sa ligne a été créée avec un
+  // autre compte (ex. poste partagé, ou saisie faite par quelqu'un d'autre
+  // via "Ma fiche"). On l'explique au lieu de laisser des champs grisés muets.
+  const info = tr.querySelector('.fiche-proprio');
+  if (!info) return;
+  info.textContent = '';
+  if (isAdmin) {
+    info.append('Saisi avec le compte ');
+    const compte = document.createElement('strong');
+    compte.textContent = owner || 'inconnu';
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'btn-reattribuer';
+    bouton.textContent = 'Réattribuer…';
+    info.append(compte, bouton);
+  } else if (!editable) {
+    const compte = document.createElement('strong');
+    compte.textContent = currentUser ? currentUser.email : 'aucun compte';
+    info.append('Cette ligne a été créée avec un autre compte — tu es connecté avec ', compte,
+      '. Reconnecte-toi avec le bon compte, ou demande à l’administrateur de te la réattribuer.');
+  }
 }
 
 function ligneVideDefaut(conseillerPreRempli, semainePreRemplie) {
@@ -2726,6 +2780,30 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     tr.remove();
     renderAll();
     if (docId) db.collection('cockpit_semaines').doc(docId).delete().catch(err => console.error(err));
+    return;
+  }
+
+  const btnReattribuer = e.target.closest('.btn-reattribuer');
+  if (btnReattribuer && isAdmin) {
+    const tr = btnReattribuer.closest('tr');
+    const docId = tr.dataset.docId;
+    const actuel = tr.dataset.ownerEmail || '';
+    const saisie = prompt(`Adresse email du compte avec lequel ce conseiller se connecte (propriétaire actuel : ${actuel || 'inconnu'}) :`, actuel);
+    if (!saisie) return;
+    const nouveau = saisie.trim().toLowerCase();
+    if (!/^[^@\s]+@capfinances\.fr$/.test(nouveau)) {
+      alert('Adresse @capfinances.fr attendue.');
+      return;
+    }
+    db.collection('cockpit_semaines').doc(docId)
+      .set({ ownerEmail: nouveau, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+      .then(() => {
+        // Mise à jour locale immédiate : le snapshot Firestore peut être
+        // différé tant que le focus est dans le tableau.
+        tr.dataset.ownerEmail = nouveau;
+        appliquerVerrouillageLigne(tr);
+      })
+      .catch(err => { console.error(err); alert('Réattribution impossible : ' + err.message); });
     return;
   }
 
