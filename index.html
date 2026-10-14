@@ -661,6 +661,27 @@
   .roster-table input:focus { border-color: var(--gold); background: var(--bg); border-radius: 6px; padding: 5px 7px; outline: none; }
   .roster-table input[type="date"] { font-variant-numeric: tabular-nums; }
 
+  /* ---------------------------------------------------- Analyse IA */
+
+  .ia-cle-ligne { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .ia-cle-ligne input {
+    flex: 1; min-width: 240px; font: inherit; font-size: 13px; padding: 9px 11px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--heading);
+  }
+  .ia-cle-ligne input:focus { border-color: var(--gold); outline: none; }
+  .ia-statut { font-size: 12.5px; color: var(--heading-2); }
+  .ia-resultat h3 { font-size: 15px; margin: 20px 0 8px; color: var(--heading); }
+  .ia-resultat h3:first-child { margin-top: 0; }
+  .ia-resultat h4 { font-size: 13.5px; margin: 14px 0 4px; color: var(--gold); }
+  .ia-resultat ul { margin: 4px 0 8px 18px; padding: 0; }
+  .ia-resultat li { margin: 3px 0; font-size: 13px; line-height: 1.45; }
+  .ia-resultat p { margin: 6px 0; font-size: 13px; line-height: 1.5; }
+  .ia-donnees summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
+  .ia-donnees pre {
+    max-height: 280px; overflow: auto; font-size: 11px; line-height: 1.4;
+    background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+  }
+
   /* ---------------------------------------------------- Classement (tri) */
 
   .classement-table th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -814,6 +835,7 @@
       <button class="nav-item" data-view="classement" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Classement</span></button>
       <button class="nav-item" data-view="statistiques" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Statistiques</span></button>
       <button class="nav-item" data-view="alertes" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>Alertes</span></button>
+      <button class="nav-item" data-view="analyse" id="nav-analyse" type="button" style="display:none;"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" fill="currentColor" opacity="0.6"/></svg><span>Analyse IA</span></button>
       <button class="nav-item" data-view="parametres" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="19" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><rect x="8" y="19" width="8" height="2" rx="1" fill="currentColor"/></svg><span>Paramètres</span></button>
     </nav>
     <div class="sidebar-user">
@@ -1077,6 +1099,38 @@
         <hr class="rule">
         <div id="alertes-body"></div>
         <div class="field-hint">Ressenti et Accompagnement viennent de la dernière semaine connue de chaque conseiller (comme le bilan du mercredi) — remplis via l'onglet "Ma fiche".</div>
+      </div>
+
+      <!-- ============================================= ANALYSE IA (admin) ============================================= -->
+      <div class="view" id="view-analyse">
+        <div class="page-title">Analyse IA</div>
+        <div class="page-sub">Synthèse rédigée par Claude à partir des chiffres de la période sélectionnée (filtres Semaine / Mois / Ancienneté en haut de page). Réservé à l'administrateur.</div>
+        <hr class="rule">
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title"><span>Clé API Anthropic</span></div>
+          <div class="field-hint" id="ia-cle-etat"></div>
+          <div class="ia-cle-ligne">
+            <input type="password" id="ia-cle" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+            <button class="btn btn-primary" id="btn-ia-cle-enregistrer" type="button">Enregistrer la clé</button>
+            <button class="btn" id="btn-ia-cle-supprimer" type="button">Supprimer</button>
+          </div>
+          <div class="field-hint" style="margin-top:10px;">Enregistrée uniquement dans ce navigateur (jamais dans Cockpit ni dans Firebase) : il faudra la ressaisir sur un autre poste. Pense à fixer une limite de dépense sur ton compte Anthropic.</div>
+        </div>
+
+        <div class="saisie-toolbar">
+          <button class="btn btn-primary" id="btn-ia-analyser" type="button">Générer l'analyse</button>
+          <span class="ia-statut" id="ia-statut"></span>
+        </div>
+
+        <div class="card ia-resultat" id="ia-resultat" style="display:none;"></div>
+
+        <details class="ia-donnees" id="ia-donnees" style="display:none;margin-top:14px;">
+          <summary>Données transmises à l'API (noms remplacés par des codes)</summary>
+          <pre id="ia-donnees-json"></pre>
+        </details>
+
+        <div class="field-hint" style="margin-top:14px;">Confidentialité : les noms des conseillers sont remplacés par des codes (C01, C02…) avant l'envoi et rétablis dans le texte affiché ; seuls les indicateurs calculés partent vers l'API Anthropic, rien n'est enregistré par Cockpit.</div>
       </div>
 
       <!-- ============================================= PARAMÈTRES ============================================= -->
@@ -3129,10 +3183,268 @@ document.querySelectorAll('.classement-table th[data-sort]').forEach(th => {
   });
 });
 
+/* =========================================================
+   ANALYSE IA (admin) — appel direct à l'API Anthropic depuis le
+   navigateur de l'administrateur, avec sa propre clé (stockée dans
+   ce navigateur uniquement). Les noms sont remplacés par des codes
+   avant l'envoi et rétablis à l'affichage ; rien n'est écrit dans
+   Firestore.
+   ========================================================= */
+
+const MODELE_ANALYSE_IA = 'claude-sonnet-5';
+const CLE_IA_STOCKAGE = 'cockpit_cle_anthropic';
+
+const PROMPT_SYSTEME_ANALYSE_IA = `Tu es un directeur commercial expérimenté qui analyse les chiffres hebdomadaires d'une équipe de conseillers en gestion de patrimoine, pour aider leur manager à les accompagner.
+
+Les données fournies sont déjà calculées : ne les recalcule pas et n'invente aucun chiffre. Les conseillers sont désignés par des codes (C01, C02…) : n'utilise que ces codes. Les objectifs sont hebdomadaires. "points_perdus" indique, par critère, combien de points du Performance ID (sur 100) le conseiller laisse de côté : plus la valeur est élevée, plus le critère est à travailler. "accompagnement_declare" et "ressenti_derniere_semaine" sont déclarés par le conseiller lui-même : signale-les s'ils sont préoccupants (accompagnement "Urgent", ressenti "Décevante" ou "Très mauvaise").
+
+Réponds en français, de façon concrète, factuelle et concise, en citant les chiffres. Ne juge pas la personne, uniquement ses indicateurs. Respecte exactement cette structure :
+
+## Synthèse équipe
+4 à 6 puces : niveau global, ce qui va bien, ce qui freine l'équipe.
+
+## Conseillers à accompagner en priorité
+Du plus au moins prioritaire. Pour chacun : une ligne "### Cxx — Performance ID, niveau" puis 2 à 3 puces "À travailler : critère (chiffre vs objectif) → piste d'action concrète".
+
+## Autres conseillers
+Une ligne par conseiller : "Cxx : point fort principal ; point à surveiller".
+
+## Priorités de la semaine pour le manager
+3 actions concrètes.`;
+
+function lireCleIA() {
+  try { return localStorage.getItem(CLE_IA_STOCKAGE) || ''; } catch (e) { return ''; }
+}
+
+function majEtatCleIA() {
+  const cle = lireCleIA();
+  document.getElementById('ia-cle-etat').textContent = cle
+    ? `Clé enregistrée sur ce navigateur (se termine par …${cle.slice(-4)}).`
+    : 'Aucune clé enregistrée : colle ta clé Anthropic ci-dessous pour activer l’analyse.';
+  document.getElementById('btn-ia-cle-supprimer').style.display = cle ? '' : 'none';
+}
+
+/** Données envoyées à l'API : indicateurs calculés de la période filtrée, noms remplacés par des codes. Retourne { payload, codes } où codes = Map code → nom. */
+function construirePayloadAnalyseIA(rows, toutesLignes) {
+  const arrondi = (v, d = 1) => Math.round(v * 10 ** d) / 10 ** d;
+  const pct = v => arrondi(v * 100);
+  const roster = readRoster();
+  const classement = classementDe(rows);
+  const nbC = classement.length || 1;
+  const semaines = [...new Set(rows.map(r => r.semaine))].sort();
+  const nbSemaines = Math.max(semaines.length, 1);
+
+  const codes = new Map();
+  const codeDe = new Map();
+  classement.forEach((c, i) => {
+    const code = `C${String(i + 1).padStart(2, '0')}`;
+    codes.set(code, c.conseiller);
+    codeDe.set(c.conseiller, code);
+  });
+
+  const conseillers = classement.map(c => {
+    const nbSem = nbSemainesDe(rows, c.conseiller);
+    const entree = roster.find(r => r.conseiller === c.conseiller);
+    const mois = entree ? moisDepuis(entree.date_entree) : null;
+    const derniere = derniereLigneDe(toutesLignes, c.conseiller);
+    return {
+      code: codeDe.get(c.conseiller),
+      anciennete_mois: mois,
+      performance_id: arrondi(c.performance),
+      niveau: niveauDe(c.performance).texte,
+      rdv_poses_moy_hebdo: arrondi(c.rdv_poses / nbSem),
+      recommandations_moy_hebdo: arrondi(c.recommandations / nbSem),
+      taux_rdv_vu_pct: pct(c.taux_rdv_vu),
+      taux_visio_pct: pct(c.taux_visio),
+      taux_casse_pct: pct(c.taux_casse),
+      taux_r1_vu_pct: pct(c.r1 ? c.r1_vus / c.r1 : 0),
+      taux_r1_vers_r2_pct: pct(c.taux_r1_r2),
+      taux_signature_pct: pct(c.taux_signature),
+      taux_concretisation_pct: pct(c.taux_concretisation),
+      commissions_eur: Math.round(c.commissions),
+      potentiel_eur: Math.round(c.potentiel),
+      points_perdus: {
+        rdv_poses: arrondi(POIDS.rdv - c.score_rdv),
+        transformation_r1_r2: arrondi(POIDS.r1_r2 - c.score_r1r2),
+        signature: arrondi(POIDS.signature - c.score_signature),
+        concretisation: arrondi(POIDS.concretisation - c.score_concretisation),
+        recommandations: arrondi(POIDS.recommandations - c.score_recommandations),
+        casse: arrondi(POIDS.casse - c.score_casse),
+      },
+      evolution_performance: historiqueDe(toutesLignes, c.conseiller).slice(-4)
+        .map(h => ({ semaine: h.semaine, performance_id: arrondi(h.performance) })),
+      accompagnement_declare: derniere ? derniere.accompagnement : [],
+      ressenti_derniere_semaine: derniere ? derniere.ressenti : null,
+    };
+  });
+
+  const eq = agreger(rows);
+  const compteNiveaux = {};
+  for (const c of classement) {
+    const n = niveauDe(c.performance).texte;
+    compteNiveaux[n] = (compteNiveaux[n] || 0) + 1;
+  }
+
+  const payload = {
+    periode: { semaines, nb_semaines: nbSemaines },
+    objectifs_hebdomadaires: {
+      rdv_poses_par_conseiller: OBJECTIFS.rdv,
+      recommandations_par_conseiller: OBJECTIFS.recommandations,
+      taux_r1_vers_r2_pct: OBJECTIFS.r1_r2 * 100,
+      taux_signature_pct: OBJECTIFS.signature * 100,
+      taux_concretisation_pct: OBJECTIFS.concretisation * 100,
+      taux_visio_max_pct: OBJECTIFS.visio_max * 100,
+      taux_casse_max_pct: OBJECTIFS.casse_max * 100,
+      taux_rdv_vu_cible_pct: 66,
+      taux_r1_vu_cible_pct: 50,
+    },
+    poids_performance_id: { ...POIDS },
+    seuils_niveaux: { elite: SEUILS.elite, excellent: SEUILS.excellent, correct: SEUILS.bon, a_accompagner: SEUILS.progression },
+    equipe: {
+      nb_conseillers: classement.length,
+      performance_id_moyenne: arrondi(classement.reduce((s, c) => s + c.performance, 0) / nbC),
+      repartition_niveaux: compteNiveaux,
+      rdv_poses_moy_hebdo_par_conseiller: arrondi(eq.rdv_poses / nbC / nbSemaines),
+      recommandations_moy_hebdo_par_conseiller: arrondi(eq.recommandations / nbC / nbSemaines),
+      taux_rdv_vu_pct: pct(eq.taux_rdv_vu),
+      taux_visio_pct: pct(eq.taux_visio),
+      taux_casse_pct: pct(eq.taux_casse),
+      taux_r1_vers_r2_pct: pct(eq.taux_r1_r2),
+      taux_signature_pct: pct(eq.taux_signature),
+      taux_concretisation_pct: pct(eq.taux_concretisation),
+    },
+    conseillers,
+  };
+  return { payload, codes };
+}
+
+async function appelerClaudeIA(cle, systeme, contenu) {
+  let reponse;
+  try {
+    reponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': cle,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODELE_ANALYSE_IA,
+        max_tokens: 4096,
+        system: systeme,
+        messages: [{ role: 'user', content: contenu }],
+      }),
+    });
+  } catch (e) {
+    throw new Error('Impossible de joindre l’API Anthropic (réseau, bloqueur de publicités ou pare-feu ?).');
+  }
+  const json = await reponse.json().catch(() => ({}));
+  if (!reponse.ok) {
+    const detail = json && json.error && json.error.message ? json.error.message : `HTTP ${reponse.status}`;
+    if (reponse.status === 401) throw new Error('Clé API refusée (401) : vérifie qu’elle est correcte et active.');
+    throw new Error(`L’API a refusé la demande : ${detail}`);
+  }
+  return (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+function ajouterTexteInlineIA(parent, texte) {
+  for (const morceau of texte.split(/(\*\*[^*]+\*\*)/g)) {
+    if (morceau.length > 4 && morceau.startsWith('**') && morceau.endsWith('**')) {
+      const gras = document.createElement('strong');
+      gras.textContent = morceau.slice(2, -2);
+      parent.append(gras);
+    } else if (morceau) {
+      parent.append(document.createTextNode(morceau));
+    }
+  }
+}
+
+/** Rendu Markdown minimal (titres, puces, gras) construit en DOM + textContent : le texte de l'IA n'est jamais injecté comme HTML. */
+function rendreAnalyseIA(texte, conteneur, codes) {
+  conteneur.textContent = '';
+  const avecNoms = texte.replace(/\bC\d{2}\b/g, code => codes.get(code) || code);
+  let liste = null;
+  for (const brut of avecNoms.split('\n')) {
+    const ligne = brut.trimEnd();
+    if (!ligne.trim()) { liste = null; continue; }
+    let m;
+    if ((m = ligne.match(/^#{1,2}\s+(.*)/))) {
+      liste = null;
+      const h = document.createElement('h3');
+      ajouterTexteInlineIA(h, m[1]);
+      conteneur.append(h);
+    } else if ((m = ligne.match(/^#{3,4}\s+(.*)/))) {
+      liste = null;
+      const h = document.createElement('h4');
+      ajouterTexteInlineIA(h, m[1]);
+      conteneur.append(h);
+    } else if ((m = ligne.match(/^\s*[-*•]\s+(.*)/))) {
+      if (!liste) { liste = document.createElement('ul'); conteneur.append(liste); }
+      const li = document.createElement('li');
+      ajouterTexteInlineIA(li, m[1]);
+      liste.append(li);
+    } else {
+      liste = null;
+      const p = document.createElement('p');
+      ajouterTexteInlineIA(p, ligne);
+      conteneur.append(p);
+    }
+  }
+}
+
+async function genererAnalyseIA() {
+  const statut = document.getElementById('ia-statut');
+  const bouton = document.getElementById('btn-ia-analyser');
+  const cle = lireCleIA();
+  if (!cle) { statut.textContent = 'Enregistre d’abord ta clé API Anthropic.'; return; }
+
+  const toutes = readRows();
+  const rows = appliquerFiltres(toutes);
+  if (!rows.length) { statut.textContent = 'Aucune donnée sur la période sélectionnée.'; return; }
+
+  const { payload, codes } = construirePayloadAnalyseIA(rows, toutes);
+  const json = JSON.stringify(payload, null, 1);
+  document.getElementById('ia-donnees-json').textContent = json;
+  document.getElementById('ia-donnees').style.display = '';
+
+  bouton.disabled = true;
+  statut.textContent = `Analyse en cours (${payload.equipe.nb_conseillers} conseillers, ${payload.periode.nb_semaines} semaine(s))…`;
+  try {
+    const texte = await appelerClaudeIA(cle, PROMPT_SYSTEME_ANALYSE_IA, `Voici les données de la période (JSON) :\n\n${json}`);
+    const zone = document.getElementById('ia-resultat');
+    rendreAnalyseIA(texte, zone, codes);
+    zone.style.display = '';
+    statut.textContent = `Analyse générée à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.`;
+  } catch (err) {
+    console.error('Analyse IA', err);
+    statut.textContent = err.message;
+  } finally {
+    bouton.disabled = false;
+  }
+}
+
+document.getElementById('btn-ia-cle-enregistrer').addEventListener('click', () => {
+  const champ = document.getElementById('ia-cle');
+  const cle = champ.value.trim();
+  if (!/^sk-ant-/.test(cle)) { alert('Une clé Anthropic commence par « sk-ant- ».'); return; }
+  try { localStorage.setItem(CLE_IA_STOCKAGE, cle); } catch (e) { alert('Impossible d’enregistrer la clé dans ce navigateur.'); return; }
+  champ.value = '';
+  majEtatCleIA();
+});
+
+document.getElementById('btn-ia-cle-supprimer').addEventListener('click', () => {
+  try { localStorage.removeItem(CLE_IA_STOCKAGE); } catch (e) { /* rien à faire */ }
+  majEtatCleIA();
+});
+
+document.getElementById('btn-ia-analyser').addEventListener('click', genererAnalyseIA);
+majEtatCleIA();
+
 const TITLES = {
   dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
   equipe: 'Équipe', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
-  parametres: 'Paramètres',
+  analyse: 'Analyse IA', parametres: 'Paramètres',
 };
 
 document.querySelectorAll('.nav-item').forEach(btn => {
@@ -3274,6 +3586,7 @@ auth.onAuthStateChanged(user => {
   document.body.classList.add('authed');
   document.getElementById('sidebar-user-email').textContent = user.email;
   document.getElementById('sidebar-admin-badge').style.display = isAdmin ? '' : 'none';
+  document.getElementById('nav-analyse').style.display = isAdmin ? '' : 'none';
 
   demarrerEcoutes();
 });
