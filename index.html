@@ -715,6 +715,66 @@
   .org-pool h3 { margin: 0 0 4px; font-size: 14px; color: var(--heading); }
   .org-pool .org-chip { background: var(--heading-2); }
 
+  /* ---------------------------------------------------- Point à travailler (ressources de formation) */
+
+  .pf-overlay {
+    position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(17, 20, 64, 0.55);
+  }
+  .pf-modal {
+    background: var(--bg); border-radius: 18px; width: min(580px, 100%); max-height: calc(100vh - 32px);
+    overflow-y: auto; padding: 24px; box-shadow: 0 20px 50px rgba(17, 20, 64, 0.35);
+  }
+  .pf-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold); }
+  .pf-titre { margin: 4px 0 2px; font-size: 21px; color: var(--heading); }
+  .pf-sous-titre { font-size: 12.5px; color: var(--heading-2); }
+  .pf-axe { background: var(--cream); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 16px; }
+  .pf-axe-tete { display: flex; align-items: center; gap: 10px; }
+  .pf-axe-ic {
+    width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .pf-axe-nom { font-size: 16px; font-weight: 700; color: var(--heading); }
+  .pf-valeur { font-size: 28px; font-weight: 800; color: var(--heading); margin-top: 12px; line-height: 1.1; }
+  .pf-objectif { font-size: 12.5px; color: var(--heading-2); margin-top: 2px; }
+  .pf-barre { height: 8px; border-radius: 999px; background: var(--border); margin-top: 12px; overflow: hidden; }
+  .pf-barre-fill { height: 100%; border-radius: 999px; background: var(--coral); }
+  .pf-barre-fill.warn { background: var(--warning); }
+  .pf-barre-fill.ok { background: var(--success); }
+  .pf-ratio { font-size: 12px; color: var(--heading-2); margin-top: 6px; }
+  .pf-conseil { margin: 12px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--heading); }
+  .pf-section-titre { margin: 22px 0 8px; font-size: 13px; font-weight: 700; color: var(--heading); }
+  .pf-ressource {
+    display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--heading); text-decoration: none;
+  }
+  .pf-ressource:hover { border-color: var(--gold); background: var(--gold-tint); }
+  .pf-ressource-ic {
+    width: 34px; height: 34px; border-radius: 9px; background: var(--gold-tint); color: var(--gold);
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .pf-ressource-titre { font-size: 13.5px; font-weight: 600; word-break: break-word; }
+  .pf-ressource-type { font-size: 11.5px; color: var(--heading-2); }
+  .pf-ressource-go { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--gold); flex: 0 0 auto; }
+  .pf-vide { font-size: 12.5px; color: var(--heading-2); padding: 12px; border: 1px dashed var(--border); border-radius: 12px; margin: 0; }
+  .pf-fete { margin-top: 16px; padding: 18px; border-radius: 14px; background: var(--cream); border: 1px solid var(--border); font-size: 14px; color: var(--heading); line-height: 1.45; }
+  .pf-admin {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 12px;
+    border-top: 1px dashed var(--border); font-size: 12px; color: var(--heading-2);
+  }
+  .pf-pied { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+  .res-axe { margin-top: 16px; }
+  .res-axe h4 { margin: 0 0 8px; font-size: 13.5px; color: var(--heading); display: flex; align-items: center; gap: 8px; }
+  .res-ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .res-input, .res-select {
+    font: inherit; font-size: 12.5px; padding: 6px 8px; color: var(--heading);
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg); min-width: 0;
+  }
+  .res-titre { flex: 1 1 180px; }
+  .res-url { flex: 2 1 240px; }
+  .res-vide { font-size: 12px; color: var(--heading-2); margin: 0 0 8px; }
+
   /* ---------------------------------------------------- Analyse IA */
 
   .ia-cle-ligne { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
@@ -1082,6 +1142,7 @@
         </div>
         <div class="saisie-toolbar" id="fiche-toolbar" style="display:none;">
           <button class="btn btn-primary" id="btn-add-ma-semaine" type="button">+ Ajouter ma semaine</button>
+          <button class="btn" id="btn-point-faible" type="button">Mon point à travailler</button>
           <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--heading-2);cursor:pointer;margin-left:auto;">
             <input type="checkbox" id="toggle-historique-fiche" style="width:auto;">
             <span>Voir mes semaines précédentes</span>
@@ -1307,6 +1368,15 @@
           <div class="locked-hint" id="poids-locked-hint" style="display:none;">Lecture seule — seul l'administrateur peut modifier la pondération.</div>
         </div>
 
+        <div class="card" id="ressources-carte" style="display:none; margin-top:16px;">
+          <div class="card-title"><span>Ressources de formation</span></div>
+          <div class="field-hint">Affichées au conseiller quand il valide sa semaine, selon son point le plus faible. Colle un lien (SharePoint, OneDrive, site de formation, vidéo…) : un clic l'ouvre dans un nouvel onglet.</div>
+          <div id="ressources-editeur"></div>
+          <div class="saisie-toolbar" style="margin-top:14px;">
+            <button class="btn" id="btn-apercu-point-faible" type="button">Voir la page telle que le conseiller la verra</button>
+          </div>
+        </div>
+
         <div class="field-hint" style="margin-top:14px;">S'applique immédiatement au Performance ID de tout le monde (Dashboard, Classement, Conseillers, Statistiques, Alertes). Objectifs et seuils de niveaux restent alignés sur l'appli desktop pour l'instant.</div>
       </div>
 
@@ -1315,6 +1385,10 @@
 </div>
 
 <div id="zone-impression" aria-hidden="true"></div>
+
+<div class="pf-overlay" id="pf-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Ton point à travailler">
+  <div class="pf-modal" id="pf-modal"></div>
+</div>
 
 <script>
 /* =========================================================
@@ -3159,6 +3233,7 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     const texteInitial = btnValider.innerHTML;
     btnValider.disabled = true;
     writeRowNow(tr).then(() => {
+      try { ouvrirPointFaibleDepuisLigne(tr); } catch (e) { console.error('Point à travailler', e); }
       btnValider.classList.add('valide');
       btnValider.innerHTML = `${ic('checkcircle', 15)} Enregistré`;
       setTimeout(() => {
@@ -3783,6 +3858,354 @@ document.getElementById('btn-org-pre-remplir').addEventListener('click', preRemp
 document.getElementById('org-contenu').addEventListener('focusout', () => {
   setTimeout(() => { if (rendreOrganisationEnAttente) renderOrganisation(); }, 0);
 });
+
+/* =========================================================
+   POINT À TRAVAILLER — à la validation de la semaine, l'axe du
+   Performance ID le plus éloigné de son objectif est mis en avant
+   avec les ressources de formation choisies par l'admin.
+   Bibliothèque : cockpit_parametres/ressources { axes: { <axe>: [{ id, titre, type, url }] } }.
+   ========================================================= */
+
+const fmtNb = v => String(Math.round(v * 10) / 10).replace('.', ',');
+const fmtPourcent = v => fmtNb(v * 100) + ' %';
+
+const AXES_PERF = [
+  { cle: 'rdv', score: 'score_rdv', libelle: 'RDV posés', ic: 'calendarcheck',
+    valeur: a => `${fmtNb(a.rdv_poses)} RDV posés`,
+    objectif: () => `Objectif : ${fmtNb(OBJECTIFS.rdv)} RDV posés par semaine`,
+    conseil: 'Poser davantage de RDV pour se rapprocher de l’objectif.' },
+  { cle: 'r1_r2', score: 'score_r1r2', libelle: 'Transformation R1 → R2', ic: 'rotate',
+    valeur: a => fmtPourcent(a.taux_r1_r2),
+    objectif: () => `Objectif : ${fmtNb(OBJECTIFS.r1_r2 * 100)} % des R1 transformés en R2`,
+    conseil: 'Améliorer le taux de transformation R1 → R2.' },
+  { cle: 'signature', score: 'score_signature', libelle: 'Taux de signature', ic: 'pen',
+    valeur: a => fmtPourcent(a.taux_signature),
+    objectif: () => `Objectif : ${fmtNb(OBJECTIFS.signature * 100)} % des R2 signés`,
+    conseil: 'Travailler le taux de signature en R2.' },
+  { cle: 'concretisation', score: 'score_concretisation', libelle: 'Concrétisation', ic: 'coins',
+    valeur: a => fmtPourcent(a.taux_concretisation),
+    objectif: () => `Objectif : ${fmtNb(OBJECTIFS.concretisation * 100)} % du potentiel concrétisé en commissions`,
+    conseil: 'Optimiser le taux de concrétisation des commissions.' },
+  { cle: 'recommandations', score: 'score_recommandations', libelle: 'Recommandations', ic: 'users',
+    valeur: a => `${fmtNb(a.recommandations)} recommandation${a.recommandations > 1 ? 's' : ''}`,
+    objectif: () => `Objectif : ${fmtNb(OBJECTIFS.recommandations)} recommandations par semaine`,
+    conseil: 'Augmenter le nombre de recommandations recueillies auprès des clients.' },
+  { cle: 'casse', score: 'score_casse', libelle: 'Taux de casse', ic: 'calendarx',
+    valeur: a => fmtPourcent(a.taux_casse),
+    objectif: () => `À ne pas dépasser : ${fmtNb(OBJECTIFS.casse_max * 100)} % de RDV posés non tenus`,
+    conseil: 'Réduire le taux de casse (RDV posés qui n’ont pas eu lieu).' },
+];
+
+const TYPES_RESSOURCE = [
+  { valeur: 'formation', libelle: 'Formation', ic: 'target' },
+  { valeur: 'pdf', libelle: 'PDF / document', ic: 'folder' },
+  { valeur: 'trame', libelle: 'Trame', ic: 'pen' },
+  { valeur: 'video', libelle: 'Vidéo', ic: 'video' },
+  { valeur: 'lien', libelle: 'Lien', ic: 'briefcase' },
+];
+
+// Utilisé tant que l'admin n'a encore rien enregistré dans Paramètres.
+const RESSOURCES_PAR_DEFAUT = {};
+
+let bibliothequeRessources = null;   // null = pas de document en base : RESSOURCES_PAR_DEFAUT
+let ressourcesChargees = false;      // garde-fou : jamais d'écriture avant réception du document
+let contextePointFaible = null;
+let editeurRessourcesEnAttente = false;
+
+/** Seuls les liens http(s) sont ouverts (jamais javascript:, data:…). */
+const urlSure = url => { const u = String(url || '').trim(); return /^https?:\/\//i.test(u) ? u : ''; };
+
+function normaliserRessources(axes) {
+  const source = axes && typeof axes === 'object' ? axes : {};
+  const sortie = {};
+  for (const axe of AXES_PERF) {
+    sortie[axe.cle] = (Array.isArray(source[axe.cle]) ? source[axe.cle] : [])
+      .filter(r => r && typeof r === 'object')
+      .map(r => ({
+        id: String(r.id || nouvelId()),
+        titre: String(r.titre || ''),
+        type: TYPES_RESSOURCE.some(t => t.valeur === r.type) ? r.type : 'lien',
+        url: String(r.url || ''),
+      }));
+  }
+  return sortie;
+}
+
+const ressourcesDe = cle => (bibliothequeRessources || normaliserRessources(RESSOURCES_PAR_DEFAUT))[cle] || [];
+
+const realiseRenseigne = data => (data.rdv_vus || 0) > 0 || (data.r1_vus || 0) > 0 || (data.r2_vus || 0) > 0 || (data.suivis_faits || 0) > 0;
+
+/** Axe le plus éloigné de son objectif (score / poids le plus bas) ; null si tout est à l'objectif. */
+function pointFaibleDe(agg) {
+  let pire = null;
+  for (const axe of AXES_PERF) {
+    const poids = POIDS[axe.cle] || 0;
+    if (poids <= 0) continue;
+    const ratio = Math.min((agg[axe.score] || 0) / poids, 1);
+    if (!pire || ratio < pire.ratio - 1e-9) pire = { axe, ratio };
+  }
+  return pire && pire.ratio < 0.999 ? pire : null;
+}
+
+const bibliothequeAUneRessource = () => AXES_PERF.some(a => ressourcesDe(a.cle).some(r => urlSure(r.url)));
+
+/** Le bouton « Mon point à travailler » n'apparaît pour les conseillers qu'une fois la bibliothèque alimentée. */
+function majBoutonPointFaible() {
+  document.getElementById('btn-point-faible').style.display = (isAdmin || bibliothequeAUneRessource()) ? '' : 'none';
+}
+
+/**
+ * À la validation : la page ne s'ouvre pas pour un conseiller tant qu'il n'y a rien à lui proposer
+ * (bibliothèque vide, ou aucune ressource pour son axe faible). L'admin la voit toujours, pour tester.
+ */
+function ouvrirPointFaibleDepuisLigne(tr) {
+  const data = rowDataFromTr(tr);
+  if (!data.conseiller || !realiseRenseigne(data)) return false;   // pas de réalisé : rien à analyser
+  lirePoids();
+  const agg = agreger([data]);
+  if (!isAdmin) {
+    if (!bibliothequeAUneRessource()) return false;
+    const detecte = pointFaibleDe(agg);
+    if (detecte && !ressourcesDe(detecte.axe.cle).some(r => urlSure(r.url))) return false;
+  }
+  ouvrirPointFaible({ conseiller: data.conseiller, semaine: data.semaine, agg });
+  return true;
+}
+
+function fermerPointFaible() {
+  document.getElementById('pf-overlay').style.display = 'none';
+  contextePointFaible = null;
+}
+
+function ouvrirPointFaible(contexte) {
+  contextePointFaible = contexte;
+  const detecte = contexte.agg ? pointFaibleDe(contexte.agg) : null;
+  rendrePointFaible(detecte ? detecte.axe.cle : (contexte.apercu ? 'recommandations' : null));
+  document.getElementById('pf-overlay').style.display = 'flex';
+  const fermer = document.getElementById('pf-fermer');
+  if (fermer) fermer.focus();
+}
+
+function rendrePointFaible(cleAxe) {
+  const ctx = contextePointFaible;
+  if (!ctx) return;
+  const modal = document.getElementById('pf-modal');
+  modal.textContent = '';
+  const el = (tag, classe, texte) => {
+    const n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  };
+
+  modal.append(el('div', 'pf-kicker', ctx.apercu ? 'Aperçu administrateur' : 'Ton point à travailler'));
+  const titre = ctx.apercu ? 'Ce que verra le conseiller' : (cleAxe || !ctx.agg ? 'Là où tu peux progresser' : 'Bravo, tout est à l’objectif');
+  modal.append(el('h2', 'pf-titre', titre));
+  const sousTitre = [ctx.apercu ? null : ctx.conseiller, ctx.semaine ? `semaine du ${libelleDateCourte(ctx.semaine)}` : null].filter(Boolean).join(' — ');
+  if (sousTitre) modal.append(el('div', 'pf-sous-titre', sousTitre));
+
+  const axe = cleAxe ? AXES_PERF.find(a => a.cle === cleAxe) : null;
+
+  if (!axe && ctx.agg) {
+    modal.append(el('div', 'pf-fete', 'Tous tes indicateurs sont dans l’objectif cette semaine. Continue comme ça, et pense à consolider ce qui marche bien.'));
+  } else if (!axe) {
+    modal.append(el('div', 'pf-fete', ctx.apercu
+      ? 'Choisis un axe ci-dessous pour voir les ressources associées.'
+      : 'Remplis ton réalisé de la semaine pour découvrir ton point à travailler et les ressources associées.'));
+  } else {
+    const panneau = el('div', 'pf-axe');
+    const tete = el('div', 'pf-axe-tete');
+    const pastille = el('span', 'pf-axe-ic');
+    pastille.innerHTML = ic(axe.ic, 22);   // icône interne, jamais de donnée utilisateur
+    tete.append(pastille, el('div', 'pf-axe-nom', axe.libelle));
+    panneau.append(tete);
+
+    if (ctx.agg) {
+      const poids = POIDS[axe.cle] || 0;
+      const ratio = poids > 0 ? Math.min((ctx.agg[axe.score] || 0) / poids, 1) : 0;
+      panneau.append(el('div', 'pf-valeur', axe.valeur(ctx.agg)), el('div', 'pf-objectif', axe.objectif()));
+      const barre = el('div', 'pf-barre');
+      const rempli = el('div', 'pf-barre-fill ' + (ratio >= 0.75 ? 'ok' : ratio >= 0.5 ? 'warn' : ''));
+      rempli.style.width = Math.max(Math.round(ratio * 100), 2) + '%';
+      barre.append(rempli);
+      panneau.append(barre, el('div', 'pf-ratio', `${Math.round(ratio * 100)} % de l’objectif atteint`));
+    }
+    panneau.append(el('p', 'pf-conseil', axe.conseil));
+    modal.append(panneau);
+
+    modal.append(el('div', 'pf-section-titre', 'Pour progresser'));
+    const liste = ressourcesDe(axe.cle).filter(r => urlSure(r.url));
+    if (!liste.length) {
+      modal.append(el('p', 'pf-vide', 'Aucune ressource n’a encore été ajoutée pour cet axe.'));
+    }
+    for (const r of liste) {
+      const type = TYPES_RESSOURCE.find(t => t.valeur === r.type) || TYPES_RESSOURCE[TYPES_RESSOURCE.length - 1];
+      const lien = el('a', 'pf-ressource');
+      lien.href = urlSure(r.url);
+      lien.target = '_blank';
+      lien.rel = 'noopener noreferrer';
+      const pict = el('span', 'pf-ressource-ic');
+      pict.innerHTML = ic(type.ic, 18);
+      const texte = el('div');
+      texte.append(el('div', 'pf-ressource-titre', r.titre || r.url), el('div', 'pf-ressource-type', type.libelle));
+      lien.append(pict, texte, el('span', 'pf-ressource-go', 'Ouvrir ↗'));
+      modal.append(lien);
+    }
+  }
+
+  if (isAdmin) {
+    const admin = el('div', 'pf-admin');
+    admin.append(el('span', '', 'Admin — afficher l’axe :'));
+    const select = el('select', 'res-select');
+    select.append(new Option(ctx.agg ? 'Point faible détecté' : '— choisir un axe —', ''));
+    AXES_PERF.forEach(a => select.append(new Option(a.libelle, a.cle)));
+    const detecteInitial = ctx.agg ? pointFaibleDe(ctx.agg) : null;
+    select.value = detecteInitial && detecteInitial.axe.cle === cleAxe ? '' : (cleAxe || '');
+    select.addEventListener('change', () => {
+      const detecte = ctx.agg ? pointFaibleDe(ctx.agg) : null;
+      rendrePointFaible(select.value || (detecte ? detecte.axe.cle : null));
+    });
+    admin.append(select);
+    const versParametres = el('button', 'org-mini-btn', 'Gérer les ressources');
+    versParametres.type = 'button';
+    versParametres.addEventListener('click', () => {
+      fermerPointFaible();
+      document.querySelector('.nav-item[data-view="parametres"]').click();
+    });
+    admin.append(versParametres);
+    modal.append(admin);
+  }
+
+  const pied = el('div', 'pf-pied');
+  const fermer = el('button', 'btn btn-primary', 'Fermer');
+  fermer.type = 'button';
+  fermer.id = 'pf-fermer';
+  fermer.addEventListener('click', fermerPointFaible);
+  pied.append(fermer);
+  modal.append(pied);
+}
+
+document.getElementById('pf-overlay').addEventListener('click', e => {
+  if (e.target.id === 'pf-overlay') fermerPointFaible();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && contextePointFaible) fermerPointFaible();
+});
+
+document.getElementById('btn-point-faible').addEventListener('click', () => {
+  const qui = document.getElementById('fiche-qui').value;
+  if (!qui) return;
+  const semaine = jeudiCourant();
+  const tr = [...document.getElementById('rows-body').querySelectorAll('tr')].find(ligne =>
+    ligne.querySelector('[data-field="conseiller"]')?.value.trim() === qui
+    && ligne.querySelector('[data-field="semaine"]')?.value.trim() === semaine);
+  if (!tr || !ouvrirPointFaibleDepuisLigne(tr)) ouvrirPointFaible({ conseiller: qui, semaine, agg: null });
+});
+
+document.getElementById('btn-apercu-point-faible').addEventListener('click', () => {
+  ouvrirPointFaible({ conseiller: 'Aperçu', semaine: null, agg: null, apercu: true });
+});
+
+/* ---- Éditeur de la bibliothèque (Paramètres, admin) ---- */
+
+function sauvegarderRessources() {
+  if (!isAdmin || !ressourcesChargees || !bibliothequeRessources) return Promise.resolve();
+  return db.collection('cockpit_parametres').doc('ressources').set({
+    axes: bibliothequeRessources,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  }).catch(err => {
+    console.error('Ressources', err);
+    alert('Enregistrement des ressources impossible : ' + err.message);
+  });
+}
+
+function modifierRessources(modification) {
+  const copie = JSON.parse(JSON.stringify(bibliothequeRessources || normaliserRessources(RESSOURCES_PAR_DEFAUT)));
+  modification(copie);
+  bibliothequeRessources = copie;
+  renderEditeurRessources();
+  majBoutonPointFaible();
+  sauvegarderRessources();
+}
+
+function renderEditeurRessources() {
+  const carte = document.getElementById('ressources-carte');
+  const zone = document.getElementById('ressources-editeur');
+  carte.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin) return;
+  // Pas de reconstruction pendant la frappe : on le fera à la sortie du champ.
+  if (zone.contains(document.activeElement) && ['INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+    editeurRessourcesEnAttente = true;
+    return;
+  }
+  editeurRessourcesEnAttente = false;
+
+  const el = (tag, classe, texte) => {
+    const n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  };
+
+  zone.textContent = '';
+  for (const axe of AXES_PERF) {
+    const bloc = el('div', 'res-axe');
+    const titre = el('h4');
+    const pict = el('span');
+    pict.innerHTML = ic(axe.ic, 16);
+    titre.append(pict, document.createTextNode(axe.libelle));
+    bloc.append(titre);
+
+    const liste = ressourcesDe(axe.cle);
+    if (!liste.length) bloc.append(el('p', 'res-vide', 'Aucune ressource pour cet axe.'));
+    for (const r of liste) {
+      const ligne = el('div', 'res-ligne');
+
+      const champTitre = el('input', 'res-input res-titre');
+      champTitre.type = 'text';
+      champTitre.placeholder = 'Titre (ex. Trame de recommandation)';
+      champTitre.value = r.titre;
+      champTitre.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).titre = champTitre.value.trim(); }));
+
+      const choixType = el('select', 'res-select');
+      TYPES_RESSOURCE.forEach(t => choixType.append(new Option(t.libelle, t.valeur)));
+      choixType.value = r.type;
+      choixType.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).type = choixType.value; }));
+
+      const champUrl = el('input', 'res-input res-url');
+      champUrl.type = 'url';
+      champUrl.placeholder = 'https://… (lien SharePoint, OneDrive, formation…)';
+      champUrl.value = r.url;
+      champUrl.addEventListener('change', () => modifierRessources(b => { b[axe.cle].find(x => x.id === r.id).url = champUrl.value.trim(); }));
+
+      const suppr = el('button', 'org-mini-btn danger', '✕');
+      suppr.type = 'button';
+      suppr.title = 'Supprimer cette ressource';
+      suppr.addEventListener('click', () => modifierRessources(b => { b[axe.cle] = b[axe.cle].filter(x => x.id !== r.id); }));
+
+      ligne.append(champTitre, choixType, champUrl, suppr);
+      if (r.url && !urlSure(r.url)) ligne.append(el('div', 'res-vide', 'Le lien doit commencer par https://'));
+      bloc.append(ligne);
+    }
+
+    const ajout = el('button', 'org-mini-btn', '+ Ajouter une ressource');
+    ajout.type = 'button';
+    ajout.addEventListener('click', () => modifierRessources(b => { b[axe.cle].push({ id: nouvelId(), titre: '', type: 'lien', url: '' }); }));
+    bloc.append(ajout);
+    zone.append(bloc);
+  }
+}
+
+document.getElementById('ressources-editeur').addEventListener('focusout', () => {
+  setTimeout(() => { if (editeurRessourcesEnAttente) renderEditeurRessources(); }, 0);
+});
+
+function appliquerRessourcesSnapshot(snap) {
+  ressourcesChargees = true;
+  bibliothequeRessources = snap.exists ? normaliserRessources((snap.data() || {}).axes) : null;
+  renderEditeurRessources();
+  majBoutonPointFaible();
+}
 
 /* =========================================================
    ANALYSE IA (admin) — appel direct à l'API Anthropic depuis le
@@ -4507,6 +4930,7 @@ let unsubscribers = [];
 
 function demarrerEcoutes() {
   organisationChargee = false;
+  ressourcesChargees = false;
   const unsubRows = db.collection('cockpit_semaines').onSnapshot(snap => {
     marquerSynchronise(true);
     if (rowsFocused) { pendingRowsSnap = snap; return; }
@@ -4531,6 +4955,12 @@ function demarrerEcoutes() {
     err => console.error('Sync organisation', err)
   );
   unsubscribers.push(unsubEquipes);
+
+  const unsubRessources = db.collection('cockpit_parametres').doc('ressources').onSnapshot(
+    appliquerRessourcesSnapshot,
+    err => console.error('Sync ressources', err)
+  );
+  unsubscribers.push(unsubRessources);
 }
 
 auth.onAuthStateChanged(user => {
