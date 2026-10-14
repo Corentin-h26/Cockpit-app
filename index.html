@@ -669,6 +669,45 @@
   .roster-table input:focus { border-color: var(--gold); background: var(--bg); border-radius: 6px; padding: 5px 7px; outline: none; }
   .roster-table input[type="date"] { font-variant-numeric: tabular-nums; }
 
+  /* ---------------------------------------------------- Organisation (RT → SA → conseillers) */
+
+  .org-outils { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .org-grille { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+  .org-rt { background: var(--cream); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+  .org-rt-entete, .org-sa-entete { display: flex; align-items: center; gap: 8px; }
+  .org-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
+  .org-nom-input {
+    flex: 1; min-width: 0; font: inherit; font-size: 14px; font-weight: 700; color: var(--heading);
+    background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px;
+  }
+  .org-nom-input:disabled { opacity: 1; cursor: default; }
+  .org-nom-input:hover:not(:disabled), .org-nom-input:focus { border-color: var(--border); background: var(--bg); outline: none; }
+  .org-nom-texte { flex: 1; font-size: 14px; font-weight: 700; color: var(--heading); }
+  .org-compte { font-size: 11px; color: var(--heading-2); flex: 0 0 auto; }
+  .org-mini-btn {
+    font: inherit; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg); color: var(--heading);
+  }
+  .org-mini-btn:hover { border-color: var(--gold); }
+  .org-mini-btn.danger:hover { border-color: var(--coral); color: var(--coral); }
+  .org-sa { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-top: 10px; }
+  .org-sa-entete .org-nom-input { font-size: 13px; }
+  .org-depot {
+    min-height: 44px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start;
+    padding: 8px; margin-top: 8px; border: 1px dashed var(--border); border-radius: 8px;
+  }
+  .org-depot.survol { border-color: var(--gold); background: rgba(179, 147, 89, 0.14); }
+  .org-vide { font-size: 11.5px; color: var(--heading-2); align-self: center; }
+  .org-chip {
+    font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px;
+    background: var(--navy); color: #fff; cursor: grab; user-select: none;
+  }
+  .org-chip.fixe { cursor: default; }
+  .org-chip.glisse { opacity: 0.45; }
+  .org-pool { margin-top: 18px; }
+  .org-pool h3 { margin: 0 0 4px; font-size: 14px; color: var(--heading); }
+  .org-pool .org-chip { background: var(--heading-2); }
+
   /* ---------------------------------------------------- Analyse IA */
 
   .ia-cle-ligne { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
@@ -892,6 +931,7 @@
       <button class="nav-item" data-view="ma-fiche" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.7" fill="currentColor"/><path d="M4.6 20.2c0-4.1 3.3-6.6 7.4-6.6s7.4 2.5 7.4 6.6" fill="currentColor" opacity="0.55"/></svg><span>Ma fiche</span></button>
       <button class="nav-item" data-view="conseillers" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="7.6" r="3.3" fill="currentColor"/><path d="M2.7 19.4c0-3.6 2.8-6 6.3-6s6.3 2.4 6.3 6z" fill="currentColor"/><circle cx="17.3" cy="8.4" r="2.3" fill="currentColor" opacity="0.55"/><path d="M15.6 13.7c2.7.2 4.9 2.3 4.9 5.7h-3.4" fill="currentColor" opacity="0.55"/></svg><span>Conseillers</span></button>
       <button class="nav-item" data-view="equipe" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2.3" y="5" width="19.4" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.7" cy="11.7" r="2.1" fill="currentColor"/><path d="M5.3 15.8c0-1.7 1.5-2.8 3.4-2.8s3.4 1.1 3.4 2.8" fill="currentColor"/><line x1="14.3" y1="10" x2="18.3" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.3" y1="13" x2="18.3" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Équipe</span></button>
+      <button class="nav-item" data-view="organisation" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="9" y="2.8" width="6" height="4.6" rx="1.2" fill="currentColor"/><rect x="2.4" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="9.2" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="16" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><path d="M12 7.4v4.4M5.2 16.6v-3.2a1.6 1.6 0 0 1 1.6-1.6h10.4a1.6 1.6 0 0 1 1.6 1.6v3.2M12 11.8v4.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Organisation</span></button>
       <button class="nav-item" data-view="classement" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Classement</span></button>
       <button class="nav-item" data-view="statistiques" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Statistiques</span></button>
       <button class="nav-item" data-view="alertes" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>Alertes</span></button>
@@ -918,6 +958,8 @@
       <div class="topbar-filtres">
         <select class="topbar-select" id="filtre-semaine" title="Filtrer par semaine"><option value="">Toutes les semaines</option></select>
         <select class="topbar-select" id="filtre-mois" title="Filtrer par bloc mensuel"><option value="">Tous les mois</option></select>
+        <select class="topbar-select" id="filtre-rt" title="Filtrer par RT" style="display:none;"><option value="">Toutes les équipes</option></select>
+        <select class="topbar-select" id="filtre-sa" title="Filtrer par SA" style="display:none;"><option value="">Tous les SA</option></select>
         <select class="topbar-select" id="filtre-anciennete" title="Filtrer par ancienneté">
           <option value="">Tous les conseillers</option>
           <option value="nouveau">🌱 Nouveau</option>
@@ -1042,6 +1084,18 @@
         <div id="ma-fiche-table-slot"></div>
 
         <div class="field-hint" id="fiche-vide-hint"></div>
+      </div>
+
+      <!-- ============================================= ORGANISATION ============================================= -->
+      <div class="view" id="view-organisation">
+        <div class="page-title">Organisation</div>
+        <div class="page-sub">Les équipes par RT et SA. L'administrateur glisse un conseiller d'une équipe à l'autre pour le réaffecter ; les filtres RT / SA en haut de page s'appliquent ensuite à tous les écrans.</div>
+        <hr class="rule">
+        <div class="org-outils" id="org-outils">
+          <button class="btn btn-primary" id="btn-org-ajouter-rt" type="button">+ Ajouter un RT</button>
+          <button class="btn" id="btn-org-pre-remplir" type="button" style="display:none;">Pré-remplir avec l'organigramme actuel</button>
+        </div>
+        <div id="org-contenu"></div>
       </div>
 
       <!-- ============================================= CLASSEMENT ============================================= -->
@@ -1282,6 +1336,11 @@ const ALLOWED_EMAIL_DOMAIN = '@capfinances.fr';
 
 let currentUser = null;
 let isAdmin = false;
+
+// Organisation RT → SA → conseillers (document cockpit_parametres/equipes, écriture admin).
+// Déclaré ici, tôt dans le script : appliquerFiltres() y accède à chaque rendu.
+let organisation = { rts: [], affectations: [] };
+let affectationParConseiller = new Map();   // conseiller -> id du SA
 
 /* ---- Connexion / inscription ---- */
 
@@ -1807,6 +1866,19 @@ function appliquerFiltres(rows) {
     filtre = filtre.filter(r => clientAncienneteDe(r.conseiller, roster) === ancienneteSel);
   }
 
+  // Équipe : RT (tous les SA de ce RT), SA précis, ou conseillers sans équipe.
+  const rtSel = document.getElementById('filtre-rt').value;
+  const saSel = document.getElementById('filtre-sa').value;
+  if (rtSel || saSel) {
+    filtre = filtre.filter(r => {
+      const equipe = equipeDe(r.conseiller);
+      if (rtSel === '__aucune__') return !equipe;
+      if (!equipe) return false;
+      if (saSel) return equipe.sa.id === saSel;
+      return equipe.rt.id === rtSel;
+    });
+  }
+
   const semaineSel = document.getElementById('filtre-semaine').value;
   if (semaineSel) filtre = filtre.filter(r => r.semaine === semaineSel);
 
@@ -1836,6 +1908,7 @@ function renderAll() {
   renderClassement(rows);
   renderConseillers(rows);
   renderEquipe();
+  if (document.getElementById('view-organisation').classList.contains('active')) renderOrganisation();
   renderStatistiques(rows);
   renderAlertes(rows);
   renderParametres();
@@ -3255,8 +3328,14 @@ document.getElementById('poids-fields').addEventListener('input', () => {
    FILTRES GLOBAUX / TRI ROSTER / NAVIGATION
    ========================================================= */
 
-['filtre-semaine', 'filtre-mois', 'filtre-anciennete'].forEach(id => {
+['filtre-semaine', 'filtre-mois', 'filtre-anciennete', 'filtre-sa'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => renderAll());
+});
+
+// Changer de RT réduit la liste des SA proposés.
+document.getElementById('filtre-rt').addEventListener('change', () => {
+  populerFiltresOrganisation();
+  renderAll();
 });
 
 document.querySelectorAll('.roster-table th[data-sort]').forEach(th => {
@@ -3275,6 +3354,320 @@ document.querySelectorAll('.classement-table th[data-sort]').forEach(th => {
     else classementSort = { key: cle, dir: cle === 'conseiller' ? 'asc' : 'desc' };
     renderAll();
   });
+});
+
+/* =========================================================
+   ORGANISATION — RT → SA → conseillers
+   Document Firestore cockpit_parametres/equipes :
+     { rts: [{ id, nom, sas: [{ id, nom }] }], affectations: [{ conseiller, sa }] }
+   Lecture : tout compte @capfinances.fr ; écriture : admin (règles existantes).
+   ========================================================= */
+
+const nouvelId = () => 'o' + Math.random().toString(36).slice(2, 9);
+
+function normaliserOrganisation(data) {
+  const rts = Array.isArray(data && data.rts) ? data.rts.map(rt => ({
+    id: String(rt.id),
+    nom: String(rt.nom || ''),
+    sas: Array.isArray(rt.sas) ? rt.sas.map(sa => ({ id: String(sa.id), nom: String(sa.nom || '') })) : [],
+  })) : [];
+  const affectations = Array.isArray(data && data.affectations)
+    ? data.affectations.filter(a => a && a.conseiller && a.sa).map(a => ({ conseiller: String(a.conseiller), sa: String(a.sa) }))
+    : [];
+  return { rts, affectations };
+}
+
+function indexerOrganisation() {
+  affectationParConseiller = new Map(organisation.affectations.map(a => [a.conseiller, a.sa]));
+}
+
+/** { rt, sa } du conseiller, ou null s'il n'est dans aucune équipe (ou rattaché à un SA supprimé). */
+function equipeDe(conseiller) {
+  const saId = affectationParConseiller.get(conseiller);
+  if (!saId) return null;
+  for (const rt of organisation.rts) {
+    const sa = rt.sas.find(s => s.id === saId);
+    if (sa) return { rt, sa };
+  }
+  return null;
+}
+
+function sauvegarderOrganisation() {
+  if (!isAdmin) return Promise.resolve();
+  return db.collection('cockpit_parametres').doc('equipes').set({
+    rts: organisation.rts,
+    affectations: organisation.affectations,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  }).catch(err => {
+    console.error('Organisation', err);
+    alert('Enregistrement de l’organisation impossible : ' + err.message);
+  });
+}
+
+/** Filtres RT / SA du bandeau : masqués tant qu'aucune organisation n'existe ; les SA proposés dépendent du RT choisi. */
+function populerFiltresOrganisation() {
+  const selRt = document.getElementById('filtre-rt');
+  const selSa = document.getElementById('filtre-sa');
+  const rtAvant = selRt.value;
+  const saAvant = selSa.value;
+  const aUneStructure = organisation.rts.length > 0;
+
+  selRt.style.display = aUneStructure ? '' : 'none';
+  selSa.style.display = aUneStructure ? '' : 'none';
+
+  selRt.replaceChildren(
+    new Option('Toutes les équipes', ''),
+    ...organisation.rts.map(rt => new Option(`RT ${rt.nom}`, rt.id)),
+    new Option('Sans équipe', '__aucune__'),
+  );
+  const rtExiste = organisation.rts.some(rt => rt.id === rtAvant) || rtAvant === '__aucune__';
+  selRt.value = rtExiste ? rtAvant : '';
+
+  const rtCourant = selRt.value;
+  const sas = [];
+  for (const rt of organisation.rts) {
+    if (rtCourant && rt.id !== rtCourant) continue;
+    for (const sa of rt.sas) sas.push({ id: sa.id, libelle: rtCourant ? `SA ${sa.nom}` : `SA ${sa.nom} (${rt.nom})` });
+  }
+  selSa.replaceChildren(new Option('Tous les SA', ''), ...sas.map(s => new Option(s.libelle, s.id)));
+  selSa.disabled = rtCourant === '__aucune__';
+  selSa.value = sas.some(s => s.id === saAvant) && rtCourant !== '__aucune__' ? saAvant : '';
+}
+
+let rendreOrganisationEnAttente = false;
+let glisserEnCours = false;
+let focusNomOrganisation = null;   // id de l'élément (RT ou SA) dont le nom doit prendre le focus au prochain rendu
+
+function renderOrganisation() {
+  const zone = document.getElementById('org-contenu');
+  // Pas de reconstruction pendant un glisser ni pendant la saisie d'un nom : on le fera ensuite.
+  if (glisserEnCours || (zone.contains(document.activeElement) && document.activeElement.classList.contains('org-nom-input'))) {
+    rendreOrganisationEnAttente = true;
+    return;
+  }
+  rendreOrganisationEnAttente = false;
+
+  const el = (tag, classe, texte) => {
+    const n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  };
+  const compare = (a, b) => a.localeCompare(b, 'fr');
+
+  const roster = readRoster().map(r => r.conseiller);
+  const affectes = new Map();   // saId -> noms (conseillers présents au roster)
+  const sansEquipe = [];
+  for (const nom of roster) {
+    const eq = equipeDe(nom);
+    if (eq) {
+      if (!affectes.has(eq.sa.id)) affectes.set(eq.sa.id, []);
+      affectes.get(eq.sa.id).push(nom);
+    } else {
+      sansEquipe.push(nom);
+    }
+  }
+
+  document.getElementById('org-outils').style.display = isAdmin ? '' : 'none';
+  document.getElementById('btn-org-pre-remplir').style.display = (isAdmin && !organisation.rts.length) ? '' : 'none';
+
+  const brancherDepot = (depot, saId) => {
+    depot.addEventListener('dragover', e => {
+      if (!isAdmin) return;
+      e.preventDefault();
+      depot.classList.add('survol');
+    });
+    depot.addEventListener('dragleave', () => depot.classList.remove('survol'));
+    depot.addEventListener('drop', e => {
+      e.preventDefault();
+      depot.classList.remove('survol');
+      glisserEnCours = false;
+      if (!isAdmin) return;
+      const nom = e.dataTransfer.getData('text/plain');
+      if (nom) deplacerConseillerOrganisation(nom, saId);
+    });
+  };
+
+  const creerPuce = (nom) => {
+    const puce = el('div', 'org-chip' + (isAdmin ? '' : ' fixe'), nom);
+    if (isAdmin) {
+      puce.draggable = true;
+      puce.addEventListener('dragstart', e => {
+        glisserEnCours = true;
+        e.dataTransfer.setData('text/plain', nom);
+        e.dataTransfer.effectAllowed = 'move';
+        puce.classList.add('glisse');
+      });
+      puce.addEventListener('dragend', () => {
+        glisserEnCours = false;
+        puce.classList.remove('glisse');
+        if (rendreOrganisationEnAttente) renderOrganisation();
+      });
+    }
+    return puce;
+  };
+
+  const champNom = (valeur, prefixe, surChangement, idFocus) => {
+    if (!isAdmin) return el('span', 'org-nom-texte', valeur);
+    const input = el('input', 'org-nom-input');
+    input.type = 'text';
+    input.value = valeur;
+    input.placeholder = prefixe;
+    input.addEventListener('change', () => surChangement(input.value.trim()));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+    input.dataset.id = idFocus;
+    return input;
+  };
+
+  zone.textContent = '';
+  const grille = el('div', 'org-grille');
+
+  if (!organisation.rts.length) {
+    zone.append(el('div', 'empty-state', isAdmin
+      ? 'Aucune équipe pour l’instant : ajoute un RT, puis ses SA, ou pré-remplis avec l’organigramme actuel.'
+      : 'L’organisation n’a pas encore été renseignée.'));
+  }
+
+  for (const rt of organisation.rts) {
+    const carte = el('div', 'org-rt');
+    const entete = el('div', 'org-rt-entete');
+    entete.append(el('span', 'org-badge', 'RT'));
+    entete.append(champNom(rt.nom, 'Nom du RT', nom => renommerOrganisation(rt.id, nom), rt.id));
+    const total = rt.sas.reduce((s, sa) => s + (affectes.get(sa.id) || []).length, 0);
+    entete.append(el('span', 'org-compte', `${total} conseiller${total > 1 ? 's' : ''}`));
+    if (isAdmin) {
+      const ajoutSa = el('button', 'org-mini-btn', '+ SA');
+      ajoutSa.type = 'button';
+      ajoutSa.addEventListener('click', () => ajouterSAOrganisation(rt.id));
+      const suppr = el('button', 'org-mini-btn danger', '✕');
+      suppr.type = 'button';
+      suppr.title = 'Supprimer ce RT';
+      suppr.addEventListener('click', () => supprimerRTOrganisation(rt.id));
+      entete.append(ajoutSa, suppr);
+    }
+    carte.append(entete);
+
+    for (const sa of rt.sas) {
+      const boite = el('div', 'org-sa');
+      const enteteSa = el('div', 'org-sa-entete');
+      enteteSa.append(el('span', 'org-badge', 'SA'));
+      enteteSa.append(champNom(sa.nom, 'Nom du SA', nom => renommerOrganisation(sa.id, nom), sa.id));
+      const noms = (affectes.get(sa.id) || []).slice().sort(compare);
+      enteteSa.append(el('span', 'org-compte', String(noms.length)));
+      if (isAdmin) {
+        const suppr = el('button', 'org-mini-btn danger', '✕');
+        suppr.type = 'button';
+        suppr.title = 'Supprimer ce SA';
+        suppr.addEventListener('click', () => supprimerSAOrganisation(sa.id));
+        enteteSa.append(suppr);
+      }
+      boite.append(enteteSa);
+
+      const depot = el('div', 'org-depot');
+      if (noms.length) noms.forEach(nom => depot.append(creerPuce(nom)));
+      else depot.append(el('span', 'org-vide', isAdmin ? 'Glisse des conseillers ici' : 'Aucun conseiller'));
+      brancherDepot(depot, sa.id);
+      boite.append(depot);
+      carte.append(boite);
+    }
+    grille.append(carte);
+  }
+  zone.append(grille);
+
+  const pool = el('div', 'org-pool');
+  pool.append(el('h3', '', `Non affectés (${sansEquipe.length})`));
+  const depotPool = el('div', 'org-depot');
+  if (sansEquipe.length) sansEquipe.slice().sort(compare).forEach(nom => depotPool.append(creerPuce(nom)));
+  else depotPool.append(el('span', 'org-vide', 'Tous les conseillers du roster sont affectés'));
+  brancherDepot(depotPool, null);
+  pool.append(depotPool);
+  zone.append(pool);
+
+  if (focusNomOrganisation) {
+    const champ = zone.querySelector(`.org-nom-input[data-id="${focusNomOrganisation}"]`);
+    focusNomOrganisation = null;
+    if (champ) { champ.focus(); champ.select(); }
+  }
+}
+
+function majOrganisation(nouvelle) {
+  organisation = nouvelle;
+  indexerOrganisation();
+  populerFiltresOrganisation();
+  renderAll();
+  sauvegarderOrganisation();
+}
+
+function deplacerConseillerOrganisation(nom, saId) {
+  const autres = organisation.affectations.filter(a => a.conseiller !== nom);
+  majOrganisation({ ...organisation, affectations: saId ? [...autres, { conseiller: nom, sa: saId }] : autres });
+}
+
+function renommerOrganisation(id, nom) {
+  if (!nom) { renderOrganisation(); return; }   // nom vidé : on garde l'ancien
+  majOrganisation({
+    ...organisation,
+    rts: organisation.rts.map(rt => ({
+      ...rt,
+      nom: rt.id === id ? nom : rt.nom,
+      sas: rt.sas.map(sa => sa.id === id ? { ...sa, nom } : sa),
+    })),
+  });
+}
+
+function ajouterRTOrganisation() {
+  const id = nouvelId();
+  focusNomOrganisation = id;
+  majOrganisation({ ...organisation, rts: [...organisation.rts, { id, nom: 'Nouveau RT', sas: [] }] });
+}
+
+function ajouterSAOrganisation(rtId) {
+  const id = nouvelId();
+  focusNomOrganisation = id;
+  majOrganisation({
+    ...organisation,
+    rts: organisation.rts.map(rt => rt.id === rtId ? { ...rt, sas: [...rt.sas, { id, nom: 'Nouveau SA' }] } : rt),
+  });
+}
+
+function supprimerSAOrganisation(saId) {
+  const nb = organisation.affectations.filter(a => a.sa === saId).length;
+  if (nb && !confirm(`Ce SA a ${nb} conseiller${nb > 1 ? 's' : ''} : ils repasseront en « Non affectés ». Supprimer ?`)) return;
+  majOrganisation({
+    rts: organisation.rts.map(rt => ({ ...rt, sas: rt.sas.filter(sa => sa.id !== saId) })),
+    affectations: organisation.affectations.filter(a => a.sa !== saId),
+  });
+}
+
+function supprimerRTOrganisation(rtId) {
+  const rt = organisation.rts.find(r => r.id === rtId);
+  if (!rt) return;
+  const idsSa = new Set(rt.sas.map(sa => sa.id));
+  const nb = organisation.affectations.filter(a => idsSa.has(a.sa)).length;
+  if ((rt.sas.length || nb) && !confirm(`Supprimer ce RT, ses ${rt.sas.length} SA et désaffecter ${nb} conseiller${nb > 1 ? 's' : ''} ?`)) return;
+  majOrganisation({
+    rts: organisation.rts.filter(r => r.id !== rtId),
+    affectations: organisation.affectations.filter(a => !idsSa.has(a.sa)),
+  });
+}
+
+function preRemplirOrganisationDepuisOrganigramme() {
+  if (!confirm('Créer les 3 RT (Merwan, Alexandre Paris, Enzo) et leurs 7 SA d’après l’organigramme ? Tu pourras ensuite tout renommer, ajouter ou supprimer.')) return;
+  const sas = noms => noms.map(nom => ({ id: nouvelId(), nom }));
+  majOrganisation({
+    rts: [
+      { id: nouvelId(), nom: 'Merwan', sas: sas(['Pierre', 'Alexis', 'Cécile']) },
+      { id: nouvelId(), nom: 'Alexandre Paris', sas: sas(['Margot', 'Audrey', 'Étienne']) },
+      { id: nouvelId(), nom: 'Enzo', sas: sas(['Grégoire']) },
+    ],
+    affectations: organisation.affectations,
+  });
+}
+
+document.getElementById('btn-org-ajouter-rt').addEventListener('click', ajouterRTOrganisation);
+document.getElementById('btn-org-pre-remplir').addEventListener('click', preRemplirOrganisationDepuisOrganigramme);
+document.getElementById('org-contenu').addEventListener('focusout', () => {
+  setTimeout(() => { if (rendreOrganisationEnAttente) renderOrganisation(); }, 0);
 });
 
 /* =========================================================
@@ -3863,7 +4256,7 @@ majEtatCleIA();
 
 const TITLES = {
   dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
-  equipe: 'Équipe', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
+  equipe: 'Équipe', organisation: 'Organisation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
   analyse: 'Analyse IA', parametres: 'Paramètres',
 };
 
@@ -3969,6 +4362,13 @@ function appliquerPoidsSnapshot(snap) {
   renderAll();
 }
 
+function appliquerEquipesSnapshot(snap) {
+  organisation = normaliserOrganisation(snap.exists ? snap.data() : null);
+  indexerOrganisation();
+  populerFiltresOrganisation();
+  renderAll();
+}
+
 function marquerSynchronise(ok) {
   document.getElementById('sync-dot').classList.toggle('off', !ok);
   document.getElementById('sync-label').textContent = ok ? 'Synchronisé' : 'Synchronisation interrompue';
@@ -3995,6 +4395,12 @@ function demarrerEcoutes() {
     appliquerPoidsSnapshot(snap);
   }, err => { console.error('Sync paramètres', err); marquerSynchronise(false); });
   unsubscribers.push(unsubPoids);
+
+  const unsubEquipes = db.collection('cockpit_parametres').doc('equipes').onSnapshot(
+    appliquerEquipesSnapshot,
+    err => console.error('Sync organisation', err)
+  );
+  unsubscribers.push(unsubEquipes);
 }
 
 auth.onAuthStateChanged(user => {
