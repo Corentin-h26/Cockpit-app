@@ -578,6 +578,14 @@
     padding: 10px 12px;
   }
   .mode-fiche td.cell-erreurs:empty { display: none; }
+
+  /* Simple rappel (questions du bilan sans réponse) : orange, n'empêche rien. */
+  .entry-table td.cell-erreurs.a-rappel { color: #A8650F; }
+  .mode-fiche td.cell-erreurs.a-rappel {
+    background: rgba(240, 164, 58, 0.12);
+    border-color: var(--warning);
+    color: var(--heading);
+  }
   .btn-reattribuer {
     font: inherit;
     font-size: 12px;
@@ -2574,9 +2582,9 @@ function construireLigneHTML(docId, data) {
     ${prevuHTML}
     <td class="fiche-section-titre" data-titre="Réalisé"></td>
     ${realiseHTML}
-    <td class="fiche-section-titre" data-titre="Souhaites-tu un accompagnement cette semaine ? (obligatoire pour le bilan)"></td>
+    <td class="fiche-section-titre" data-titre="Souhaites-tu un accompagnement cette semaine ?"></td>
     <td class="fiche-groupe">${accompagnementHTML}</td>
-    <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ? (obligatoire pour le bilan)"></td>
+    <td class="fiche-section-titre" data-titre="Comment évalues-tu ta semaine ?"></td>
     <td class="fiche-groupe">${ressentiHTML}</td>
     <td class="cell-erreurs"></td>
     <td class="fiche-proprio"></td>
@@ -2697,21 +2705,6 @@ function calculerErreursLigne(tr) {
     erreurs.push({ champ: 'r2_signes', message: `R2 signés (${r2_signes}) ne peut pas dépasser R2 vus (${r2_vus}).` });
   }
 
-  // Questions du bilan : obligatoires dès que le bilan est commencé (un
-  // chiffre "réalisé" saisi) ou que la semaine est terminée (à partir du
-  // mercredi qui la clôt) — mais pas avant, sinon le prévu du jeudi ne
-  // pourrait pas être enregistré sans évaluer une semaine pas encore vécue.
-  const realiseCommence = CHAMPS_REALISE.some(champ => valeur(champ) > 0);
-  const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
-  const semaineTerminee = /^\d{4}-\d{2}-\d{2}$/.test(semaine) && dateLocaleISO() >= ajouterJoursISO(semaine, 6);
-  if (realiseCommence || semaineTerminee) {
-    if (!lireAccompagnement(tr).length) {
-      erreurs.push({ champ: 'accompagnement', questionnaire: true, message: 'Réponds à « Souhaites-tu un accompagnement cette semaine ? » : coche au moins une case (ou « Pas de besoin »).' });
-    }
-    if (!lireRessenti(tr)) {
-      erreurs.push({ champ: 'ressenti', questionnaire: true, message: 'Réponds à « Comment évalues-tu ta semaine ? » : choisis une option.' });
-    }
-  }
   return erreurs;
 }
 
@@ -2719,14 +2712,42 @@ function dateLocaleISO(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Affiche les erreurs de cohérence : champ en rouge + message dans la colonne "Contrôle" (tableau) / l'encadré de la carte (Ma fiche). Pas de message sur les lignes qu'on ne peut pas corriger (celles des autres). */
+/**
+ * Rappels NON bloquants : questions du bilan restées sans réponse
+ * ("accompagnement" et "évaluation de la semaine"). Affichés dès que le
+ * bilan est commencé (un chiffre "réalisé" saisi) ou que la semaine est
+ * terminée (à partir du mercredi qui la clôt), et uniquement pour la
+ * personne qui a saisi la ligne. N'empêchent jamais l'enregistrement :
+ * des conseillers remplissent leur réalisé au jour le jour.
+ */
+function rappelsBilan(tr) {
+  if (!currentUser || tr.dataset.ownerEmail !== currentUser.email) return [];
+  const valeur = champ => parseFloat(tr.querySelector(`[data-field="${champ}"]`)?.value) || 0;
+  const realiseCommence = CHAMPS_REALISE.some(champ => valeur(champ) > 0);
+  const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
+  const semaineTerminee = /^\d{4}-\d{2}-\d{2}$/.test(semaine) && dateLocaleISO() >= ajouterJoursISO(semaine, 6);
+  if (!realiseCommence && !semaineTerminee) return [];
+
+  const rappels = [];
+  if (!lireAccompagnement(tr).length) {
+    rappels.push('Réponds à « Souhaites-tu un accompagnement cette semaine ? » : coche au moins une case (ou « Pas de besoin »).');
+  }
+  if (!lireRessenti(tr)) {
+    rappels.push('Réponds à « Comment évalues-tu ta semaine ? » : choisis une option.');
+  }
+  return rappels;
+}
+
+/**
+ * Affiche les contrôles d'une ligne dans la colonne "Contrôle" (tableau) / l'encadré de la
+ * carte (Ma fiche) : erreurs de cohérence BLOQUANTES (champ + encadré rouges) et rappels
+ * du bilan NON bloquants (encadré orange). Pas de message sur les lignes qu'on ne peut
+ * pas corriger (celles des autres).
+ */
 function validerCoherenceRDV() {
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
-    // Les questions du bilan ne s'affichent en erreur qu'une fois qu'un
-    // enregistrement a été refusé : sinon toutes les anciennes lignes sans
-    // réponse s'afficheraient en rouge sans que personne n'y touche.
-    const refuse = brouillonsBloques.has(tr.dataset.docId);
-    const erreurs = calculerErreursLigne(tr).filter(e => !e.questionnaire || refuse);
+    const erreurs = calculerErreursLigne(tr);
+    const rappels = rappelsBilan(tr);
 
     const parChamp = {};
     for (const e of erreurs) (parChamp[e.champ] = parChamp[e.champ] || []).push(e.message);
@@ -2741,18 +2762,26 @@ function validerCoherenceRDV() {
     const cellule = tr.querySelector('.cell-erreurs');
     if (!cellule) continue;
     cellule.textContent = '';
-    if (!erreurs.length || tr.classList.contains('row-readonly')) continue;
+    cellule.classList.remove('a-erreurs', 'a-rappel');
+    if (tr.classList.contains('row-readonly')) continue;
 
-    const titre = document.createElement('div');
-    titre.className = 'erreurs-titre';
-    titre.textContent = 'Non enregistré — à corriger :';
-    cellule.append(titre);
-    for (const e of erreurs) {
-      const ligne = document.createElement('div');
-      ligne.className = 'erreurs-ligne';
-      ligne.textContent = e.message;
-      cellule.append(ligne);
-    }
+    const ajouterBloc = (titreTexte, messages) => {
+      const titre = document.createElement('div');
+      titre.className = 'erreurs-titre';
+      titre.textContent = titreTexte;
+      cellule.append(titre);
+      for (const message of messages) {
+        const ligne = document.createElement('div');
+        ligne.className = 'erreurs-ligne';
+        ligne.textContent = message;
+        cellule.append(ligne);
+      }
+    };
+
+    if (erreurs.length) ajouterBloc('Non enregistré — à corriger :', erreurs.map(e => e.message));
+    if (rappels.length) ajouterBloc('À compléter (n’empêche pas l’enregistrement) :', rappels);
+    cellule.classList.toggle('a-erreurs', erreurs.length > 0);
+    cellule.classList.toggle('a-rappel', erreurs.length === 0 && rappels.length > 0);
   }
 }
 
@@ -2806,8 +2835,7 @@ function scheduleRowWrite(tr) {
   clearTimeout(rowWriteTimers.get(docId));
   rowWriteTimers.set(docId, setTimeout(() => {
     writeRowNow(tr).catch(err => {
-      if (err.code === 'incoherent') validerCoherenceRDV();   // affiche aussi les questions du bilan restées sans réponse
-      else console.error('Écriture ligne échouée', err);
+      if (err.code !== 'incoherent') console.error('Écriture ligne échouée', err);
     });
   }, 600));
 }
@@ -2992,7 +3020,6 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     }).catch(err => {
       btnValider.disabled = false;
       if (err.code === 'incoherent') {
-        validerCoherenceRDV();
         alert('Validation impossible, corrige d’abord :\n\n• ' + err.erreurs.map(e => e.message).join('\n• '));
         const premier = tr.querySelector(`[data-field="${err.erreurs[0].champ}"]`);
         if (premier) premier.focus();
