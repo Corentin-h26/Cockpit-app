@@ -4276,8 +4276,11 @@ function renderEditeurRessources() {
   carte.style.display = isAdmin ? '' : 'none';
   if (!isAdmin) return;
   // Pas de reconstruction pendant la frappe : on le fera à la sortie du champ.
+  // Seuls les champs où l'on tape sont protégés : une liste (type) ou un champ fichier doivent se reconstruire
+  // tout de suite, sinon le champ d'envoi n'apparaît pas après le choix du type.
   const actif = document.activeElement;
-  if (zone.contains(actif) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(actif.tagName) && actif.type !== 'file') {
+  const enSaisie = ['INPUT', 'TEXTAREA'].includes(actif.tagName) && actif.type !== 'file';
+  if (zone.contains(actif) && enSaisie) {
     editeurRessourcesEnAttente = true;
     return;
   }
