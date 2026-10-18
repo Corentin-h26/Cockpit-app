@@ -416,7 +416,7 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-  tr.row-readonly .row-delete { display: none; }
+  tr.row-readonly .row-delete, tr.row-readonly .row-inverser { display: none; }
 
   /* Nom de conseiller qui ne correspond à personne du roster Équipe — le
      classement/filtre Ancienneté ne le reconnaîtraient pas. */
@@ -635,6 +635,16 @@
     padding: 4px;
   }
   .row-delete:hover { color: var(--coral); }
+  .row-inverser {
+    border: none;
+    background: none;
+    color: var(--heading-2);
+    cursor: pointer;
+    font-size: 15px;
+    padding: 4px;
+  }
+  .row-inverser:hover { color: var(--gold); }
+  .row-inverser:disabled { opacity: 0.4; cursor: wait; }
 
   .field-hint { font-size: 10.5px; color: var(--heading-2); margin-top: 10px; }
 
@@ -2786,7 +2796,7 @@ function jeudiCourant() {
 function celluleChampValeur(f, valeur) {
   const label = LABELS_CHAMPS[f];
   if (f === 'semaine') return `<td data-label="${label}"><input type="text" data-field="semaine" placeholder="2026-08-27" value="${valeur ?? ''}"></td>`;
-  if (f === 'conseiller') return `<td data-label="${label}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Prénom Nom" value="${valeur ?? ''}"></td>`;
+  if (f === 'conseiller') return `<td data-label="${label}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${valeur ?? ''}"></td>`;
   return `<td data-label="${label}"><input type="number" inputmode="decimal" data-field="${f}" value="${valeur ?? 0}"></td>`;
 }
 
@@ -3275,11 +3285,11 @@ document.getElementById('rows-body').addEventListener('input', (e) => {
 
 function construireLigneRosterHTML(docId, data) {
   return `<tr data-doc-id="${docId}">
-    <td><input type="text" data-field="r_conseiller" placeholder="Prénom Nom" value="${data.conseiller || ''}"></td>
+    <td><input type="text" data-field="r_conseiller" placeholder="Nom Prénom" value="${data.conseiller || ''}"></td>
     <td><input type="date" data-field="r_date_entree" value="${data.date_entree || ''}"></td>
     <td class="anc-duree"></td>
     <td class="anc-niveau"></td>
-    <td class="actions"><button class="row-delete" type="button" title="Supprimer">✕</button></td>
+    <td class="actions"><button class="row-inverser" type="button" title="Inverser prénom et nom (met à jour les saisies et l’organisation)">⇄</button><button class="row-delete" type="button" title="Supprimer">✕</button></td>
   </tr>`;
 }
 
@@ -3309,6 +3319,10 @@ function ajouterLigneRoster() {
 document.getElementById('btn-add-roster').addEventListener('click', ajouterLigneRoster);
 
 document.getElementById('roster-body').addEventListener('click', (e) => {
+  if (e.target.classList.contains('row-inverser')) {
+    inverserNomConseiller(e.target.closest('tr'));
+    return;
+  }
   if (e.target.classList.contains('row-delete')) {
     if (!isAdmin) return;
     const tr = e.target.closest('tr');
@@ -3318,6 +3332,90 @@ document.getElementById('roster-body').addEventListener('click', (e) => {
     if (docId) db.collection('cockpit_roster').doc(docId).delete().catch(err => console.error(err));
   }
 });
+
+/* ---- Inverser « Prénom Nom » en « Nom Prénom » ----
+   Le nom sert de lien entre le roster, les semaines saisies et l'organisation : on les met donc à jour ensemble. */
+
+const nomInverse = nom => {
+  const mots = String(nom).trim().split(/\s+/).filter(Boolean);
+  return mots.length === 2 ? `${mots[1]} ${mots[0]}` : null;
+};
+
+function renommerDansOrganisation(org, ancien, nouveau) {
+  const maj = noeud => noeud.personne === ancien ? { ...noeud, personne: nouveau } : noeud;
+  return {
+    ...org,
+    rtc: maj(org.rtc),
+    rts: org.rts.map(rt => ({ ...maj(rt), sas: rt.sas.map(maj) })),
+    affectations: org.affectations.map(a => a.conseiller === ancien ? { ...a, conseiller: nouveau } : a),
+  };
+}
+
+/** Semaines d'abord (par lots), puis roster + organisation ensemble : en cas d'échec en cours de route, relancer
+ *  l'opération termine le travail (le roster porte encore l'ancien nom, la requête retrouve les semaines restantes). */
+async function renommerConseillerPartout(docIdRoster, ancien, nouveau, docsSemaines) {
+  const horodatage = firebase.firestore.FieldValue.serverTimestamp();
+  for (let i = 0; i < docsSemaines.length; i += 400) {
+    const lot = db.batch();
+    docsSemaines.slice(i, i + 400).forEach(d => lot.update(d.ref, { conseiller: nouveau }));
+    await lot.commit();
+  }
+  const nouvelleOrg = renommerDansOrganisation(organisation, ancien, nouveau);
+  const orgChangee = JSON.stringify(nouvelleOrg) !== JSON.stringify(organisation);
+  const final = db.batch();
+  final.update(db.collection('cockpit_roster').doc(docIdRoster), { conseiller: nouveau, updatedAt: horodatage });
+  if (orgChangee) {
+    final.set(db.collection('cockpit_parametres').doc('equipes'), {
+      rts: nouvelleOrg.rts, affectations: nouvelleOrg.affectations, rtc: nouvelleOrg.rtc, updatedAt: horodatage,
+    });
+  }
+  await final.commit();
+
+  if (orgChangee) {
+    organisation = nouvelleOrg;
+    indexerOrganisation();
+    populerFiltresOrganisation();
+  }
+  try {
+    if (sessionStorage.getItem('cockpit_qui') === ancien) sessionStorage.setItem('cockpit_qui', nouveau);
+  } catch (e) { /* stockage indisponible : sans importance */ }
+  const champ = document.querySelector(`#roster-body tr[data-doc-id="${docIdRoster}"] [data-field="r_conseiller"]`);
+  if (champ) champ.value = nouveau;
+  renderAll();
+}
+
+async function inverserNomConseiller(tr) {
+  if (!isAdmin || !tr) return;
+  const docId = tr.dataset.docId;
+  const ancien = tr.querySelector('[data-field="r_conseiller"]').value.trim();
+  const nouveau = nomInverse(ancien);
+  if (!nouveau) {
+    alert(`« ${ancien} » : l’inversion automatique ne fonctionne que pour un nom en deux mots. Pour un nom composé, modifie-le à la main.`);
+    return;
+  }
+  if (readRoster().some(r => r.conseiller === nouveau)) {
+    alert(`« ${nouveau} » existe déjà dans le roster.`);
+    return;
+  }
+  if (!organisationChargee) {
+    alert('Chargement en cours, réessaie dans un instant.');
+    return;
+  }
+  const bouton = tr.querySelector('.row-inverser');
+  bouton.disabled = true;
+  try {
+    const snap = await db.collection('cockpit_semaines').where('conseiller', '==', ancien).get();
+    const n = snap.size;
+    const phrase = n === 0 ? 'Aucune semaine saisie' : `${n} semaine${n > 1 ? 's' : ''} saisie${n > 1 ? 's' : ''}`;
+    if (!confirm(`Renommer « ${ancien} » en « ${nouveau} » ?\n\n${phrase} et l’organisation seront mises à jour avec le nouveau nom.`)) return;
+    await renommerConseillerPartout(docId, ancien, nouveau, snap.docs);
+  } catch (err) {
+    console.error('Renommage', err);
+    alert('Renommage impossible : ' + err.message);
+  } finally {
+    bouton.disabled = false;
+  }
+}
 
 const rosterWriteTimers = new Map();
 document.getElementById('roster-body').addEventListener('input', (e) => {
@@ -3367,10 +3465,10 @@ const ROSTER_INITIAL = [
   { conseiller: 'Minatchy Lucas', date_entree: '2026-07-06' },
   { conseiller: 'Klavic Mathilde', date_entree: '2026-07-06' },
   { conseiller: 'Messelier Grégoire', date_entree: '2019-10-07' },
-  { conseiller: 'Merwan Aoufi', date_entree: '2020-02-24' },
-  { conseiller: 'Alexandre Paris', date_entree: '2020-11-30' },
-  { conseiller: 'Enzo Arlabosse', date_entree: '2023-12-05' },
-  { conseiller: 'Corentin Hodicq', date_entree: '2015-11-21' },
+  { conseiller: 'Aoufi Merwan', date_entree: '2020-02-24' },
+  { conseiller: 'Paris Alexandre', date_entree: '2020-11-30' },
+  { conseiller: 'Arlabosse Enzo', date_entree: '2023-12-05' },
+  { conseiller: 'Hodicq Corentin', date_entree: '2015-11-21' },
 ];
 
 document.getElementById('btn-importer-roster').addEventListener('click', async () => {
