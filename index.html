@@ -445,6 +445,25 @@
   .cell-erreurs .erreurs-titre { font-weight: 700; margin-bottom: 2px; }
   .cell-erreurs .erreurs-ligne + .erreurs-ligne { margin-top: 2px; }
 
+  /* Récapitulatif des erreurs au-dessus du tableau "Ma semaine" : la colonne « Contrôle » est tout à droite
+     d'un tableau très large, donc invisible sans défiler. Reste affiché en haut de l'écran pendant la saisie. */
+  .saisie-erreurs {
+    position: sticky; top: 8px; z-index: 30; margin-bottom: 14px; padding: 12px 14px;
+    max-height: 45vh; overflow-y: auto; border-radius: 12px;
+    background: var(--bg); border: 1px solid var(--coral); border-left-width: 4px;
+    box-shadow: 0 6px 18px rgba(21, 42, 73, 0.18);
+  }
+  .saisie-erreurs-titre { font-size: 13px; font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+  .saisie-erreur-ligne {
+    display: block; width: 100%; text-align: left; font: inherit; cursor: pointer;
+    background: rgba(239, 91, 110, 0.07); border: 1px solid transparent; border-radius: 8px;
+    padding: 8px 10px; margin-top: 6px; color: var(--heading);
+  }
+  .saisie-erreur-ligne:hover { border-color: var(--coral); }
+  .saisie-erreur-qui { font-size: 12.5px; font-weight: 700; }
+  .saisie-erreur-msg { font-size: 12px; line-height: 1.4; margin-top: 2px; }
+  .saisie-erreur-aller { font-size: 11px; color: var(--heading-2); margin-top: 3px; }
+
   /* ---------------------------------------------------- Ma fiche */
 
   .fiche-identite { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
@@ -1112,6 +1131,8 @@
             <span>Voir les semaines précédentes</span>
           </label>
         </div>
+
+        <div class="saisie-erreurs" id="saisie-erreurs" style="display:none;" role="alert"></div>
 
         <div id="saisie-table-slot">
           <div class="table-wrap">
@@ -2986,6 +3007,7 @@ function rappelsBilan(tr) {
  * pas corriger (celles des autres).
  */
 function validerCoherenceRDV() {
+  const problemes = [];   // lignes à corriger, pour le récapitulatif au-dessus du tableau
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
     const erreurs = calculerErreursLigne(tr);
     const rappels = rappelsBilan(tr);
@@ -3005,6 +3027,7 @@ function validerCoherenceRDV() {
     cellule.textContent = '';
     cellule.classList.remove('a-erreurs', 'a-rappel');
     if (tr.classList.contains('row-readonly')) continue;
+    if (erreurs.length && !tr.classList.contains('semaine-masquee')) problemes.push({ tr, erreurs });
 
     const ajouterBloc = (titreTexte, messages) => {
       const titre = document.createElement('div');
@@ -3023,6 +3046,42 @@ function validerCoherenceRDV() {
     if (rappels.length) ajouterBloc('À compléter (n’empêche pas l’enregistrement) :', rappels);
     cellule.classList.toggle('a-erreurs', erreurs.length > 0);
     cellule.classList.toggle('a-rappel', erreurs.length === 0 && rappels.length > 0);
+  }
+  afficherErreursSaisie(problemes);
+}
+
+/** Récapitulatif des lignes à corriger au-dessus du tableau "Ma semaine" ; un clic amène sur le champ en cause. */
+function afficherErreursSaisie(problemes) {
+  const zone = document.getElementById('saisie-erreurs');
+  if (!zone) return;
+  zone.textContent = '';
+  if (!problemes.length) { zone.style.display = 'none'; return; }
+  zone.style.display = '';
+
+  const el = (tag, classe, texte) => {
+    const n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  };
+  const n = problemes.length;
+  zone.append(el('div', 'saisie-erreurs-titre',
+    `${n} ligne${n > 1 ? 's' : ''} à corriger : ${n > 1 ? 'elles ne sont' : 'elle n’est'} pas enregistrée${n > 1 ? 's' : ''} tant que ce n’est pas corrigé`));
+
+  for (const { tr, erreurs } of problemes) {
+    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim() || 'Ligne sans nom';
+    const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim();
+    const bouton = el('button', 'saisie-erreur-ligne');
+    bouton.type = 'button';
+    bouton.append(el('div', 'saisie-erreur-qui', semaine ? `${nom} — semaine du ${libelleDateCourte(semaine)}` : nom));
+    for (const e of erreurs) bouton.append(el('div', 'saisie-erreur-msg', '• ' + e.message));
+    bouton.append(el('div', 'saisie-erreur-aller', 'Cliquer pour aller à la ligne'));
+    bouton.addEventListener('click', () => {
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const champ = tr.querySelector(`[data-field="${erreurs[0].champ}"]`);
+      if (champ) champ.focus({ preventScroll: true });
+    });
+    zone.append(bouton);
   }
 }
 
