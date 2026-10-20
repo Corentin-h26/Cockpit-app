@@ -966,6 +966,7 @@
   .groupe-membre-pct { font-size: 12px; font-weight: 700; color: rgb(var(--accent-rgb)); white-space: nowrap; }
   .groupe-barre { height: 5px; margin-top: 7px; border-radius: 999px; overflow: hidden; background: rgba(var(--accent-rgb), 0.16); }
   .groupe-barre > div { height: 100%; border-radius: 999px; background: rgb(var(--accent-rgb)); }
+  .groupe-detail { margin-top: 6px; font-size: 11.5px; color: var(--heading-2); }
   .groupe-note { margin-top: 6px; font-size: 11.5px; color: var(--heading-2); }
   .groupe-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
   .groupe-actions .vide { font-size: 11.5px; color: var(--heading-2); }
@@ -4883,6 +4884,27 @@ const AXES_SANS_GROUPE = ['concretisation', 'rdv'];
 /** Indicateurs retenus pour les groupes : tous sauf ceux de AXES_SANS_GROUPE, et sans poids nul. */
 const axesDesGroupes = () => AXES_PERF.filter(a => !AXES_SANS_GROUPE.includes(a.cle) && (POIDS[a.cle] || 0) > 0);
 
+/**
+ * Un indicateur n'est « mesurable » que s'il y a de quoi le mesurer : la signature se calcule sur les R2 prévus et la
+ * transformation sur les R1. Sans R2 (ou sans R1) le Performance ID affiche 0 % ; ce n'est pas une difficulté de signature
+ * (ou de transformation) : le conseiller n'entre pas dans ce groupe.
+ */
+function indicateurMesurable(cle, agg) {
+  if (cle === 'signature') return agg.r2 > 0;
+  if (cle === 'r1_r2') return agg.denom_r1 > 0;
+  return true;
+}
+
+/** Chiffres bruts derrière le pourcentage, affichés sous chaque conseiller pour pouvoir les vérifier. */
+function detailGroupe(cle, agg, nbSemaines) {
+  const pl = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+  if (cle === 'signature') return `${pl(agg.r2_signes, 'signature')} sur ${pl(agg.r2, 'R2 prévu')}`;
+  if (cle === 'r1_r2') return `${agg.r1_en_r2} passé${agg.r1_en_r2 > 1 ? 's' : ''} en R2 sur ${pl(agg.denom_r1, 'R1')}`;
+  if (cle === 'recommandations') return `${pl(agg.recommandations, 'recommandation')} sur ${pl(nbSemaines, 'semaine')} (${fmtNb(agg.recommandations / Math.max(nbSemaines, 1))} par semaine)`;
+  if (cle === 'casse') return `${agg.rdv_vus} RDV vus sur ${agg.rdv_poses} posés (casse ${fmtPourcent(agg.taux_casse)})`;
+  return '';
+}
+
 /** lignes : lignes du mois (réalisé commencé) ; calcule l'écart de chaque conseiller sur chaque indicateur puis répartit. */
 function calculerGroupesFormation(lignes) {
   lirePoids();
@@ -4895,9 +4917,9 @@ function calculerGroupesFormation(lignes) {
   const analyses = [...parConseiller].map(([nom, rows]) => {
     const agg = agreger(rows);
     const ecarts = {};
-    for (const axe of axes) ecarts[axe.cle] = 1 - Math.min((agg[axe.score] || 0) / POIDS[axe.cle], 1);
+    for (const axe of axes) ecarts[axe.cle] = indicateurMesurable(axe.cle, agg) ? 1 - Math.min((agg[axe.score] || 0) / POIDS[axe.cle], 1) : 0;
     const plusFaible = axes.reduce((pire, axe) => (ecarts[axe.cle] > ecarts[pire.cle] ? axe : pire), axes[0]);
-    return { nom, ecarts, plusFaible };
+    return { nom, ecarts, plusFaible, agg, nbSemaines: new Set(rows.map(r => r.semaine)).size };
   });
   return { ...repartirEnGroupes(analyses, axes), nbAnalyses: analyses.length, axes };
 }
@@ -4948,7 +4970,8 @@ function renderGroupes() {
     el('span', '', `${bloc.libelle} : `),
     el('strong', '', `${pluriel(nbAnalyses, 'conseiller')} analysé${nbAnalyses > 1 ? 's' : ''}`),
     el('span', 'groupes-puce', pluriel(groupes.length, 'groupe')),
-    ...(tailles.length ? [el('span', 'groupes-puce', `effectifs : ${tailles.join(' · ')}`)] : []));
+    ...(tailles.length ? [el('span', 'groupes-puce', `effectifs : ${tailles.join(' · ')}`)] : []),
+    ...(avecRealise.length ? [el('span', 'groupes-puce', `semaines comptées : ${[...new Set(avecRealise.map(r => r.semaine))].sort().map(libelleDateCourte).join(' · ')}`)] : []));
 
   zone.append(el('p', 'groupes-methode',
     'Chaque conseiller est placé dans le groupe de son indicateur le plus faible sur le mois (RDV posés et Concrétisation exclus) ; le RTC et les RT n’entrent dans aucun groupe. '
@@ -4980,6 +5003,7 @@ function renderGroupes() {
       rempli.style.width = Math.max(atteinte, 3) + '%';
       barre.append(rempli);
       fiche.append(ligne, barre);
+      if (m.agg) fiche.append(el('div', 'groupe-detail', detailGroupe(axe.cle, m.agg, m.nbSemaines)));
       if (m.plusFaible.cle !== axe.cle) fiche.append(el('div', 'groupe-note', `Point le plus faible : ${m.plusFaible.libelle} (groupe rééquilibré)`));
       carte.append(fiche);
     }
