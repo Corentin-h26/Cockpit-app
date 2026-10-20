@@ -813,6 +813,9 @@
   .formation-grille .pf-ressource { margin-bottom: 0; }
   .formation-grille .pf-texte { grid-column: 1 / -1; margin-bottom: 0; }
 
+  .res-envoi-groupe { display: inline-block; margin-left: 6px; cursor: pointer; }
+  .res-envoi-groupe.occupe { opacity: 0.6; pointer-events: none; cursor: wait; }
+
   .res-axe { margin-top: 16px; }
   .res-axe h4 { margin: 0 0 8px; font-size: 13.5px; color: var(--heading); display: flex; align-items: center; gap: 8px; }
   .res-ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
@@ -4260,6 +4263,30 @@ function supprimerFichierRessource(meta) {
     .catch(err => console.error('Suppression du fichier', err));
 }
 
+/** Titre proposé pour un fichier : son nom sans extension, tirets bas remplacés par des espaces. */
+const titreDepuisNomFichier = nom => String(nom).normalize('NFC').replace(/\.[^.]+$/, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Envoi de plusieurs fichiers d'un coup dans un indicateur : une ressource « fichier » par document, titrée d'après
+ * son nom, dans l'ordre alphabétique. Un fichier refusé (format, taille) n'empêche pas les autres.
+ * Retourne { ajoutes, echecs: [{ nom, raison }] }.
+ */
+async function ajouterFichiersALaBibliotheque(cleAxe, fichiers, progression) {
+  const tries = [...fichiers].sort((a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true }));
+  const ajoutes = [], echecs = [];
+  for (let i = 0; i < tries.length; i++) {
+    if (progression) progression(i + 1, tries.length);
+    try {
+      const meta = await televerserFichierRessource(tries[i]);
+      ajoutes.push({ id: nouvelId(), titre: titreDepuisNomFichier(tries[i].name), type: 'fichier', url: '', contenu: '', fichier: meta });
+    } catch (err) {
+      echecs.push({ nom: tries[i].name, raison: err.message });
+    }
+  }
+  if (ajoutes.length) modifierRessources(b => { b[cleAxe].push(...ajoutes); });
+  return { ajoutes: ajoutes.length, echecs };
+}
+
 async function ouvrirFichierRessource(meta) {
   // Fenêtre ouverte tout de suite, sur le clic : sinon le navigateur bloquerait l'ouverture après l'attente réseau.
   const fenetre = window.open('', '_blank');
@@ -4663,6 +4690,36 @@ function renderEditeurRessources() {
     ajout.type = 'button';
     ajout.addEventListener('click', () => modifierRessources(b => { b[axe.cle].push({ id: nouvelId(), titre: '', type: 'lien', url: '', contenu: '', fichier: null }); }));
     bloc.append(ajout);
+
+    const envoiGroupe = el('label', 'org-mini-btn res-envoi-groupe');
+    const libelleEnvoi = el('span', '', '+ Ajouter des fichiers');
+    const choixFichiers = el('input');
+    choixFichiers.type = 'file';
+    choixFichiers.multiple = true;
+    choixFichiers.accept = EXTENSIONS_ACCEPTEES;
+    choixFichiers.style.display = 'none';
+    choixFichiers.addEventListener('change', async () => {
+      const fichiers = [...choixFichiers.files];
+      if (!fichiers.length) return;
+      if (!ressourcesChargees) { alert('Chargement en cours, réessaie dans un instant.'); choixFichiers.value = ''; return; }
+      envoiGroupe.classList.add('occupe');
+      try {
+        const { ajoutes, echecs } = await ajouterFichiersALaBibliotheque(axe.cle, fichiers,
+          (n, total) => { libelleEnvoi.textContent = `Envoi ${n}/${total}…`; });
+        if (echecs.length) {
+          alert(`${ajoutes} fichier${ajoutes > 1 ? 's' : ''} ajouté${ajoutes > 1 ? 's' : ''}. Non ajouté${echecs.length > 1 ? 's' : ''} :\n\n`
+            + echecs.map(e => `• ${e.nom} : ${e.raison}`).join('\n'));
+        }
+      } catch (err) {
+        alert('Envoi impossible : ' + err.message);
+      } finally {
+        libelleEnvoi.textContent = '+ Ajouter des fichiers';
+        envoiGroupe.classList.remove('occupe');
+        choixFichiers.value = '';
+      }
+    });
+    envoiGroupe.append(libelleEnvoi, choixFichiers);
+    bloc.append(envoiGroupe);
     zone.append(bloc);
   }
 }
