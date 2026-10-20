@@ -1081,6 +1081,7 @@
       <div class="view active" id="view-dashboard">
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Vue d'ensemble de l'équipe, calculée en direct à partir des saisies de "Ma semaine".</div>
+        <div class="field-hint" id="dashboard-hors-roster" style="display:none;"></div>
         <hr class="rule">
 
         <div class="section-label">Vue d'ensemble</div>
@@ -1586,7 +1587,8 @@ function lireAccompagnement(tr) {
   return [...tr.querySelectorAll('input[data-field="accompagnement"]:checked')].map(cb => cb.value);
 }
 
-function readRows() {
+/** Toutes les lignes du tableau "Ma semaine", y compris celles d'un nom absent du roster. */
+function readRowsBrut() {
   const body = document.getElementById('rows-body');
   const rows = [];
   for (const tr of body.querySelectorAll('tr')) {
@@ -1605,6 +1607,17 @@ function readRows() {
     if (row.conseiller) rows.push(row);
   }
   return rows;
+}
+
+/**
+ * Lignes servant à TOUS les calculs (Dashboard, Classement, Statistiques, Alertes, Analyse IA…) : celles des
+ * conseillers présents dans le roster. Un conseiller retiré du roster garde ses saisies en base (rien n'est
+ * supprimé) mais ne compte plus dans les statistiques. Roster vide (pas encore chargé) : aucun filtrage.
+ */
+function readRows() {
+  const brut = readRowsBrut();
+  const noms = new Set(readRoster().map(r => r.conseiller));
+  return noms.size ? brut.filter(r => noms.has(r.conseiller)) : brut;
 }
 
 function sum(rows, field) {
@@ -2017,12 +2030,28 @@ function appliquerFiltres(rows) {
    RENDU
    ========================================================= */
 
+/** Admin : signale les saisies laissées de côté parce que le nom n'est pas (ou plus) dans le roster. */
+function majAvertissementHorsRoster() {
+  const zone = document.getElementById('dashboard-hors-roster');
+  if (!zone) return;
+  const noms = new Set(readRoster().map(r => r.conseiller));
+  const exclues = new Map();
+  if (isAdmin && noms.size) {
+    for (const r of readRowsBrut()) if (!noms.has(r.conseiller)) exclues.set(r.conseiller, (exclues.get(r.conseiller) || 0) + 1);
+  }
+  if (!exclues.size) { zone.style.display = 'none'; zone.textContent = ''; return; }
+  const liste = [...exclues].map(([nom, n]) => `${nom} (${n})`).join(', ');
+  zone.textContent = `Saisies non comptées dans les statistiques car le conseiller n’est pas (ou plus) dans le roster : ${liste}. Rien n’est supprimé : ajoute le nom au roster pour les compter de nouveau.`;
+  zone.style.display = '';
+}
+
 function renderAll() {
   lirePoids();
   appliquerFiltreSemaineSaisie();
   populerDatalistRoster();
   validerConseillersSaisis();
   validerCoherenceRDV();
+  majAvertissementHorsRoster();
   const toutesLignes = readRows();
   populerFiltresSemaineEtMois(toutesLignes);
   const rows = appliquerFiltres(toutesLignes);
