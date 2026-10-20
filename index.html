@@ -940,6 +940,40 @@
     .formation-axe-titre { font-size: 18px; }
   }
 
+  /* Groupes de formation */
+  .groupes-mois-label { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; color: var(--heading-2); }
+  .groupes-resume {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 18px; padding: 14px 18px; border-radius: 16px;
+    background: var(--cream); font-size: 13px; color: var(--heading);
+  }
+  .groupes-resume strong { font-weight: 800; }
+  .groupes-puce { font-size: 12px; font-weight: 700; padding: 4px 11px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--heading-2); }
+  .groupes-methode { margin: 0 0 20px; font-size: 12.5px; line-height: 1.55; color: var(--heading-2); }
+  .groupes-grille { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
+  .groupe-carte {
+    --accent-rgb: 21, 42, 73; padding: 18px; border-radius: 20px;
+    background: rgba(var(--accent-rgb), 0.08); border: 1px solid rgba(var(--accent-rgb), 0.26);
+  }
+  .groupe-entete { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(var(--accent-rgb), 0.32); }
+  .groupe-ic {
+    width: 40px; height: 40px; border-radius: 12px; color: #fff; background: rgb(var(--accent-rgb)); box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.35);
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .groupe-titre { flex: 1; min-width: 0; font-size: 16px; font-weight: 800; color: var(--heading); }
+  .groupe-nb { font-size: 12px; font-weight: 800; color: #fff; background: rgb(var(--accent-rgb)); padding: 4px 11px; border-radius: 999px; }
+  .groupe-membre { margin-bottom: 8px; padding: 10px 13px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); }
+  .groupe-membre-ligne { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--heading); }
+  .groupe-membre-pct { font-size: 12px; font-weight: 700; color: rgb(var(--accent-rgb)); white-space: nowrap; }
+  .groupe-barre { height: 5px; margin-top: 7px; border-radius: 999px; overflow: hidden; background: rgba(var(--accent-rgb), 0.16); }
+  .groupe-barre > div { height: 100%; border-radius: 999px; background: rgb(var(--accent-rgb)); }
+  .groupe-note { margin-top: 6px; font-size: 11.5px; color: var(--heading-2); }
+  .groupe-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .groupe-actions .vide { font-size: 11.5px; color: var(--heading-2); }
+  .groupes-autres { margin-top: 26px; padding: 16px 18px; border-radius: 16px; background: var(--cream); }
+  .groupes-autres + .groupes-autres { margin-top: 12px; }
+  .groupes-autres-titre { margin-bottom: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: var(--heading-2); }
+  .groupes-autres-liste { display: flex; flex-wrap: wrap; gap: 8px; }
+
   .res-envoi-groupe { display: inline-block; margin-left: 6px; cursor: pointer; }
   .res-envoi-groupe.occupe { opacity: 0.6; pointer-events: none; cursor: wait; }
 
@@ -1180,6 +1214,7 @@
       <button class="nav-item" data-view="saisie" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16.5V20h3.5L18.4 9.1l-3.5-3.5z" fill="currentColor"/><path d="M19.9 7.6l-3.5-3.5 1.6-1.6a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4z" fill="currentColor" opacity="0.6"/></svg><span>Ma semaine</span></button>
       <button class="nav-item" data-view="ma-fiche" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.7" fill="currentColor"/><path d="M4.6 20.2c0-4.1 3.3-6.6 7.4-6.6s7.4 2.5 7.4 6.6" fill="currentColor" opacity="0.55"/></svg><span>Ma fiche</span></button>
       <button class="nav-item" data-view="formation" id="nav-formation" type="button" style="display:none;"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 4 2 9l10 5 10-5z" fill="currentColor"/><path d="M6 12.2V16c0 1.3 2.7 3 6 3s6-1.7 6-3v-3.8l-6 3z" fill="currentColor" opacity="0.6"/><path d="M21 9.6V15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Formation</span></button>
+      <button class="nav-item" data-view="groupes" id="nav-groupes" type="button" style="display:none;"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="7" cy="8" r="2.8" fill="currentColor"/><circle cx="17" cy="8" r="2.8" fill="currentColor" opacity="0.7"/><circle cx="12" cy="15.2" r="2.8" fill="currentColor" opacity="0.45"/><path d="M2.5 15.5c0-2.4 2-3.9 4.5-3.9M21.5 15.5c0-2.4-2-3.9-4.5-3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Groupes de formation</span></button>
       <button class="nav-item" data-view="conseillers" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="7.6" r="3.3" fill="currentColor"/><path d="M2.7 19.4c0-3.6 2.8-6 6.3-6s6.3 2.4 6.3 6z" fill="currentColor"/><circle cx="17.3" cy="8.4" r="2.3" fill="currentColor" opacity="0.55"/><path d="M15.6 13.7c2.7.2 4.9 2.3 4.9 5.7h-3.4" fill="currentColor" opacity="0.55"/></svg><span>Conseillers</span></button>
       <button class="nav-item" data-view="equipe" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2.3" y="5" width="19.4" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.7" cy="11.7" r="2.1" fill="currentColor"/><path d="M5.3 15.8c0-1.7 1.5-2.8 3.4-2.8s3.4 1.1 3.4 2.8" fill="currentColor"/><line x1="14.3" y1="10" x2="18.3" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.3" y1="13" x2="18.3" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Équipe</span></button>
       <button class="nav-item" data-view="organisation" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="9" y="2.8" width="6" height="4.6" rx="1.2" fill="currentColor"/><rect x="2.4" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="9.2" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="16" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><path d="M12 7.4v4.4M5.2 16.6v-3.2a1.6 1.6 0 0 1 1.6-1.6h10.4a1.6 1.6 0 0 1 1.6 1.6v3.2M12 11.8v4.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Organisation</span></button>
@@ -1490,6 +1525,21 @@
         </div>
         <div class="formation-filtres" id="formation-filtres"></div>
         <div id="formation-contenu"></div>
+      </div>
+
+      <!-- ============================================= GROUPES DE FORMATION (admin) ============================================= -->
+      <div class="view" id="view-groupes">
+        <div class="page-title">Groupes de formation</div>
+        <div class="page-sub">Répartition automatique des conseillers selon leurs difficultés du mois, en groupes équilibrés. Visible uniquement par l'administrateur.</div>
+        <hr class="rule">
+        <div class="saisie-toolbar">
+          <label class="groupes-mois-label">Mois
+            <select class="topbar-select" id="groupes-mois"></select>
+          </label>
+          <button class="btn" id="btn-groupes-copier" type="button" style="margin-left:auto;">Copier tous les groupes</button>
+        </div>
+        <div id="groupes-resume"></div>
+        <div id="groupes-contenu"></div>
       </div>
 
       <!-- ============================================= ANALYSE IA (admin) ============================================= -->
@@ -2191,7 +2241,8 @@ function clientAncienneteDe(nom, roster) {
   return cleAncienneteDepuisMois(moisDepuis(entree.date_entree));
 }
 
-function appliquerFiltres(rows) {
+/** Filtres de population du bandeau (ancienneté, centre / SA) — sans la période. Réutilisé par l'onglet Groupes de formation. */
+function filtrerParEquipeEtAnciennete(rows) {
   let filtre = rows;
 
   const ancienneteSel = document.getElementById('filtre-anciennete').value;
@@ -2212,6 +2263,11 @@ function appliquerFiltres(rows) {
       return !!equipe.rt && equipe.rt.id === rtSel;
     });
   }
+  return filtre;
+}
+
+function appliquerFiltres(rows) {
+  let filtre = filtrerParEquipeEtAnciennete(rows);
 
   const semaineSel = document.getElementById('filtre-semaine').value;
   if (semaineSel) filtre = filtre.filter(r => r.semaine === semaineSel);
@@ -2260,6 +2316,7 @@ function renderAll() {
   renderEquipe();
   if (document.getElementById('view-organisation').classList.contains('active')) renderOrganisation();
   if (document.getElementById('view-formation').classList.contains('active')) renderFormation();
+  if (document.getElementById('view-groupes').classList.contains('active')) renderGroupes();
   renderStatistiques(rows);
   renderAlertes(rows);
   renderParametres();
@@ -4753,6 +4810,223 @@ document.getElementById('btn-formation-gerer').addEventListener('click', () => {
   document.querySelector('.nav-item[data-view="parametres"]').click();
 });
 
+/* =========================================================
+   GROUPES DE FORMATION (admin) — répartition automatique, par mois
+   Chaque conseiller est placé dans le groupe de l'indicateur où il est le plus en difficulté (Concrétisation exclue,
+   pas de groupe pour cet indicateur). Pour équilibrer les effectifs, certains passent sur leur 2e ou 3e difficulté :
+   affectation de coût minimal (algorithme hongrois) sous une capacité maximale par groupe, la plus basse qui permette
+   de ne placer personne sur un indicateur où il n'est pas réellement en difficulté.
+   ========================================================= */
+
+const SEUIL_BESOIN_GROUPE = 0.10;   // au moins 10 % sous l'objectif pour entrer dans un groupe
+
+/** Affectation de coût minimal : cout[i][j], i lignes ≤ j colonnes ; renvoie la colonne choisie pour chaque ligne. */
+function affectationOptimale(cout) {
+  const n = cout.length, m = cout[0].length;
+  const u = Array(n + 1).fill(0), v = Array(m + 1).fill(0), p = Array(m + 1).fill(0), chemin = Array(m + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i;
+    let j0 = 0;
+    const minv = Array(m + 1).fill(Infinity), vu = Array(m + 1).fill(false);
+    do {
+      vu[j0] = true;
+      const i0 = p[j0];
+      let delta = Infinity, j1 = 0;
+      for (let j = 1; j <= m; j++) {
+        if (vu[j]) continue;
+        const cur = cout[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; chemin[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= m; j++) {
+        if (vu[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = chemin[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const resultat = Array(n).fill(-1);
+  for (let j = 1; j <= m; j++) if (p[j]) resultat[p[j] - 1] = j - 1;
+  return resultat;
+}
+
+/**
+ * analyses : [{ nom, ecarts: { <axe>: 0..1 } }] (écart = 1 − atteinte de l'objectif) ; axes : indicateurs retenus.
+ * Retourne { groupes: [{ axe, membres }], sansBesoin }.
+ */
+function repartirEnGroupes(analyses, axes) {
+  const enDifficulte = (a, axe) => a.ecarts[axe.cle] >= SEUIL_BESOIN_GROUPE;
+  const besoin = analyses.filter(a => axes.some(x => enDifficulte(a, x)));
+  const sansBesoin = analyses.filter(a => !besoin.includes(a));
+  const utiles = axes.filter(x => besoin.some(a => enDifficulte(a, x)));
+  const membres = new Map(utiles.map(x => [x.cle, []]));
+
+  if (besoin.length) {
+    let cap = Math.ceil(besoin.length / utiles.length);
+    let placement;
+    for (;; cap++) {
+      const cout = besoin.map(a => utiles.flatMap(x => Array(cap).fill(enDifficulte(a, x) ? 1 - a.ecarts[x.cle] : 5)));
+      placement = affectationOptimale(cout).map(col => utiles[Math.floor(col / cap)]);
+      if (besoin.every((a, i) => enDifficulte(a, placement[i])) || cap >= besoin.length) break;
+    }
+    besoin.forEach((a, i) => membres.get(placement[i].cle).push(a));
+  }
+  const groupes = utiles
+    .map(axe => ({ axe, membres: membres.get(axe.cle).sort((a, b) => b.ecarts[axe.cle] - a.ecarts[axe.cle] || a.nom.localeCompare(b.nom, 'fr')) }))
+    .filter(g => g.membres.length);
+  return { groupes, sansBesoin };
+}
+
+/** Indicateurs retenus pour les groupes : tous sauf Concrétisation, et sans poids nul. */
+const axesDesGroupes = () => AXES_PERF.filter(a => a.cle !== 'concretisation' && (POIDS[a.cle] || 0) > 0);
+
+/** lignes : lignes du mois (réalisé commencé) ; calcule l'écart de chaque conseiller sur chaque indicateur puis répartit. */
+function calculerGroupesFormation(lignes) {
+  lirePoids();
+  const axes = axesDesGroupes();
+  const parConseiller = new Map();
+  for (const r of lignes) {
+    if (!parConseiller.has(r.conseiller)) parConseiller.set(r.conseiller, []);
+    parConseiller.get(r.conseiller).push(r);
+  }
+  const analyses = [...parConseiller].map(([nom, rows]) => {
+    const agg = agreger(rows);
+    const ecarts = {};
+    for (const axe of axes) ecarts[axe.cle] = 1 - Math.min((agg[axe.score] || 0) / POIDS[axe.cle], 1);
+    const plusFaible = axes.reduce((pire, axe) => (ecarts[axe.cle] > ecarts[pire.cle] ? axe : pire), axes[0]);
+    return { nom, ecarts, plusFaible };
+  });
+  return { ...repartirEnGroupes(analyses, axes), nbAnalyses: analyses.length, axes };
+}
+
+function renderGroupes() {
+  const zone = document.getElementById('groupes-contenu');
+  if (!zone) return;
+  zone.textContent = '';
+  const resume = document.getElementById('groupes-resume');
+  resume.textContent = '';
+  if (!isAdmin) return;
+  const el = fabriquerEl;
+
+  // Mois proposés : blocs mensuels ayant des saisies ; par défaut le plus récent.
+  const toutes = readRows();
+  const blocs = blocsSemaines(toutes);
+  const sel = document.getElementById('groupes-mois');
+  const signature = blocs.map(b => b.libelle).join('|');
+  if (sel.dataset.signature !== signature) {
+    const precedent = sel.value;
+    sel.textContent = '';
+    blocs.forEach(b => sel.append(new Option(b.libelle, b.libelle)));
+    sel.dataset.signature = signature;
+    const recent = blocs.reduce((r, b) => (!r || b.semaines[b.semaines.length - 1] > r.semaines[r.semaines.length - 1] ? b : r), null);
+    sel.value = blocs.some(b => b.libelle === precedent) ? precedent : (recent ? recent.libelle : '');
+  }
+  const bloc = blocs.find(b => b.libelle === sel.value);
+  if (!bloc) {
+    zone.append(el('div', 'formation-vide', 'Aucune saisie pour l’instant : les groupes se calculent à partir des semaines saisies dans « Ma semaine ».'));
+    return;
+  }
+
+  // Population : filtres du bandeau (centre / SA, ancienneté) ; seules les semaines dont le réalisé est commencé comptent.
+  const semaines = new Set(bloc.semaines);
+  const duMois = filtrerParEquipeEtAnciennete(toutes).filter(r => semaines.has(r.semaine));
+  const avecRealise = duMois.filter(realiseRenseigne);
+  const { groupes, sansBesoin, nbAnalyses, axes } = calculerGroupesFormation(avecRealise);
+  const noms = filtrerParEquipeEtAnciennete(readRoster()).map(r => r.conseiller);
+  const analyses = new Set(avecRealise.map(r => r.conseiller));
+  const sansRealise = noms.filter(n => !analyses.has(n));
+  const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+
+  resume.className = 'groupes-resume';
+  const tailles = groupes.map(g => g.membres.length);
+  resume.append(
+    el('span', '', `${bloc.libelle} : `),
+    el('strong', '', `${pluriel(nbAnalyses, 'conseiller')} analysé${nbAnalyses > 1 ? 's' : ''}`),
+    el('span', 'groupes-puce', pluriel(groupes.length, 'groupe')),
+    ...(tailles.length ? [el('span', 'groupes-puce', `effectifs : ${tailles.join(' · ')}`)] : []));
+
+  zone.append(el('p', 'groupes-methode',
+    'Chaque conseiller est placé dans le groupe de son indicateur le plus faible sur le mois (Concrétisation exclue). '
+    + 'Pour équilibrer les effectifs, certains rejoignent le groupe de leur 2e ou 3e difficulté (indiqué sur leur fiche). '
+    + 'Sont comptées les semaines dont le réalisé est commencé ; les filtres du bandeau (centre, SA, ancienneté) s’appliquent.'));
+
+  if (!groupes.length) {
+    zone.append(el('div', 'formation-vide', nbAnalyses
+      ? 'Tout le monde est à l’objectif (ou à moins de 10 % de l’objectif) sur tous les indicateurs : aucun groupe nécessaire ce mois-ci.'
+      : 'Aucun réalisé saisi sur ce mois pour la sélection actuelle.'));
+  }
+
+  const grille = el('div', 'groupes-grille');
+  for (const { axe, membres } of groupes) {
+    const carte = el('section', 'groupe-carte');
+    carte.style.setProperty('--accent-rgb', axe.couleur);
+    const entete = el('div', 'groupe-entete');
+    const pastille = el('span', 'groupe-ic');
+    pastille.innerHTML = ic(axe.ic, 20);
+    entete.append(pastille, el('div', 'groupe-titre', axe.libelle), el('span', 'groupe-nb', String(membres.length)));
+    carte.append(entete);
+    for (const m of membres) {
+      const atteinte = Math.round((1 - m.ecarts[axe.cle]) * 100);
+      const fiche = el('div', 'groupe-membre');
+      const ligne = el('div', 'groupe-membre-ligne');
+      ligne.append(el('span', '', m.nom), el('span', 'groupe-membre-pct', `${atteinte} % de l’objectif`));
+      const barre = el('div', 'groupe-barre');
+      const rempli = el('div');
+      rempli.style.width = Math.max(atteinte, 3) + '%';
+      barre.append(rempli);
+      fiche.append(ligne, barre);
+      if (m.plusFaible.cle !== axe.cle) fiche.append(el('div', 'groupe-note', `Point le plus faible : ${m.plusFaible.libelle} (groupe rééquilibré)`));
+      carte.append(fiche);
+    }
+    const actions = el('div', 'groupe-actions');
+    const copier = el('button', 'org-mini-btn', 'Copier la liste');
+    copier.type = 'button';
+    copier.addEventListener('click', () => copierTexteRessource(`${axe.libelle} - ${bloc.labelCourt}\n` + membres.map(m => m.nom).sort((a, b) => a.localeCompare(b, 'fr')).join('\n'), copier));
+    actions.append(copier);
+    if (ressourcesDe(axe.cle).some(ressourceValide)) {
+      const voir = el('button', 'org-mini-btn', 'Voir les ressources');
+      voir.type = 'button';
+      voir.addEventListener('click', () => {
+        axeFormationFiltre = axe.cle;
+        document.querySelector('.nav-item[data-view="formation"]').click();
+      });
+      actions.append(voir);
+    } else {
+      actions.append(el('span', 'vide', 'Aucune ressource pour cet indicateur'));
+    }
+    carte.append(actions);
+    grille.append(carte);
+  }
+  zone.append(grille);
+
+  const liste = (titre, noms2, classe) => {
+    const bloc2 = el('div', 'groupes-autres');
+    bloc2.append(el('div', 'groupes-autres-titre', `${titre} (${noms2.length})`));
+    const l = el('div', 'groupes-autres-liste');
+    noms2.forEach(n => l.append(el('span', 'groupes-puce', n)));
+    bloc2.append(l);
+    zone.append(bloc2);
+  };
+  if (sansBesoin.length) liste('À l’objectif : pas de formation nécessaire ce mois-ci', sansBesoin.map(a => a.nom).sort((a, b) => a.localeCompare(b, 'fr')));
+  if (sansRealise.length) liste('Sans réalisé saisi sur ce mois', sansRealise.slice().sort((a, b) => a.localeCompare(b, 'fr')));
+
+  groupesCourants = { bloc, groupes, sansBesoin, sansRealise };
+}
+
+let groupesCourants = null;
+
+document.getElementById('groupes-mois').addEventListener('change', renderGroupes);
+document.getElementById('btn-groupes-copier').addEventListener('click', () => {
+  if (!groupesCourants) return;
+  const { bloc, groupes, sansBesoin, sansRealise } = groupesCourants;
+  const trier = l => l.slice().sort((a, b) => a.localeCompare(b, 'fr'));
+  const lignes = [`Groupes de formation - ${bloc.libelle}`, ''];
+  for (const g of groupes) lignes.push(`${g.axe.libelle} (${g.membres.length}) : ${trier(g.membres.map(m => m.nom)).join(', ')}`);
+  if (sansBesoin.length) lignes.push('', `À l’objectif : ${trier(sansBesoin.map(a => a.nom)).join(', ')}`);
+  if (sansRealise.length) lignes.push('', `Sans réalisé saisi : ${trier(sansRealise).join(', ')}`);
+  copierTexteRessource(lignes.join('\n'), document.getElementById('btn-groupes-copier'));
+});
+
 function rendrePointFaible(cleAxe) {
   const ctx = contextePointFaible;
   if (!ctx) return;
@@ -5634,7 +5908,7 @@ majEtatCleIA();
 
 const TITLES = {
   dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
-  equipe: 'Équipe', organisation: 'Organisation', formation: 'Formation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
+  equipe: 'Équipe', organisation: 'Organisation', formation: 'Formation', groupes: 'Groupes de formation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
   analyse: 'Analyse IA', parametres: 'Paramètres',
 };
 
@@ -5819,6 +6093,7 @@ auth.onAuthStateChanged(user => {
   document.getElementById('sidebar-user-email').textContent = user.email;
   document.getElementById('sidebar-admin-badge').style.display = isAdmin ? '' : 'none';
   document.getElementById('nav-analyse').style.display = isAdmin ? '' : 'none';
+  document.getElementById('nav-groupes').style.display = isAdmin ? '' : 'none';
 
   demarrerEcoutes();
 });
