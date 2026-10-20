@@ -4812,8 +4812,8 @@ document.getElementById('btn-formation-gerer').addEventListener('click', () => {
 
 /* =========================================================
    GROUPES DE FORMATION (admin) — répartition automatique, par mois
-   Chaque conseiller est placé dans le groupe de l'indicateur où il est le plus en difficulté (Concrétisation exclue,
-   pas de groupe pour cet indicateur). Pour équilibrer les effectifs, certains passent sur leur 2e ou 3e difficulté :
+   Chaque conseiller est placé dans le groupe de l'indicateur où il est le plus en difficulté (Concrétisation et
+   RDV posés exclus : pas de groupe pour ces indicateurs). Pour équilibrer les effectifs, certains passent sur leur 2e ou 3e difficulté :
    affectation de coût minimal (algorithme hongrois) sous une capacité maximale par groupe, la plus basse qui permette
    de ne placer personne sur un indicateur où il n'est pas réellement en difficulté.
    ========================================================= */
@@ -4877,8 +4877,11 @@ function repartirEnGroupes(analyses, axes) {
   return { groupes, sansBesoin };
 }
 
-/** Indicateurs retenus pour les groupes : tous sauf Concrétisation, et sans poids nul. */
-const axesDesGroupes = () => AXES_PERF.filter(a => a.cle !== 'concretisation' && (POIDS[a.cle] || 0) > 0);
+/** Indicateurs sans groupe de formation. */
+const AXES_SANS_GROUPE = ['concretisation', 'rdv'];
+
+/** Indicateurs retenus pour les groupes : tous sauf ceux de AXES_SANS_GROUPE, et sans poids nul. */
+const axesDesGroupes = () => AXES_PERF.filter(a => !AXES_SANS_GROUPE.includes(a.cle) && (POIDS[a.cle] || 0) > 0);
 
 /** lignes : lignes du mois (réalisé commencé) ; calcule l'écart de chaque conseiller sur chaque indicateur puis répartit. */
 function calculerGroupesFormation(lignes) {
@@ -4927,12 +4930,14 @@ function renderGroupes() {
     return;
   }
 
-  // Population : filtres du bandeau (centre / SA, ancienneté) ; seules les semaines dont le réalisé est commencé comptent.
+  // Population : filtres du bandeau (centre / SA, ancienneté), hors RTC et RT (la direction n'entre dans aucun groupe) ;
+  // seules les semaines dont le réalisé est commencé comptent.
+  const estDirection = nom => { const eq = equipeDe(nom); return !!eq && (eq.role === 'rtc' || eq.role === 'rt'); };
   const semaines = new Set(bloc.semaines);
-  const duMois = filtrerParEquipeEtAnciennete(toutes).filter(r => semaines.has(r.semaine));
+  const duMois = filtrerParEquipeEtAnciennete(toutes).filter(r => semaines.has(r.semaine) && !estDirection(r.conseiller));
   const avecRealise = duMois.filter(realiseRenseigne);
   const { groupes, sansBesoin, nbAnalyses, axes } = calculerGroupesFormation(avecRealise);
-  const noms = filtrerParEquipeEtAnciennete(readRoster()).map(r => r.conseiller);
+  const noms = filtrerParEquipeEtAnciennete(readRoster()).map(r => r.conseiller).filter(n => !estDirection(n));
   const analyses = new Set(avecRealise.map(r => r.conseiller));
   const sansRealise = noms.filter(n => !analyses.has(n));
   const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
@@ -4946,13 +4951,13 @@ function renderGroupes() {
     ...(tailles.length ? [el('span', 'groupes-puce', `effectifs : ${tailles.join(' · ')}`)] : []));
 
   zone.append(el('p', 'groupes-methode',
-    'Chaque conseiller est placé dans le groupe de son indicateur le plus faible sur le mois (Concrétisation exclue). '
+    'Chaque conseiller est placé dans le groupe de son indicateur le plus faible sur le mois (RDV posés et Concrétisation exclus) ; le RTC et les RT n’entrent dans aucun groupe. '
     + 'Pour équilibrer les effectifs, certains rejoignent le groupe de leur 2e ou 3e difficulté (indiqué sur leur fiche). '
     + 'Sont comptées les semaines dont le réalisé est commencé ; les filtres du bandeau (centre, SA, ancienneté) s’appliquent.'));
 
   if (!groupes.length) {
     zone.append(el('div', 'formation-vide', nbAnalyses
-      ? 'Tout le monde est à l’objectif (ou à moins de 10 % de l’objectif) sur tous les indicateurs : aucun groupe nécessaire ce mois-ci.'
+      ? 'Tout le monde est à l’objectif (ou à moins de 10 % de l’objectif) sur les indicateurs concernés : aucun groupe nécessaire ce mois-ci.'
       : 'Aucun réalisé saisi sur ce mois pour la sélection actuelle.'));
   }
 
@@ -5007,7 +5012,7 @@ function renderGroupes() {
     bloc2.append(l);
     zone.append(bloc2);
   };
-  if (sansBesoin.length) liste('À l’objectif : pas de formation nécessaire ce mois-ci', sansBesoin.map(a => a.nom).sort((a, b) => a.localeCompare(b, 'fr')));
+  if (sansBesoin.length) liste('Pas de groupe de formation ce mois-ci : à l’objectif sur les indicateurs concernés', sansBesoin.map(a => a.nom).sort((a, b) => a.localeCompare(b, 'fr')));
   if (sansRealise.length) liste('Sans réalisé saisi sur ce mois', sansRealise.slice().sort((a, b) => a.localeCompare(b, 'fr')));
 
   groupesCourants = { bloc, groupes, sansBesoin, sansRealise };
@@ -5022,7 +5027,7 @@ document.getElementById('btn-groupes-copier').addEventListener('click', () => {
   const trier = l => l.slice().sort((a, b) => a.localeCompare(b, 'fr'));
   const lignes = [`Groupes de formation - ${bloc.libelle}`, ''];
   for (const g of groupes) lignes.push(`${g.axe.libelle} (${g.membres.length}) : ${trier(g.membres.map(m => m.nom)).join(', ')}`);
-  if (sansBesoin.length) lignes.push('', `À l’objectif : ${trier(sansBesoin.map(a => a.nom)).join(', ')}`);
+  if (sansBesoin.length) lignes.push('', `Pas de groupe (à l’objectif) : ${trier(sansBesoin.map(a => a.nom)).join(', ')}`);
   if (sansRealise.length) lignes.push('', `Sans réalisé saisi : ${trier(sansRealise).join(', ')}`);
   copierTexteRessource(lignes.join('\n'), document.getElementById('btn-groupes-copier'));
 });
