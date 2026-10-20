@@ -1432,7 +1432,7 @@
             <button class="formation-gerer" id="btn-formation-gerer" type="button" style="display:none;">Gérer les ressources</button>
             <label class="formation-recherche-wrap">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15.2" y1="15.2" x2="20" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-              <input type="search" id="formation-recherche" class="formation-recherche" placeholder="Rechercher un script, un SMS, un support…" autocomplete="off">
+              <input type="search" id="formation-recherche" name="recherche-formation" class="formation-recherche" placeholder="Rechercher un script, un SMS, un support…" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly')">
             </label>
           </div>
         </div>
@@ -4531,6 +4531,8 @@ function renderFormation() {
   if (!zone) return;
   const el = fabriquerEl;
   const champRecherche = document.getElementById('formation-recherche');
+  // Garde-fou : un navigateur peut remplir ce champ avec l'adresse e-mail de connexion ; on la vide plutôt que de tout masquer.
+  if (/^\S+@\S+\.\S+$/.test((champRecherche.value || '').trim())) champRecherche.value = '';
   const recherche = (champRecherche.value || '').trim().toLowerCase();
   document.getElementById('btn-formation-gerer').style.display = isAdmin ? '' : 'none';
 
