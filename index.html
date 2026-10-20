@@ -4885,21 +4885,29 @@ const AXES_SANS_GROUPE = ['concretisation', 'rdv'];
 const axesDesGroupes = () => AXES_PERF.filter(a => !AXES_SANS_GROUPE.includes(a.cle) && (POIDS[a.cle] || 0) > 0);
 
 /**
- * Un indicateur n'est « mesurable » que s'il y a de quoi le mesurer : la signature se calcule sur les R2 prévus et la
- * transformation sur les R1. Sans R2 (ou sans R1) le Performance ID affiche 0 % ; ce n'est pas une difficulté de signature
- * (ou de transformation) : le conseiller n'entre pas dans ce groupe.
+ * Pour les groupes de formation, signature et transformation se calculent sur les rendez-vous VUS (et non prévus) :
+ *  - transformation R1 → R2 = R1 → R2 ÷ R1 vus ; signature = R2 signés ÷ R2 vus.
+ * Sans R1 vu (ou sans R2 vu) il n'y a rien à mesurer : ce n'est pas une difficulté, le conseiller n'entre pas dans ce groupe.
+ * (Le Performance ID, lui, garde sa propre formule.)
  */
-function indicateurMesurable(cle, agg) {
-  if (cle === 'signature') return agg.r2 > 0;
-  if (cle === 'r1_r2') return agg.denom_r1 > 0;
+function indicateurMesurable(cle, a) {
+  if (cle === 'signature') return a.r2_vus > 0;
+  if (cle === 'r1_r2') return a.r1_vus > 0;
   return true;
+}
+
+/** Part de l'objectif atteinte (0..1) pour les groupes de formation. */
+function atteinteGroupe(cle, a, axe) {
+  if (cle === 'signature') return Math.min((a.r2_signes / a.r2_vus) / OBJECTIFS.signature, 1);
+  if (cle === 'r1_r2') return Math.min((a.r1_en_r2 / a.r1_vus) / OBJECTIFS.r1_r2, 1);
+  return Math.min((a[axe.score] || 0) / POIDS[cle], 1);
 }
 
 /** Chiffres bruts derrière le pourcentage, affichés sous chaque conseiller pour pouvoir les vérifier. */
 function detailGroupe(cle, agg, nbSemaines) {
   const pl = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
-  if (cle === 'signature') return `${pl(agg.r2_signes, 'signature')} sur ${pl(agg.r2, 'R2 prévu')}`;
-  if (cle === 'r1_r2') return `${agg.r1_en_r2} passé${agg.r1_en_r2 > 1 ? 's' : ''} en R2 sur ${pl(agg.denom_r1, 'R1')}`;
+  if (cle === 'signature') return `${pl(agg.r2_signes, 'signature')} sur ${pl(agg.r2_vus, 'R2 vu')}`;
+  if (cle === 'r1_r2') return `${agg.r1_en_r2} passé${agg.r1_en_r2 > 1 ? 's' : ''} en R2 sur ${pl(agg.r1_vus, 'R1 vu')}`;
   if (cle === 'recommandations') return `${pl(agg.recommandations, 'recommandation')} sur ${pl(nbSemaines, 'semaine')} (${fmtNb(agg.recommandations / Math.max(nbSemaines, 1))} par semaine)`;
   if (cle === 'casse') return `${agg.rdv_vus} RDV vus sur ${agg.rdv_poses} posés (casse ${fmtPourcent(agg.taux_casse)})`;
   return '';
@@ -4915,9 +4923,9 @@ function calculerGroupesFormation(lignes) {
     parConseiller.get(r.conseiller).push(r);
   }
   const analyses = [...parConseiller].map(([nom, rows]) => {
-    const agg = agreger(rows);
+    const agg = { ...agreger(rows), r1_vus: sum(rows, 'r1_vus'), r2_vus: sum(rows, 'r2_vus') };   // vus : base des groupes
     const ecarts = {};
-    for (const axe of axes) ecarts[axe.cle] = indicateurMesurable(axe.cle, agg) ? 1 - Math.min((agg[axe.score] || 0) / POIDS[axe.cle], 1) : 0;
+    for (const axe of axes) ecarts[axe.cle] = indicateurMesurable(axe.cle, agg) ? 1 - atteinteGroupe(axe.cle, agg, axe) : 0;
     const plusFaible = axes.reduce((pire, axe) => (ecarts[axe.cle] > ecarts[pire.cle] ? axe : pire), axes[0]);
     return { nom, ecarts, plusFaible, agg, nbSemaines: new Set(rows.map(r => r.semaine)).size };
   });
@@ -4975,6 +4983,7 @@ function renderGroupes() {
 
   zone.append(el('p', 'groupes-methode',
     'Chaque conseiller est placé dans le groupe de son indicateur le plus faible sur le mois (RDV posés et Concrétisation exclus) ; le RTC et les RT n’entrent dans aucun groupe. '
+    + 'La transformation se calcule sur les R1 vus et la signature sur les R2 vus (pas sur les prévus). '
     + 'Pour équilibrer les effectifs, certains rejoignent le groupe de leur 2e ou 3e difficulté (indiqué sur leur fiche). '
     + 'Sont comptées les semaines dont le réalisé est commencé ; les filtres du bandeau (centre, SA, ancienneté) s’appliquent.'));
 
