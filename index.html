@@ -1228,6 +1228,7 @@
       <div class="view active" id="view-dashboard">
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Vue d'ensemble de l'équipe, calculée en direct à partir des saisies de "Ma semaine".</div>
+        <div class="field-hint" id="dashboard-semaine-auto" style="display:none; color:var(--gold); font-weight:600;"></div>
         <div class="field-hint" id="dashboard-hors-roster" style="display:none;"></div>
         <hr class="rule">
 
@@ -2133,19 +2134,49 @@ function blocsSemaines(rows) {
 }
 
 let dernierBlocsMois = [];
-let filtreSemaineInitialise = false;
+let filtreSemaineManuel = false;   // vrai dès que l'utilisateur choisit lui-même une semaine dans le bandeau
+
+/**
+ * Semaine affichée par défaut : la plus récente dont le réalisé est rempli — au moins la moitié des lignes de la
+ * semaine avec un réalisé commencé (des conseillers remplissent au jour le jour : un seul ne suffit pas à basculer).
+ * Tant que ce n'est pas le cas pour la semaine en cours, on garde la précédente. À défaut, la plus récente.
+ */
+function semaineParDefaut(rows) {
+  const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
+  const commence = r => (r.rdv_vus || 0) > 0 || (r.r1_vus || 0) > 0 || (r.r2_vus || 0) > 0 || (r.suivis_faits || 0) > 0;
+  for (let i = semaines.length - 1; i >= 0; i--) {
+    const lignes = rows.filter(r => r.semaine === semaines[i]);
+    if (lignes.length && lignes.filter(commence).length * 2 >= lignes.length) return semaines[i];
+  }
+  return semaines.length ? semaines[semaines.length - 1] : '';
+}
+
+/** Dashboard : explique pourquoi la semaine précédente est affichée quand le réalisé de la semaine en cours n'est pas encore rempli. */
+function majInfoSemaineAuto(semaines, semaineAffichee) {
+  const zone = document.getElementById('dashboard-semaine-auto');
+  if (!zone) return;
+  const derniere = semaines[semaines.length - 1];
+  if (filtreSemaineManuel || !derniere || !semaineAffichee || semaineAffichee === derniere) {
+    zone.style.display = 'none';
+    zone.textContent = '';
+    return;
+  }
+  zone.textContent = `Semaine du ${libelleDateCourte(semaineAffichee)} affichée : le réalisé de la semaine du ${libelleDateCourte(derniere)} n’est pas encore rempli. `
+    + 'La semaine en cours s’affichera dès qu’il l’est pour au moins la moitié de l’équipe (ou choisis-la dans la liste des semaines).';
+  zone.style.display = '';
+}
 
 function populerFiltresSemaineEtMois(rows) {
   const selSemaine = document.getElementById('filtre-semaine');
   const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
   const valeurSemaine = selSemaine.value;
   selSemaine.innerHTML = '<option value="">Toutes les semaines</option>' + semaines.map(s => `<option value="${s}">${s}</option>`).join('');
-  if (!filtreSemaineInitialise && semaines.length) {
-    selSemaine.value = semaines[semaines.length - 1];
-    filtreSemaineInitialise = true;
+  if (!filtreSemaineManuel && semaines.length) {
+    selSemaine.value = semaineParDefaut(rows);   // suit l'avancement du réalisé tant que l'utilisateur n'a pas choisi
   } else if (semaines.includes(valeurSemaine)) {
     selSemaine.value = valeurSemaine;
   }
+  majInfoSemaineAuto(semaines, selSemaine.value);
 
   const selMois = document.getElementById('filtre-mois');
   dernierBlocsMois = blocsSemaines(rows);
@@ -3775,7 +3806,9 @@ document.getElementById('poids-fields').addEventListener('input', () => {
    FILTRES GLOBAUX / TRI ROSTER / NAVIGATION
    ========================================================= */
 
-['filtre-semaine', 'filtre-mois', 'filtre-anciennete', 'filtre-sa'].forEach(id => {
+// Choisir une semaine soi-même (même « Toutes les semaines ») arrête le suivi automatique de la semaine par défaut.
+document.getElementById('filtre-semaine').addEventListener('change', () => { filtreSemaineManuel = true; renderAll(); });
+['filtre-mois', 'filtre-anciennete', 'filtre-sa'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => renderAll());
 });
 
