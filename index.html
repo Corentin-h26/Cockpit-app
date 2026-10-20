@@ -797,6 +797,22 @@
   }
   .pf-pied { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
+  /* Onglet Formation */
+  .formation-recherche {
+    font: inherit; font-size: 13px; padding: 8px 12px; min-width: 240px; max-width: 100%; color: var(--heading);
+    border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+  }
+  .formation-axe { margin-top: 26px; }
+  .formation-axe-titre { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 16px; font-weight: 700; color: var(--heading); }
+  .formation-axe-ic {
+    width: 32px; height: 32px; border-radius: 9px; background: var(--navy); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .formation-axe-nb { font-size: 12px; font-weight: 600; color: var(--heading-2); }
+  .formation-grille { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
+  .formation-grille .pf-ressource { margin-bottom: 0; }
+  .formation-grille .pf-texte { grid-column: 1 / -1; margin-bottom: 0; }
+
   .res-axe { margin-top: 16px; }
   .res-axe h4 { margin: 0 0 8px; font-size: 13.5px; color: var(--heading); display: flex; align-items: center; gap: 8px; }
   .res-ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
@@ -1033,6 +1049,7 @@
       <button class="nav-item active" data-view="dashboard" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="currentColor" opacity="0.55"/><rect x="3" y="13" width="8" height="8" rx="2" fill="currentColor" opacity="0.55"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/></svg><span>Dashboard</span></button>
       <button class="nav-item" data-view="saisie" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16.5V20h3.5L18.4 9.1l-3.5-3.5z" fill="currentColor"/><path d="M19.9 7.6l-3.5-3.5 1.6-1.6a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4z" fill="currentColor" opacity="0.6"/></svg><span>Ma semaine</span></button>
       <button class="nav-item" data-view="ma-fiche" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.7" fill="currentColor"/><path d="M4.6 20.2c0-4.1 3.3-6.6 7.4-6.6s7.4 2.5 7.4 6.6" fill="currentColor" opacity="0.55"/></svg><span>Ma fiche</span></button>
+      <button class="nav-item" data-view="formation" id="nav-formation" type="button" style="display:none;"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 4 2 9l10 5 10-5z" fill="currentColor"/><path d="M6 12.2V16c0 1.3 2.7 3 6 3s6-1.7 6-3v-3.8l-6 3z" fill="currentColor" opacity="0.6"/><path d="M21 9.6V15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Formation</span></button>
       <button class="nav-item" data-view="conseillers" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="7.6" r="3.3" fill="currentColor"/><path d="M2.7 19.4c0-3.6 2.8-6 6.3-6s6.3 2.4 6.3 6z" fill="currentColor"/><circle cx="17.3" cy="8.4" r="2.3" fill="currentColor" opacity="0.55"/><path d="M15.6 13.7c2.7.2 4.9 2.3 4.9 5.7h-3.4" fill="currentColor" opacity="0.55"/></svg><span>Conseillers</span></button>
       <button class="nav-item" data-view="equipe" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="2.3" y="5" width="19.4" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.7" cy="11.7" r="2.1" fill="currentColor"/><path d="M5.3 15.8c0-1.7 1.5-2.8 3.4-2.8s3.4 1.1 3.4 2.8" fill="currentColor"/><line x1="14.3" y1="10" x2="18.3" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14.3" y1="13" x2="18.3" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Équipe</span></button>
       <button class="nav-item" data-view="organisation" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="9" y="2.8" width="6" height="4.6" rx="1.2" fill="currentColor"/><rect x="2.4" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="9.2" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="16" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><path d="M12 7.4v4.4M5.2 16.6v-3.2a1.6 1.6 0 0 1 1.6-1.6h10.4a1.6 1.6 0 0 1 1.6 1.6v3.2M12 11.8v4.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Organisation</span></button>
@@ -1321,6 +1338,18 @@
         <hr class="rule">
         <div id="alertes-body"></div>
         <div class="field-hint">Ressenti et Accompagnement viennent de la dernière semaine connue de chaque conseiller (comme le bilan du mercredi) — remplis via l'onglet "Ma fiche".</div>
+      </div>
+
+      <!-- ============================================= FORMATION ============================================= -->
+      <div class="view" id="view-formation">
+        <div class="page-title">Formation</div>
+        <div class="page-sub">Toutes les ressources de formation (supports, scripts, SMS types, liens), classées par indicateur du Performance ID.</div>
+        <hr class="rule">
+        <div class="saisie-toolbar">
+          <input type="search" id="formation-recherche" class="formation-recherche" placeholder="Rechercher une ressource…" autocomplete="off">
+          <button class="btn" id="btn-formation-gerer" type="button" style="display:none; margin-left:auto;">Gérer les ressources</button>
+        </div>
+        <div id="formation-contenu"></div>
       </div>
 
       <!-- ============================================= ANALYSE IA (admin) ============================================= -->
@@ -2060,6 +2089,7 @@ function renderAll() {
   renderConseillers(rows);
   renderEquipe();
   if (document.getElementById('view-organisation').classList.contains('active')) renderOrganisation();
+  if (document.getElementById('view-formation').classList.contains('active')) renderFormation();
   renderStatistiques(rows);
   renderAlertes(rows);
   renderParametres();
@@ -4156,7 +4186,11 @@ const bibliothequeAUneRessource = () => AXES_PERF.some(a => ressourcesDe(a.cle).
 
 /** Le bouton « Mon point à travailler » n'apparaît pour les conseillers qu'une fois la bibliothèque alimentée. */
 function majBoutonPointFaible() {
-  document.getElementById('btn-point-faible').style.display = (isAdmin || bibliothequeAUneRessource()) ? '' : 'none';
+  const visible = isAdmin || bibliothequeAUneRessource();
+  document.getElementById('btn-point-faible').style.display = visible ? '' : 'none';
+  // L'onglet Formation suit la même règle : invisible pour les conseillers tant que la bibliothèque est vide.
+  document.getElementById('nav-formation').style.display = visible ? '' : 'none';
+  if (document.getElementById('view-formation').classList.contains('active')) renderFormation();
 }
 
 /**
@@ -4292,6 +4326,102 @@ function ouvrirPointFaible(contexte) {
   if (fermer) fermer.focus();
 }
 
+const fabriquerEl = (tag, classe, texte) => {
+  const n = document.createElement(tag);
+  if (classe) n.className = classe;
+  if (texte !== undefined) n.textContent = texte;
+  return n;
+};
+
+/** Carte d'une ressource, partagée par la page « point à travailler » et l'onglet Formation :
+ *  texte à copier (bouton Copier), fichier envoyé (ouvert depuis la base) ou lien (nouvel onglet). */
+function carteRessource(r) {
+  const el = fabriquerEl;
+  const type = TYPES_RESSOURCE.find(t => t.valeur === r.type) || TYPES_RESSOURCE[TYPES_RESSOURCE.length - 1];
+  if (r.type === 'texte') {
+    const carteTexte = el('div', 'pf-texte');
+    const enteteTexte = el('div', 'pf-texte-entete');
+    const pictTexte = el('span', 'pf-ressource-ic');
+    pictTexte.innerHTML = ic(type.ic, 18);
+    const nomTexte = el('div');
+    nomTexte.append(el('div', 'pf-ressource-titre', r.titre || 'Texte'), el('div', 'pf-ressource-type', 'À copier et adapter'));
+    const copier = el('button', 'org-mini-btn', 'Copier');
+    copier.type = 'button';
+    copier.addEventListener('click', () => copierTexteRessource(r.contenu, copier));
+    enteteTexte.append(pictTexte, nomTexte, copier);
+    carteTexte.append(enteteTexte, el('div', 'pf-texte-corps', r.contenu));
+    return carteTexte;
+  }
+  const lien = el('a', 'pf-ressource');
+  if (r.type === 'fichier') {
+    lien.href = '#';
+    lien.addEventListener('click', e => { e.preventDefault(); ouvrirFichierRessource(r.fichier); });
+  } else {
+    lien.href = urlSure(r.url);
+    lien.target = '_blank';
+    lien.rel = 'noopener noreferrer';
+  }
+  const pict = el('span', 'pf-ressource-ic');
+  pict.innerHTML = ic(type.ic, 18);
+  const texte = el('div');
+  texte.append(
+    el('div', 'pf-ressource-titre', r.titre || (r.fichier ? r.fichier.nom : r.url)),
+    el('div', 'pf-ressource-type', r.type === 'fichier' ? `Document${r.fichier ? ' — ' + tailleEnKo(r.fichier.taille) + ' Ko' : ''}` : type.libelle));
+  lien.append(pict, texte, el('span', 'pf-ressource-go', 'Ouvrir ↗'));
+  return lien;
+}
+
+/* ---- Onglet Formation : toute la bibliothèque, classée par indicateur ---- */
+
+function renderFormation() {
+  const zone = document.getElementById('formation-contenu');
+  if (!zone) return;
+  const el = fabriquerEl;
+  const recherche = (document.getElementById('formation-recherche').value || '').trim().toLowerCase();
+  document.getElementById('btn-formation-gerer').style.display = isAdmin ? '' : 'none';
+  zone.textContent = '';
+
+  let total = 0, affichees = 0;
+  for (const axe of AXES_PERF) {
+    const toutes = ressourcesDe(axe.cle).filter(ressourceValide);
+    total += toutes.length;
+    const liste = recherche
+      ? toutes.filter(r => [r.titre, r.contenu, r.fichier && r.fichier.nom, (TYPES_RESSOURCE.find(t => t.valeur === r.type) || {}).libelle]
+          .filter(Boolean).join(' ').toLowerCase().includes(recherche))
+      : toutes;
+    if (!liste.length && (recherche || !isAdmin)) continue;   // l'admin voit aussi les axes encore vides
+    affichees += liste.length;
+
+    const section = el('section', 'formation-axe');
+    const titre = el('div', 'formation-axe-titre');
+    const pastille = el('span', 'formation-axe-ic');
+    pastille.innerHTML = ic(axe.ic, 18);
+    titre.append(pastille, el('span', '', axe.libelle), el('span', 'formation-axe-nb', `${liste.length} ressource${liste.length > 1 ? 's' : ''}`));
+    section.append(titre);
+    if (liste.length) {
+      const grille = el('div', 'formation-grille');
+      liste.forEach(r => grille.append(carteRessource(r)));
+      section.append(grille);
+    } else {
+      section.append(el('p', 'pf-vide', 'Aucune ressource pour cet indicateur pour l’instant.'));
+    }
+    zone.append(section);
+  }
+
+  if (!total) {
+    zone.append(el('div', 'empty-state', isAdmin
+      ? 'Aucune ressource pour l’instant : ajoute-en dans Paramètres, section « Ressources de formation ».'
+      : 'Aucune ressource de formation n’a encore été ajoutée.'));
+  } else if (!affichees && recherche) {
+    zone.append(el('div', 'empty-state', `Aucune ressource ne correspond à « ${document.getElementById('formation-recherche').value.trim()} ».`));
+  }
+}
+
+document.getElementById('formation-recherche').addEventListener('input', renderFormation);
+document.getElementById('btn-formation-gerer').addEventListener('click', () => {
+  document.querySelector('.nav-item[data-view="parametres"]').click();
+});
+
 function rendrePointFaible(cleAxe) {
   const ctx = contextePointFaible;
   if (!ctx) return;
@@ -4344,41 +4474,7 @@ function rendrePointFaible(cleAxe) {
     if (!liste.length) {
       modal.append(el('p', 'pf-vide', 'Aucune ressource n’a encore été ajoutée pour cet axe.'));
     }
-    for (const r of liste) {
-      const type = TYPES_RESSOURCE.find(t => t.valeur === r.type) || TYPES_RESSOURCE[TYPES_RESSOURCE.length - 1];
-      if (r.type === 'texte') {
-        const carteTexte = el('div', 'pf-texte');
-        const enteteTexte = el('div', 'pf-texte-entete');
-        const pictTexte = el('span', 'pf-ressource-ic');
-        pictTexte.innerHTML = ic(type.ic, 18);
-        const nomTexte = el('div');
-        nomTexte.append(el('div', 'pf-ressource-titre', r.titre || 'Texte'), el('div', 'pf-ressource-type', 'À copier et adapter'));
-        const copier = el('button', 'org-mini-btn', 'Copier');
-        copier.type = 'button';
-        copier.addEventListener('click', () => copierTexteRessource(r.contenu, copier));
-        enteteTexte.append(pictTexte, nomTexte, copier);
-        carteTexte.append(enteteTexte, el('div', 'pf-texte-corps', r.contenu));
-        modal.append(carteTexte);
-        continue;
-      }
-      const lien = el('a', 'pf-ressource');
-      if (r.type === 'fichier') {
-        lien.href = '#';
-        lien.addEventListener('click', e => { e.preventDefault(); ouvrirFichierRessource(r.fichier); });
-      } else {
-        lien.href = urlSure(r.url);
-        lien.target = '_blank';
-        lien.rel = 'noopener noreferrer';
-      }
-      const pict = el('span', 'pf-ressource-ic');
-      pict.innerHTML = ic(type.ic, 18);
-      const texte = el('div');
-      texte.append(
-        el('div', 'pf-ressource-titre', r.titre || (r.fichier ? r.fichier.nom : r.url)),
-        el('div', 'pf-ressource-type', r.type === 'fichier' ? `Document${r.fichier ? ' — ' + tailleEnKo(r.fichier.taille) + ' Ko' : ''}` : type.libelle));
-      lien.append(pict, texte, el('span', 'pf-ressource-go', 'Ouvrir ↗'));
-      modal.append(lien);
-    }
+    for (const r of liste) modal.append(carteRessource(r));
   }
 
   if (isAdmin) {
@@ -5168,7 +5264,7 @@ majEtatCleIA();
 
 const TITLES = {
   dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
-  equipe: 'Équipe', organisation: 'Organisation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
+  equipe: 'Équipe', organisation: 'Organisation', formation: 'Formation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
   analyse: 'Analyse IA', parametres: 'Paramètres',
 };
 
