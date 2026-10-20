@@ -841,34 +841,50 @@
   }
   .formation-filtre:hover { border-color: var(--gold); transform: translateY(-1px); }
   .formation-filtre.actif { background: var(--navy); border-color: var(--navy); color: #fff; }
-  .formation-filtre .nb { font-size: 11px; font-weight: 700; opacity: 0.65; }
+  .formation-filtre .nb { font-size: 11px; font-weight: 700; opacity: 0.6; }
   .formation-filtre .pour-toi { color: var(--gold); display: inline-flex; }
-  .formation-axe { margin-top: 28px; animation: formation-entree 0.35s ease both; }
+
+  .formation-axe { margin-top: 36px; animation: formation-entree 0.35s ease both; }
   @keyframes formation-entree { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .formation-axe-entete { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .formation-axe-entete {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
   .formation-axe-ic {
-    width: 46px; height: 46px; border-radius: 14px; background: var(--navy); color: #fff; box-shadow: var(--shadow);
+    width: 42px; height: 42px; border-radius: 13px; background: var(--navy); color: #fff;
     display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
-  .formation-axe-texte { flex: 1 1 200px; min-width: 0; }
-  .formation-axe-titre { font-size: 18px; font-weight: 800; color: var(--heading); }
-  .formation-axe-sous { font-size: 12.5px; color: var(--heading-2); margin-top: 2px; }
-  .formation-axe-nb { font-size: 12px; font-weight: 700; color: var(--heading-2); background: var(--cream); padding: 4px 11px; border-radius: 999px; }
+  .formation-axe-titre { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; font-size: 20px; font-weight: 800; color: var(--heading); }
+  .formation-axe-nb { font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
   .formation-pour-toi {
     display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.3px;
-    padding: 5px 12px; border-radius: 999px; color: #fff; background: var(--gold);
+    padding: 6px 13px; border-radius: 999px; color: #fff; background: var(--gold);
   }
+  .formation-axe.prioritaire { padding: 20px 20px 22px; margin-left: -6px; margin-right: -6px; border-radius: 20px; background: var(--gold-tint); }
   .formation-axe.prioritaire .formation-axe-ic { background: var(--gold); }
-  .formation-axe.prioritaire { padding: 18px; margin-left: -4px; margin-right: -4px; border-radius: 18px; background: var(--gold-tint); }
-  .formation-grille { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; }
+  .formation-axe.prioritaire .formation-axe-entete { border-bottom-color: rgba(179, 147, 89, 0.35); }
+
+  .formation-grille { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
   .formation-grille .pf-ressource {
-    margin-bottom: 0; padding: 16px; gap: 14px; border-radius: 16px; box-shadow: var(--shadow);
-    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    margin-bottom: 0; padding: 14px 16px; gap: 14px; border-radius: 16px; background: var(--bg);
+    box-shadow: 0 1px 2px rgba(21, 42, 73, 0.05); transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
   }
-  .formation-grille .pf-ressource:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(21, 42, 73, 0.14); background: var(--bg); }
-  .formation-grille .pf-ressource-ic, .formation-grille .pf-texte .pf-ressource-ic { width: 44px; height: 44px; border-radius: 12px; }
-  .formation-grille .pf-texte { margin-bottom: 0; border-radius: 16px; box-shadow: var(--shadow); transition: box-shadow 0.18s; }
-  .formation-grille .pf-texte:hover { box-shadow: 0 10px 22px rgba(21, 42, 73, 0.14); }
+  .formation-grille .pf-ressource:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(21, 42, 73, 0.13); border-color: var(--gold); background: var(--bg); }
+  .formation-grille .pf-ressource-ic, .formation-grille .pf-texte .pf-ressource-ic { width: 42px; height: 42px; border-radius: 12px; }
+  .formation-grille .pf-ressource-titre, .formation-grille .pf-texte .pf-ressource-titre { font-size: 14px; font-weight: 700; line-height: 1.3; }
+  .formation-grille .pf-ressource-type, .formation-grille .pf-texte .pf-ressource-type {
+    margin-top: 3px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: var(--gold);
+  }
+  /* Flèche ronde à la place de « Ouvrir ↗ » */
+  .formation-grille .pf-ressource-go {
+    font-size: 0; width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center; color: var(--gold); background: var(--gold-tint);
+    transition: background 0.18s, color 0.18s;
+  }
+  .formation-grille .pf-ressource-go::after { content: '→'; font-size: 16px; font-weight: 700; }
+  .formation-grille .pf-ressource:hover .pf-ressource-go { background: var(--navy); color: #fff; }
+  .formation-grille .pf-texte { margin-bottom: 0; border-radius: 16px; box-shadow: 0 1px 2px rgba(21, 42, 73, 0.05); transition: box-shadow 0.18s, border-color 0.18s; }
+  .formation-grille .pf-texte:hover { box-shadow: 0 12px 24px rgba(21, 42, 73, 0.13); border-color: var(--gold); }
   .formation-grille .pf-texte.deplie { grid-column: 1 / -1; }
   .pf-ressource-ic.ic-fichier { background: var(--navy); color: #fff; }
   .pf-ressource-ic.ic-texte { background: var(--gold); color: #fff; }
@@ -878,6 +894,16 @@
     background: transparent; border: none; border-top: 1px solid var(--border);
   }
   .pf-texte-toggle:hover { background: var(--gold-tint); }
+
+  /* Indicateurs encore sans ressource : une seule ligne discrète (administrateur) */
+  .formation-bientot {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 44px; padding: 16px 18px; border-radius: 16px; background: var(--cream);
+  }
+  .formation-bientot-titre { margin-right: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: var(--heading-2); }
+  .formation-bientot-puce {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    color: var(--heading-2); background: var(--bg); border: 1px dashed var(--border);
+  }
   .formation-vide {
     margin-top: 28px; padding: 38px 20px; text-align: center; border-radius: 18px; color: var(--heading-2); font-size: 14px;
     background: var(--cream); border: 1px dashed var(--border);
@@ -887,6 +913,7 @@
     .formation-hero { padding: 22px 18px; }
     .formation-hero-titre { font-size: 22px; }
     .formation-hero-actions { max-width: none; align-items: stretch; }
+    .formation-axe-titre { font-size: 18px; }
   }
 
   .res-envoi-groupe { display: inline-block; margin-left: 6px; cursor: pointer; }
@@ -4497,12 +4524,15 @@ function carteRessource(r, options = {}) {
   }
   const pict = el('span', 'pf-ressource-ic' + (r.type === 'fichier' ? ' ic-fichier' : ''));
   pict.innerHTML = ic(type.ic, 20);
-  const extension = r.fichier ? (String(r.fichier.nom).split('.').pop() || 'Document').toUpperCase() : '';
+  // Pastille de type : extension du fichier (PDF, DOCX…) ou libellé du type sans sa parenthèse (Vidéo, Lien…).
+  const etiquette = r.type === 'fichier'
+    ? (r.fichier ? (String(r.fichier.nom).split('.').pop() || 'Document').toUpperCase() : 'Document')
+    : type.libelle.replace(/\s*\(.*\)/, '');
   const texte = el('div');
   texte.append(
     el('div', 'pf-ressource-titre', r.titre || (r.fichier ? r.fichier.nom : r.url)),
-    el('div', 'pf-ressource-type', r.type === 'fichier' ? `${extension}${r.fichier ? ' · ' + tailleEnKo(r.fichier.taille) + ' Ko' : ''}` : type.libelle));
-  lien.append(pict, texte, el('span', 'pf-ressource-go', 'Ouvrir ↗'));
+    el('div', 'pf-ressource-type', etiquette));
+  lien.append(pict, texte, el('span', 'pf-ressource-go', 'Ouvrir'));
   return lien;
 }
 
@@ -4537,17 +4567,17 @@ function renderFormation() {
   document.getElementById('btn-formation-gerer').style.display = isAdmin ? '' : 'none';
 
   const parAxe = AXES_PERF.map(axe => ({ axe, toutes: ressourcesDe(axe.cle).filter(ressourceValide) }));
-  const total = parAxe.reduce((n, x) => n + x.toutes.length, 0);
-  const nbAxes = parAxe.filter(x => x.toutes.length).length;
+  const remplis = parAxe.filter(x => x.toutes.length);
+  const total = remplis.reduce((n, x) => n + x.toutes.length, 0);
   const prioritaire = axePrioritaireFormation();
   const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
   const stats = document.getElementById('formation-stats');
   stats.textContent = '';
-  if (total) stats.append(el('span', 'formation-stat', pluriel(total, 'ressource')), el('span', 'formation-stat', `${pluriel(nbAxes, 'indicateur')} couvert${nbAxes > 1 ? 's' : ''}`));
+  if (total) stats.append(el('span', 'formation-stat', pluriel(total, 'ressource')), el('span', 'formation-stat', `${pluriel(remplis.length, 'indicateur')} couvert${remplis.length > 1 ? 's' : ''}`));
 
-  // Filtres par indicateur
-  if (axeFormationFiltre && !parAxe.some(x => x.axe.cle === axeFormationFiltre && (x.toutes.length || isAdmin))) axeFormationFiltre = '';
+  // Filtres : seulement les indicateurs qui ont des ressources
+  if (axeFormationFiltre && !remplis.some(x => x.axe.cle === axeFormationFiltre)) axeFormationFiltre = '';
   const filtres = document.getElementById('formation-filtres');
   filtres.textContent = '';
   const puce = (cle, libelle, nb, icone, pourToi) => {
@@ -4561,12 +4591,12 @@ function renderFormation() {
   };
   if (total) {
     filtres.append(puce('', 'Tous', total));
-    for (const x of parAxe) if (x.toutes.length || isAdmin) filtres.append(puce(x.axe.cle, x.axe.libelle, x.toutes.length, x.axe.ic, x.axe.cle === prioritaire));
+    for (const x of remplis) filtres.append(puce(x.axe.cle, x.axe.libelle, x.toutes.length, x.axe.ic, x.axe.cle === prioritaire));
   }
   filtres.style.display = total ? '' : 'none';
 
   zone.textContent = '';
-  const ordre = prioritaire ? [...parAxe].sort((a, b) => (b.axe.cle === prioritaire) - (a.axe.cle === prioritaire)) : parAxe;
+  const ordre = prioritaire ? [...remplis].sort((a, b) => (b.axe.cle === prioritaire) - (a.axe.cle === prioritaire)) : remplis;
   let affichees = 0;
   for (const { axe, toutes } of ordre) {
     if (axeFormationFiltre && axe.cle !== axeFormationFiltre) continue;
@@ -4575,33 +4605,43 @@ function renderFormation() {
             ((TYPES_RESSOURCE.find(t => t.valeur === r.type) || {}).libelle || '').replace(/\s*\(.*\)/, '')]   // libellé du type sans sa parenthèse
           .filter(Boolean).join(' ').toLowerCase().includes(recherche))
       : toutes;
-    if (!liste.length && (recherche || !isAdmin)) continue;   // l'admin voit aussi les indicateurs encore vides
+    if (!liste.length) continue;
     affichees += liste.length;
 
-    const estPrioritaire = axe.cle === prioritaire && liste.length > 0;
+    const estPrioritaire = axe.cle === prioritaire;
     const section = el('section', 'formation-axe' + (estPrioritaire ? ' prioritaire' : ''));
     const entete = el('div', 'formation-axe-entete');
     const pastille = el('span', 'formation-axe-ic');
     pastille.innerHTML = ic(axe.ic, 22);
-    const bloc = el('div', 'formation-axe-texte');
-    bloc.append(el('div', 'formation-axe-titre', axe.libelle), el('div', 'formation-axe-sous', axe.objectif()));
-    entete.append(pastille, bloc);
+    const titre = el('div', 'formation-axe-titre');
+    titre.append(el('span', '', axe.libelle), el('span', 'formation-axe-nb', String(liste.length)));
+    entete.append(pastille, titre);
     if (estPrioritaire) {
       const badge = el('span', 'formation-pour-toi');
       badge.innerHTML = ic('star', 13);
       badge.append(document.createTextNode('Ton point à travailler'));
       entete.append(badge);
     }
-    entete.append(el('span', 'formation-axe-nb', pluriel(liste.length, 'ressource')));
     section.append(entete);
-    if (liste.length) {
-      const grille = el('div', 'formation-grille');
-      liste.forEach(r => grille.append(carteRessource(r, { replie: true })));
-      section.append(grille);
-    } else {
-      section.append(el('p', 'pf-vide', 'Aucune ressource pour cet indicateur pour l’instant.'));
-    }
+    const grille = el('div', 'formation-grille');
+    liste.forEach(r => grille.append(carteRessource(r, { replie: true })));
+    section.append(grille);
     zone.append(section);
+  }
+
+  // Administrateur : les indicateurs encore sans ressource, sur une seule ligne discrète
+  const vides = parAxe.filter(x => !x.toutes.length);
+  if (isAdmin && total && vides.length && !recherche && !axeFormationFiltre) {
+    const ligne = el('div', 'formation-bientot');
+    ligne.append(el('span', 'formation-bientot-titre', 'Pas encore de ressources'));
+    for (const x of vides) {
+      const p = el('span', 'formation-bientot-puce');
+      const i = el('span');
+      i.innerHTML = ic(x.axe.ic, 14);
+      p.append(i, document.createTextNode(x.axe.libelle));
+      ligne.append(p);
+    }
+    zone.append(ligne);
   }
 
   const vide = texte => {
