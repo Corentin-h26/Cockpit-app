@@ -5944,6 +5944,22 @@ document.getElementById('btn-ia-analyser').addEventListener('click', genererAnal
 document.getElementById('btn-ia-pdf').addEventListener('click', exporterSyntheseIAEnPDF);
 majEtatCleIA();
 
+/* ---- Changement de jour : l'ancienneté, les niveaux, les filtres d'ancienneté, la semaine en cours… se calculent à
+   partir de la date du jour. Une page laissée ouverte (onglet, appli installée, veille de l'ordinateur) doit donc se
+   recalculer d'elle-même quand le jour change, sans attendre un rechargement. ---- */
+let jourAffiche = dateLocaleISO();
+
+function verifierChangementDeJour() {
+  const aujourdhui = dateLocaleISO();
+  if (aujourdhui === jourAffiche) return;
+  jourAffiche = aujourdhui;
+  if (currentUser) renderAll();
+}
+
+setInterval(verifierChangementDeJour, 60 * 1000);                                   // page restée ouverte au passage de minuit
+document.addEventListener('visibilitychange', () => { if (!document.hidden) verifierChangementDeJour(); });   // retour sur l'onglet / réveil
+window.addEventListener('focus', verifierChangementDeJour);
+
 const TITLES = {
   dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
   equipe: 'Équipe', organisation: 'Organisation', formation: 'Formation', groupes: 'Groupes de formation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
