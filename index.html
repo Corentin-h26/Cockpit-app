@@ -3187,6 +3187,24 @@ function ligneVideDefaut(conseillerPreRempli, semainePreRemplie) {
   };
 }
 
+/** Ordre des lignes "semaine" : la plus récente d'abord ; à semaine égale, par nom de conseiller. Les dates ISO (AAAA-MM-JJ) se comparent comme du texte. */
+function comparerSemaines(a, b) {
+  const sa = (a.semaine || '').trim(), sb = (b.semaine || '').trim();
+  if (sa !== sb) return sa < sb ? 1 : -1;
+  return (a.conseiller || '').trim().localeCompare((b.conseiller || '').trim(), 'fr');
+}
+
+/** Insère un <tr> au bon endroit du tableau (même ordre que appliquerRowsSnapshot) plutôt qu'en bas. */
+function insererLigneTriee(body, tr) {
+  const lire = ligne => ({
+    semaine: ligne.querySelector('[data-field="semaine"]')?.value,
+    conseiller: ligne.querySelector('[data-field="conseiller"]')?.value,
+  });
+  const nouvelle = lire(tr);
+  const suivante = [...body.querySelectorAll('tr')].find(ligne => comparerSemaines(nouvelle, lire(ligne)) < 0);
+  body.insertBefore(tr, suivante || null);
+}
+
 function ajouterLigne(conseillerPreRempli, semainePreRemplie) {
   if (!currentUser) return;
   const data = ligneVideDefaut(conseillerPreRempli, semainePreRemplie);
@@ -3196,7 +3214,7 @@ function ajouterLigne(conseillerPreRempli, semainePreRemplie) {
     const template = document.createElement('tbody');
     template.innerHTML = construireLigneHTML(ref.id, data);
     const tr = template.firstElementChild;
-    body.appendChild(tr);
+    insererLigneTriee(body, tr);
     appliquerVerrouillageLigne(tr);
     const premierChamp = tr.querySelector('[data-field="rdv_poses"]');
     if (premierChamp) premierChamp.focus();
@@ -3314,7 +3332,11 @@ function validerCoherenceRDV() {
     cellule.textContent = '';
     cellule.classList.remove('a-erreurs', 'a-rappel');
     if (tr.classList.contains('row-readonly')) continue;
-    if (erreurs.length && !tr.classList.contains('semaine-masquee')) problemes.push({ tr, erreurs });
+    // Le récapitulatif ne porte que sur la semaine en cours (et les suivantes) : les semaines passées,
+    // saisies avant ces contrôles, restent corrigeables dans le tableau (champs en rouge) sans encombrer la bannière.
+    const semaineLigne = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
+    const semainePassee = /^\d{4}-\d{2}-\d{2}$/.test(semaineLigne) && semaineLigne < jeudiCourant();
+    if (erreurs.length && !semainePassee && !tr.classList.contains('semaine-masquee')) problemes.push({ tr, erreurs });
 
     const ajouterBloc = (titreTexte, messages) => {
       const titre = document.createElement('div');
@@ -6034,10 +6056,12 @@ function appliquerRowsSnapshot(snap) {
   const body = document.getElementById('rows-body');
   // Les saisies refusées pour incohérence (brouillonsBloques) priment sur la
   // version enregistrée : sinon elles disparaîtraient dès qu'un snapshot arrive.
-  body.innerHTML = snap.docs.map(doc => {
+  // Ordre d'affichage : semaine la plus récente en haut, puis les plus anciennes ("Ma semaine" comme "Ma fiche").
+  const lignes = snap.docs.map(doc => {
     const brouillon = brouillonsBloques.get(doc.id);
-    return construireLigneHTML(doc.id, brouillon ? { ...doc.data(), ...brouillon } : doc.data());
-  }).join('');
+    return { id: doc.id, data: brouillon ? { ...doc.data(), ...brouillon } : doc.data() };
+  }).sort((a, b) => comparerSemaines(a.data, b.data));
+  body.innerHTML = lignes.map(l => construireLigneHTML(l.id, l.data)).join('');
   body.querySelectorAll('tr').forEach(appliquerVerrouillageLigne);
   renderAll();
   if (modeFicheActif) renderMaFiche();
