@@ -406,6 +406,7 @@
   /* Total calculé (RDV posés / RDV vus) : lecture seule, en gras, jamais focalisable à la souris ni au clavier. */
   .entry-table input.champ-calcule { font-weight: 700; cursor: default; user-select: none; }
   .entry-table input[type="text"] { min-width: 100px; }
+  .entry-table input[type="date"] { min-width: 132px; }
   .entry-table td.actions { width: 34px; }
 
   /* "Ma semaine" (table non repliée en fiche) : masque les semaines qui ne
@@ -521,6 +522,7 @@
     cursor: not-allowed;
   }
   .mode-fiche input.champ-calcule { color: var(--heading); cursor: default; }
+  .mode-fiche input[type="date"]::-webkit-calendar-picker-indicator { display: none; }   /* semaine verrouillée en fiche : pas d'icône de calendrier trompeuse */
   .mode-fiche td:has(input[readonly]) { background: var(--cream); }
 
   .entry-table.mode-fiche tr:hover td { background: transparent; }
@@ -1408,7 +1410,7 @@
         </div>
 
         <div class="field-hint">
-          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Centre d'affaires — un champ en rouge signale un nom qui ne correspond à personne du roster. RDV posés (= R1 + R2 + Suivis) et RDV vus (= R1 vus + R2 vus + Suivi fait) se calculent tout seuls : tu n'as rien à y saisir. Un champ en rouge signale un écart : RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
+          Semaine : choisis dans le calendrier le jeudi qui ouvre la semaine (ex. 27/08/2026) ; une autre date est ramenée au jeudi précédent. RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Centre d'affaires — un champ en rouge signale un nom qui ne correspond à personne du roster. RDV posés (= R1 + R2 + Suivis) et RDV vus (= R1 vus + R2 vus + Suivi fait) se calculent tout seuls : tu n'as rien à y saisir. Un champ en rouge signale un écart : RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
         </div>
       </div>
 
@@ -3190,9 +3192,32 @@ function jeudiCourant() {
   return `${annee}-${mois}-${jour}`;
 }
 
+/** Date AAAA-MM-JJ qui existe vraiment (refuse 2026-02-31, 2026-9-17, 0002-09-17…). */
+function dateISOReelle(iso) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) && ajouterJoursISO(iso, 0) === iso;
+}
+
+/** Jeudi qui ouvre la semaine contenant cette date (la date elle-même si c'est un jeudi). */
+function jeudiAvantOuLe(iso) {
+  const [annee, mois, jour] = iso.split('-').map(Number);
+  const jourSemaine = new Date(Date.UTC(annee, mois - 1, jour)).getUTCDay();   // 0 = dimanche … 4 = jeudi
+  return ajouterJoursISO(iso, -((jourSemaine - 4 + 7) % 7));
+}
+
+/** Une semaine de saisie = le jeudi qui l'ouvre, entre 2020 et 2100. */
+function semaineValide(iso) {
+  const annee = Number(String(iso).slice(0, 4));
+  return dateISOReelle(iso) && annee >= 2020 && annee <= 2100 && jeudiAvantOuLe(iso) === iso;
+}
+
 function celluleChampValeur(f, valeur) {
   const label = LABELS_CHAMPS[f];
-  if (f === 'semaine') return `<td data-label="${esc(label)}"><input type="text" data-field="semaine" placeholder="2026-08-27" value="${esc(valeur)}"></td>`;
+  if (f === 'semaine') {
+    // Calendrier natif : la date s'affiche dans la langue du navigateur, .value reste AAAA-MM-JJ.
+    // Une ancienne valeur qui n'est pas une vraie date reste en texte (un champ date l'effacerait) et sera signalée en rouge.
+    const type = !valeur || dateISOReelle(valeur) ? 'date' : 'text';
+    return `<td data-label="${esc(label)}"><input type="${type}" data-field="semaine"${type === 'text' ? ' placeholder="2026-08-27"' : ''} value="${esc(valeur)}"></td>`;
+  }
   if (f === 'conseiller') return `<td data-label="${esc(label)}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${esc(valeur)}"></td>`;
   const composantes = TOTAUX_CALCULES[f];
   if (composantes) {
@@ -3348,6 +3373,15 @@ function calculerErreursLigne(tr) {
   const r1_en_r2 = valeur('r1_en_r2'), r2_signes = valeur('r2_signes');
   const erreurs = [];
 
+  const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
+  if (!semaine) {
+    erreurs.push({ champ: 'semaine', message: 'Choisis la semaine : le jeudi qui l’ouvre.' });
+  } else if (!semaineValide(semaine)) {
+    erreurs.push({ champ: 'semaine', message: dateISOReelle(semaine)
+      ? `Le ${libelleDateCourte(semaine)} n’est pas un jeudi : une semaine commence le jeudi (jeudi précédent : ${libelleDateCourte(jeudiAvantOuLe(semaine))}).`
+      : `« ${semaine} » n’est pas une semaine valide : choisis le jeudi qui l’ouvre dans le calendrier.` });
+  }
+
   const sommePrevu = r1 + r2 + suivis;
   if (rdv_poses !== sommePrevu) {
     erreurs.push({ champ: 'rdv_poses', message: `RDV posés (${rdv_poses}) doit être égal à R1 + R2 + Suivis (${r1} + ${r2} + ${suivis} = ${sommePrevu}). Modifie un des chiffres de la ligne : le total se recalcule tout seul.` });
@@ -3414,7 +3448,7 @@ function validerCoherenceRDV() {
 
     const parChamp = {};
     for (const e of erreurs) (parChamp[e.champ] = parChamp[e.champ] || []).push(e.message);
-    for (const champ of ['rdv_poses', 'rdv_vus', 'r1_en_r2', 'r2_signes']) {
+    for (const champ of ['semaine', 'rdv_poses', 'rdv_vus', 'r1_en_r2', 'r2_signes']) {
       const input = tr.querySelector(`[data-field="${champ}"]`);
       if (!input) continue;
       const messages = parChamp[champ] || [];
@@ -3819,6 +3853,17 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
       alert("La validation a échoué : " + err.message);
     });
   }
+});
+
+// Une date choisie qui n'est pas un jeudi est ramenée au jeudi qui ouvre sa semaine — à la sortie du champ, pas pendant la frappe.
+document.getElementById('rows-body').addEventListener('focusout', (e) => {
+  const champ = e.target;
+  if (!champ.matches || !champ.matches('input[type="date"][data-field="semaine"]') || champ.readOnly || champ.disabled) return;
+  const v = champ.value;
+  const annee = Number(v.slice(0, 4));
+  if (!dateISOReelle(v) || annee < 2020 || annee > 2100 || semaineValide(v)) return;
+  champ.value = jeudiAvantOuLe(v);
+  champ.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
 document.getElementById('rows-body').addEventListener('input', (e) => {
