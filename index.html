@@ -2618,7 +2618,7 @@ function renderParametres() {
 }
 
 // Dernier message de relance et dernière liste calculés (lus par les boutons « Copier »).
-let relanceCourante = { message: '', liste: '', destinataires: [], sujet: '' };
+let relanceCourante = { message: '', liste: '', destinataires: [], sujet: '', adresses: '' };
 
 /** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
 function messageRelanceSemaine(semaine) {
@@ -2637,6 +2637,7 @@ function renderSuiviSaisie(toutesLignes) {
   if (suiviSemaineLabel) suiviSemaineLabel.textContent = `semaine du ${jrSC}/${moSC}/${anSC}`;
 
   // Adresses des retardataires (renseignées dans Centre d'affaires) pour « Ouvrir dans ma messagerie ».
+  const messagerie = lireMessagerie();
   const adresseDe = new Map(roster.map(r => [r.conseiller, r.email]));
   const avecAdresse = nonRemplis.filter(nom => emailValide(adresseDe.get(nom)));
   const sansAdresse = nonRemplis.filter(nom => !avecAdresse.includes(nom));
@@ -2646,6 +2647,7 @@ function renderSuiviSaisie(toutesLignes) {
     liste: [...nonRemplis].sort((a, b) => a.localeCompare(b, 'fr')).join('\n'),
     destinataires: avecAdresse.map(nom => adresseDe.get(nom)),
     sujet: `Rappel Cockpit : ta semaine du ${libelleDateCourte(semaineCourante)}`,
+    adresses: avecAdresse.map(nom => adresseDe.get(nom)).join('; '),
   };
 
   const suiviSaisieBody = document.getElementById('suivi-saisie-body');
@@ -2659,19 +2661,19 @@ function renderSuiviSaisie(toutesLignes) {
           <span class="pill pill-prioritaire">Pas encore rempli</span>
         </div>`).join('') + `
         <div class="relance-actions">
-          <button class="btn btn-primary" type="button" data-relance="mail"${avecAdresse.length ? '' : ' disabled'}>Ouvrir dans ma messagerie (${avecAdresse.length})</button>
+          <button class="btn btn-primary" type="button" data-relance="${messagerie}"${avecAdresse.length ? '' : ' disabled'}>Ouvrir dans ${messagerie === 'mail' ? 'ma messagerie' : MESSAGERIES[messagerie]} (${avecAdresse.length})</button>
           <button class="btn" type="button" data-relance="message">Copier le message de relance</button>
           <button class="btn" type="button" data-relance="liste">Copier la liste des noms</button>
+          <button class="btn" type="button" data-relance="adresses"${avecAdresse.length ? '' : ' disabled'}>Copier les adresses (pour le CCI)</button>
         </div>
-        ${avecAdresse.length ? `<div class="relance-webmail">Ta messagerie ne s’ouvre pas ? Ouvrir dans
-          <button class="lien-bouton" type="button" data-relance="outlook">Outlook (web)</button> ·
-          <button class="lien-bouton" type="button" data-relance="gmail">Gmail (web)</button></div>` : ''}
+        ${avecAdresse.length ? `<div class="relance-webmail">Ouvrir plutôt dans :
+          ${Object.keys(MESSAGERIES).filter(k => k !== messagerie).map(k => `<button class="lien-bouton" type="button" data-relance="${k}">${MESSAGERIES[k]}</button>`).join(' · ')}</div>` : ''}
         <div class="relance-note" id="relance-note">${
           !avecAdresse.length
             ? 'Aucune adresse e-mail renseignée : ajoute-les dans Centre d’affaires (colonne E-mail).'
             : sansAdresse.length
-              ? `${sansAdresse.length} sans adresse e-mail, non incluse${sansAdresse.length > 1 ? 's' : ''} : ${sansAdresse.map(esc).join(', ')}. Les destinataires sont en copie cachée : ils ne voient pas les adresses des autres.`
-              : 'Les destinataires sont en copie cachée : ils ne voient pas les adresses des autres.'
+              ? `${sansAdresse.length} sans adresse e-mail, non incluse${sansAdresse.length > 1 ? 's' : ''} : ${sansAdresse.map(esc).join(', ')}. Avant d’envoyer, vérifie que les adresses sont bien dans « Cci » (copie cachée) : sinon tout le monde voit les adresses des autres.`
+              : 'Avant d’envoyer, vérifie que les adresses sont bien dans « Cci » (copie cachée) : sinon tout le monde voit les adresses des autres.'
         }</div>`
       : `<div class="empty-state">${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.</div>`;
 }
@@ -2680,10 +2682,18 @@ function renderSuiviSaisie(toutesLignes) {
 document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
   const bouton = e.target.closest('[data-relance]');
   if (!bouton) return;
-  if (bouton.dataset.relance === 'mail') { ouvrirMessagerieRelance(bouton); return; }
-  if (bouton.dataset.relance === 'outlook' || bouton.dataset.relance === 'gmail') { ouvrirWebmailRelance(bouton.dataset.relance, bouton); return; }
+  if (bouton.dataset.relance === 'mail') { memoriserMessagerie('mail'); ouvrirMessagerieRelance(bouton); return; }
+  if (bouton.dataset.relance === 'outlook' || bouton.dataset.relance === 'gmail') { memoriserMessagerie(bouton.dataset.relance); ouvrirWebmailRelance(bouton.dataset.relance, bouton); return; }
   copierTexteRessource(relanceCourante[bouton.dataset.relance] || '', bouton);
 });
+
+const MESSAGERIES = { mail: 'Application de messagerie', outlook: 'Outlook (web)', gmail: 'Gmail (web)' };
+function lireMessagerie() {
+  try { const v = localStorage.getItem('cockpit_messagerie'); return MESSAGERIES[v] ? v : 'mail'; } catch (e) { return 'mail'; }
+}
+function memoriserMessagerie(type) {
+  try { localStorage.setItem('cockpit_messagerie', type); } catch (e) { /* stockage indisponible : sans importance */ }
+}
 
 const LIMITE_MAILTO = 1900;   // au-delà, certaines messageries ignorent le lien
 
@@ -2700,7 +2710,7 @@ function surveillerOuvertureMessagerie() {
     window.removeEventListener('blur', marquer);
     document.removeEventListener('visibilitychange', marquer);
     const note = document.getElementById('relance-note');
-    if (!reagi && note) note.textContent = 'Rien ne s’est ouvert ? Aucune messagerie n’est associée aux liens e-mail sur cet ordinateur : utilise « Outlook (web) » ou « Gmail (web) » ci-dessus, ou copie le message et la liste des noms.';
+    if (!reagi && note) note.textContent = 'Rien ne s’est ouvert ? Aucune messagerie n’est associée aux liens e-mail sur cet ordinateur : utilise « Outlook (web) » ou « Gmail (web) » (liens juste au-dessus), ou copie le message et les adresses.';
   }, 1800);
 }
 
@@ -2730,9 +2740,17 @@ function ouvrirWebmailRelance(type, bouton) {
   const { destinataires, sujet, message } = relanceCourante;
   if (!destinataires.length) return;
   const outlook = type === 'outlook';
-  const base = outlook ? 'https://outlook.office.com/mail/deeplink/compose?' : 'https://mail.google.com/mail/?view=cm&fs=1&';
-  const parametres = corps => `${base}bcc=${encodeURIComponent(destinataires.join(','))}&${outlook ? 'subject' : 'su'}=${encodeURIComponent(sujet)}${corps ? `&body=${encodeURIComponent(message)}` : ''}`;
   const note = document.getElementById('relance-note');
+  if (outlook) {
+    // Outlook sur le web ne place pas les destinataires de façon fiable en CCI (ils peuvent atterrir dans « À », visibles de tous) :
+    // le message s'ouvre sans destinataire et les adresses sont copiées, à coller dans le champ « Cci ».
+    copierTexteRessource(destinataires.join('; '), bouton);
+    if (note) note.textContent = `${destinataires.length} adresse${destinataires.length > 1 ? 's copiées' : ' copiée'} : dans le message qui s’ouvre, clique sur « Cci » puis colle (Cmd+V). Ne les colle pas dans « À ».`;
+    ouvrirFenetre(`https://outlook.office.com/mail/deeplink/compose?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(message)}`);
+    return;
+  }
+  const base = 'https://mail.google.com/mail/?view=cm&fs=1&';
+  const parametres = corps => `${base}bcc=${encodeURIComponent(destinataires.join(','))}&su=${encodeURIComponent(sujet)}${corps ? `&body=${encodeURIComponent(message)}` : ''}`;
   let url = parametres(true);
   if (url.length > LIMITE_MAILTO) {
     url = parametres(false);
