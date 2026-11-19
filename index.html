@@ -417,6 +417,8 @@
   .relance-webmail { margin-top: 10px; font-size: 12px; color: var(--heading-2); }
   .lien-bouton { font: inherit; font-weight: 600; color: var(--gold-text); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
   .lien-bouton:hover { color: var(--heading); }
+  .lien-bouton.fait { color: var(--success-text); text-decoration: none; }
+  .watch-actions { display: flex; align-items: center; gap: 12px; }
   .relance-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--heading-2); }
   .roster-table input[type="email"] { min-width: 240px; }
   #roster-emails-note { font-size: 12.5px; line-height: 1.5; margin: 0 0 10px; color: var(--heading-2); }
@@ -2618,7 +2620,11 @@ function renderParametres() {
 }
 
 // Dernier message de relance et dernière liste calculés (lus par les boutons « Copier »).
-let relanceCourante = { message: '', liste: '', destinataires: [], sujet: '', adresses: '' };
+let relanceCourante = { message: '', liste: '', destinataires: [], sujet: '', adresses: '', adresseParNom: {} };
+
+// Conseillers déjà relancés par Teams pendant cette session (repère « Teams ✓ » pour suivre la liste) : mémorisé par semaine.
+const relancesFaites = new Set((() => { try { return JSON.parse(sessionStorage.getItem('cockpit_relances') || '[]'); } catch (e) { return []; } })());
+const cleRelance = nom => `${jeudiCourant()}|${nom}`;
 
 /** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
 function messageRelanceSemaine(semaine) {
@@ -2648,6 +2654,7 @@ function renderSuiviSaisie(toutesLignes) {
     destinataires: avecAdresse.map(nom => adresseDe.get(nom)),
     sujet: `Rappel Cockpit : ta semaine du ${libelleDateCourte(semaineCourante)}`,
     adresses: avecAdresse.map(nom => adresseDe.get(nom)).join('; '),
+    adresseParNom: Object.fromEntries(avecAdresse.map(nom => [nom, adresseDe.get(nom)])),
   };
 
   const suiviSaisieBody = document.getElementById('suivi-saisie-body');
@@ -2658,7 +2665,12 @@ function renderSuiviSaisie(toutesLignes) {
       ? nonRemplis.map(nom => `
         <div class="watch-row-item">
           <div class="watch-name">${esc(nom)}</div>
-          <span class="pill pill-prioritaire">Pas encore rempli</span>
+          <div class="watch-actions">
+            ${avecAdresse.includes(nom)
+              ? `<button class="lien-bouton${relancesFaites.has(cleRelance(nom)) ? ' fait' : ''}" type="button" data-teams="${esc(nom)}" title="Ouvre une conversation Teams avec ${esc(nom)}, message prérempli">${relancesFaites.has(cleRelance(nom)) ? 'Teams ✓' : 'Teams'}</button>`
+              : '<span class="watch-sub">pas d’adresse</span>'}
+            <span class="pill pill-prioritaire">Pas encore rempli</span>
+          </div>
         </div>`).join('') + `
         <div class="relance-actions">
           <button class="btn btn-primary" type="button" data-relance="${messagerie}"${avecAdresse.length ? '' : ' disabled'}>Ouvrir dans ${messagerie === 'mail' ? 'ma messagerie' : MESSAGERIES[messagerie]} (${avecAdresse.length})</button>
@@ -2666,6 +2678,8 @@ function renderSuiviSaisie(toutesLignes) {
           <button class="btn" type="button" data-relance="liste">Copier la liste des noms</button>
           <button class="btn" type="button" data-relance="adresses"${avecAdresse.length ? '' : ' disabled'}>Copier les adresses (pour le CCI)</button>
         </div>
+        ${avecAdresse.length > 1 ? `<div class="relance-webmail">Teams : un message par conseiller (bouton sur chaque ligne) ·
+          <button class="lien-bouton" type="button" data-relance="teams-groupe">conversation de groupe (${avecAdresse.length})</button> — tous les participants se voient entre eux.</div>` : ''}
         ${avecAdresse.length ? `<div class="relance-webmail">Ouvrir plutôt dans :
           ${Object.keys(MESSAGERIES).filter(k => k !== messagerie).map(k => `<button class="lien-bouton" type="button" data-relance="${k}">${MESSAGERIES[k]}</button>`).join(' · ')}</div>` : ''}
         <div class="relance-note" id="relance-note">${
@@ -2680,8 +2694,11 @@ function renderSuiviSaisie(toutesLignes) {
 
 // Les boutons sont recréés à chaque mise à jour : on écoute donc le conteneur, qui, lui, ne change pas.
 document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
+  const teams = e.target.closest('[data-teams]');
+  if (teams) { ouvrirTeamsRelance([teams.dataset.teams], teams); return; }
   const bouton = e.target.closest('[data-relance]');
   if (!bouton) return;
+  if (bouton.dataset.relance === 'teams-groupe') { ouvrirTeamsRelance(Object.keys(relanceCourante.adresseParNom), bouton); return; }
   if (bouton.dataset.relance === 'mail') { memoriserMessagerie('mail'); ouvrirMessagerieRelance(bouton); majMessagerieAffichee(); return; }
   if (bouton.dataset.relance === 'outlook' || bouton.dataset.relance === 'gmail') { memoriserMessagerie(bouton.dataset.relance); ouvrirWebmailRelance(bouton.dataset.relance, bouton); majMessagerieAffichee(); return; }
   copierTexteRessource(relanceCourante[bouton.dataset.relance] || '', bouton);
@@ -2706,6 +2723,40 @@ function majMessagerieAffichee() {
   const autres = corps.querySelector('.relance-webmail');
   if (autres) autres.innerHTML = 'Ouvrir plutôt dans : ' + Object.keys(MESSAGERIES).filter(k => k !== messagerie)
     .map(k => `<button class="lien-bouton" type="button" data-relance="${k}">${MESSAGERIES[k]}</button>`).join(' · ');
+}
+
+/** Lien profond Teams : ouvre une conversation (1 personne, ou un groupe) avec le message prérempli ; l'envoi reste à faire par l'utilisateur. */
+function urlTeams(emails, message, titre) {
+  const parametres = [`users=${emails.map(encodeURIComponent).join(',')}`];
+  if (titre) parametres.push(`topicName=${encodeURIComponent(titre)}`);
+  if (message) parametres.push(`message=${encodeURIComponent(message)}`);
+  return `https://teams.microsoft.com/l/chat/0/0?${parametres.join('&')}`;
+}
+
+function majBoutonsTeams() {
+  for (const b of document.querySelectorAll('#suivi-saisie-body [data-teams]')) {
+    const fait = relancesFaites.has(cleRelance(b.dataset.teams));
+    b.classList.toggle('fait', fait);
+    b.textContent = fait ? 'Teams ✓' : 'Teams';
+  }
+}
+
+function ouvrirTeamsRelance(noms, bouton) {
+  const emails = noms.map(n => relanceCourante.adresseParNom[n]).filter(Boolean);
+  if (!emails.length) return;
+  const groupe = emails.length > 1;
+  const titre = groupe ? relanceCourante.sujet : '';
+  let url = urlTeams(emails, relanceCourante.message, titre);
+  if (url.length > LIMITE_MAILTO) {
+    url = urlTeams(emails, '', titre);
+    copierTexteRessource(relanceCourante.message, bouton);
+    const note = document.getElementById('relance-note');
+    if (note) note.textContent = 'Message copié : colle-le dans la conversation Teams qui s’ouvre.';
+  }
+  ouvrirFenetre(url);
+  for (const nom of noms) relancesFaites.add(cleRelance(nom));
+  try { sessionStorage.setItem('cockpit_relances', JSON.stringify([...relancesFaites])); } catch (e) { /* stockage indisponible : sans importance */ }
+  majBoutonsTeams();
 }
 
 const LIMITE_MAILTO = 1900;   // au-delà, certaines messageries ignorent le lien
