@@ -297,7 +297,12 @@
 
   /* ---------------------------------------------------- KPI grid */
 
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  /* Écrans moyens : 3 colonnes, la carte « RDV posés » (la première) prend deux colonnes pour ne laisser aucune carte seule sur sa ligne. */
+  @media (max-width: 1399px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .kpi-grid > .kpi-card:first-child { grid-column: span 2; }
+  }
 
   .kpi-card {
     background: var(--cream);
@@ -1330,6 +1335,7 @@
 
   @media (max-width: 1000px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-grid > .kpi-card:first-child { grid-column: 1 / -1; }
     .kpi-hero { grid-template-columns: 1fr; }
     .kpi-sante-jauge { flex-basis: 170px; }
     .watch-row { grid-template-columns: 1fr; }
@@ -3052,10 +3058,26 @@ function renderDashboard(rows, toutesLignes) {
   const nbEnAttente = new Set(enAttente.map(r => r.conseiller)).size;
   const tend = (cle, type, mieuxQuand) => prec && !prec.vide && !cur.vide ? tendanceDe(cur[cle], prec[cle], type, mieuxQuand) : null;
   // Potentiel de la semaine précédente, compté comme celui de la semaine affichée (bilan rempli, ou bilan encore attendu) — sinon la flèche comparerait deux bases différentes.
-  const potentielPrec = precedente
-    ? sum(filtrerParEquipeEtAnciennete(toutesLignes).filter(r => r.semaine === precedente.semaine && (!exclureBilansVides || bilanRempli(r) || semaineOuverte(r.semaine))), 'potentiel')
-    : 0;
-  const tendPotentiel = prec && !prec.vide && potentielAffiche > 0 ? tendanceDe(potentielAffiche, potentielPrec, 'euro', 'hausse') : null;
+  const lignesPrec = precedente
+    ? filtrerParEquipeEtAnciennete(toutesLignes).filter(r => r.semaine === precedente.semaine && (!exclureBilansVides || bilanRempli(r) || semaineOuverte(r.semaine)))
+    : [];
+  const potentielPrec = sum(lignesPrec, 'potentiel');
+
+  // RDV posés : saisis dès le jeudi, c'est le premier signal de la semaine qui démarre. Même population que le potentiel (bilan rempli ou encore attendu).
+  // Seule la moyenne PAR CONSEILLER se compare à l'ambition et à la semaine précédente : le total d'un jeudi matin ne compte que ceux qui ont déjà saisi.
+  const lignesPrevu = rows.concat(enAttente);
+  const nbSaisi = new Set(lignesPrevu.map(r => r.conseiller)).size;
+  const rdvTotal = sum(lignesPrevu, 'rdv_poses');
+  const nbSemainesPrevu = Math.max(new Set(lignesPrevu.map(r => r.semaine)).size, 1);
+  const rdvMoy = nbSaisi ? rdvTotal / nbSaisi / nbSemainesPrevu : 0;
+  const nbRoster = filtrerParEquipeEtAnciennete(readRoster()).length;
+  const nbPrec = new Set(lignesPrec.map(r => r.conseiller)).size;
+  let tendRdv = precedente && nbSaisi && nbPrec ? tendanceDe(rdvMoy, sum(lignesPrec, 'rdv_poses') / nbPrec, 'nombre', 'hausse') : null;
+  if (tendRdv && !tendRdv.texte.startsWith('=')) tendRdv = { ...tendRdv, texte: `${tendRdv.texte} par conseiller` };
+  const phraseSaisie = nbRoster > 1 && nbRoster >= nbSaisi ? `${nbSaisi} sur ${nbRoster} conseillers ont saisi` : `${nbSaisi} conseiller${nbSaisi > 1 ? 's' : ''} ayant saisi`;
+  // Tant que tout le monde n'a pas saisi sa semaine, le total du potentiel est partiel : pas de flèche (elle afficherait un faux recul le jeudi matin).
+  const saisieIncomplete = enAttente.length > 0 && nbRoster > 0 && nbSaisi < nbRoster;
+  const tendPotentiel = prec && !prec.vide && potentielAffiche > 0 && !saisieIncomplete ? tendanceDe(potentielAffiche, potentielPrec, 'euro', 'hausse') : null;
   const tiret = '—';
   const enAttenteTexte = 'Bilan (réalisé) à venir';
   const classeStatut = st => cur.vide ? '' : st === 'warn' ? ' warn' : st === 'bad' ? ' bad' : '';
@@ -3091,7 +3113,7 @@ function renderDashboard(rows, toutesLignes) {
       <div class="kpi-title">${ic('coins', 14)} Résultats financiers <span class="kpi-periode">sur la période affichée</span></div>
       <div class="kpi-resultats-grille">
         <div><div class="kpi-sous-titre">Commissions réalisées</div><div class="kpi-value kpi-value--moyen">${attenteSeule ? tiret : euro(cur.commissions)}</div>${attenteSeule ? `<div class="kpi-variation">${enAttenteTexte}</div>` : tendanceHTML(tend('commissions', 'euro', 'hausse'))}</div>
-        <div><div class="kpi-sous-titre">Potentiel</div><div class="kpi-value kpi-value--moyen">${euro(potentielAffiche)}</div>${tendanceHTML(tendPotentiel)}${potentielAttente && !attenteSeule ? `<div class="kpi-variation">dont ${euro(potentielAttente)} en attente de bilan</div>` : ''}${attenteSeule ? `<div class="kpi-variation">Prévu par ${nbEnAttente} conseiller${nbEnAttente > 1 ? 's' : ''}</div>` : ''}</div>
+        <div><div class="kpi-sous-titre">Potentiel</div><div class="kpi-value kpi-value--moyen">${euro(potentielAffiche)}</div>${tendanceHTML(tendPotentiel)}${potentielAttente && !attenteSeule ? `<div class="kpi-variation">dont ${euro(potentielAttente)} en attente de bilan</div>` : ''}${attenteSeule ? `<div class="kpi-variation">Prévu par ${nbEnAttente}${nbRoster > 1 && nbRoster >= nbEnAttente ? ` sur ${nbRoster}` : ''} conseiller${nbEnAttente > 1 || nbRoster > 1 ? 's' : ''}</div>` : ''}</div>
         <div><div class="kpi-sous-titre">Concrétisation</div><div class="kpi-value kpi-value--moyen${classeStatut(stat.concretisation)}">${attenteSeule ? tiret : pct(cur.concretisation)}</div>${tendanceHTML(tend('concretisation', 'taux', 'hausse'))}<div class="kpi-variation">Ambition : ${OBJECTIFS.concretisation * 100} %</div></div>
       </div>
       <div class="bar-track" role="img" aria-label="Commissions réalisées sur le potentiel : ${pct(ratioCommissions)}"><div class="bar-fill ${cur.vide ? '' : bonStatut(stat.concretisation)}" style="width:${(ratioCommissions * 100).toFixed(1)}%"></div></div>
@@ -3100,6 +3122,14 @@ function renderDashboard(rows, toutesLignes) {
   // Le taux de visio ne dépend que du prévu (visio / RDV posés) : il reste lisible dès le jeudi, avant le bilan.
   const visioPrevu = attenteSeule ? agreger(enAttente).taux_visio : null;
   document.getElementById('kpi-grid').innerHTML = [
+    {
+      ic: 'calendarcheck', title: 'RDV posés',
+      value: nbSaisi ? Math.round(rdvTotal).toLocaleString('fr-FR') : tiret,
+      variation: nbSaisi
+        ? `Moy. ${fmtNb(rdvMoy)} par conseiller${nbSemainesPrevu > 1 ? ' et par semaine' : ''} · ambition ${OBJECTIFS.rdv}<br>${phraseSaisie}`
+        : 'Aucune saisie sur la période',
+      statut: nbSaisi ? statutAtteinte(rdvMoy, OBJECTIFS.rdv) : undefined, tendance: tendRdv,
+    },
     { ic: 'users', title: 'Recommandations (moy. hebdo)', value: attenteSeule ? tiret : cur.reco.toFixed(1), variation: attenteSeule ? enAttenteTexte : `Ambition : ${OBJECTIFS.recommandations}`, statut: cur.vide ? undefined : stat.reco, tendance: tend('reco', 'nombre', 'hausse') },
     { ic: 'rotate', title: 'Transformation R1 → R2', value: attenteSeule ? tiret : pct(cur.r1r2), variation: attenteSeule ? enAttenteTexte : `Ambition : ${OBJECTIFS.r1_r2 * 100} %`, statut: cur.vide ? undefined : stat.r1r2, tendance: tend('r1r2', 'taux', 'hausse') },
     { ic: 'video', title: 'Taux de RDV Visio', value: attenteSeule ? pct(visioPrevu) : pct(cur.visio), variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %`, statut: attenteSeule ? statutAtteinte(visioPrevu, OBJECTIFS.visio_max, true) : cur.vide ? undefined : stat.visio, tendance: tend('visio', 'taux', 'baisse') },
