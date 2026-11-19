@@ -294,7 +294,6 @@
     margin: 28px 0 14px;
   }
 
-  .section-label:first-of-type { margin-top: 0; }
 
   /* ---------------------------------------------------- KPI grid */
 
@@ -354,6 +353,7 @@
 
   .watch-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 
+  .view > .card + .card { margin-top: 16px; }   /* cartes empilées directement dans un écran : espace régulier */
   .card { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
   .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
@@ -376,6 +376,10 @@
   tbody tr:last-child td { border-bottom: none; }
   .rank { color: var(--heading-2); font-variant-numeric: tabular-nums; }
 
+  .table-ambitions { table-layout: fixed; }
+  .table-ambitions th:nth-child(1) { width: 34%; }
+  .table-ambitions th:nth-child(2), .table-ambitions th:nth-child(3) { width: 15%; }
+  .table-ambitions th:nth-child(4) { width: 36%; }
   .leaderboard-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
   .leaderboard-split table:first-child { border-right: 1px solid var(--border); padding-right: 16px; }
 
@@ -421,6 +425,9 @@
   .lien-bouton:hover { color: var(--heading); }
   .lien-bouton.fait { color: var(--success-text); text-decoration: none; }
   .watch-actions { display: flex; align-items: center; gap: 12px; }
+  /* Liste des retardataires : plusieurs colonnes (23 noms ne tiennent plus sur 23 lignes pleine largeur). */
+  .relance-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 36px; }
+  .relance-liste .watch-row-item:last-child { border-bottom: 1px solid var(--border); }
   .reglage-ligne { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
   .reglage-ligne input { margin-top: 2px; }
   .relance-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--heading-2); }
@@ -1317,6 +1324,9 @@
   }
 
   @media (max-width: 700px) {
+    .table-ambitions th:nth-child(1) { width: 34%; }
+    .table-ambitions th:nth-child(2), .table-ambitions th:nth-child(3) { width: 19%; }
+    .table-ambitions th:nth-child(4) { width: 28%; }
     .kpi-value--hero { font-size: 40px; }
     .kpi-value--moyen { font-size: 26px; }
     .kpi-resultats-grille { grid-template-columns: repeat(2, 1fr); }
@@ -1454,7 +1464,7 @@
 
         <div class="card">
           <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-3.3a5.7 5.7 0 1 0 0-11.4 5.7 5.7 0 0 0 0 11.4z" fill="currentColor"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg><span>Ambitions vs Réalisé (centre d'affaires)</span></div>
-          <table>
+          <table class="table-ambitions">
             <thead><tr><th>Indicateur</th><th class="num">Ambition</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
             <tbody id="objectifs-body"></tbody>
           </table>
@@ -2790,22 +2800,20 @@ function renderSuiviSaisie(toutesLignes) {
     </div>
     ${type === 'realise' ? `<div class="relance-note">Bilan du mercredi : conseillers qui ont une ligne pour cette semaine mais n'ont rien saisi dans « Réalisé » ni répondu à « Comment évalues-tu ta semaine ? ». Ceux sans aucune ligne sont dans « Semaine non remplie ».${[3, 4, 5].includes(jour) ? '' : ' Le réalisé se remplit en fin de semaine : relance plutôt le mercredi soir.'}</div>` : ''}`;
 
-  const pastille = type === 'realise' ? 'Réalisé non rempli' : 'Pas encore rempli';
   const vide = type === 'realise'
     ? `${ic('checkcircle', 13)} Tous les bilans de la semaine sont remplis.`
     : `${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.`;
 
   suiviSaisieBody.innerHTML = onglets + (concernes.length
-      ? concernes.map(nom => `
+      ? '<div class="relance-liste">' + concernes.map(nom => `
         <div class="watch-row-item">
           <div class="watch-name">${esc(nom)}</div>
           <div class="watch-actions">
             ${avecAdresse.includes(nom)
               ? `<button class="lien-bouton${relancesFaites.has(cleRelance(nom)) ? ' fait' : ''}" type="button" data-teams="${esc(nom)}" title="Ouvre une conversation Teams avec ${esc(nom)}, message prérempli">${relancesFaites.has(cleRelance(nom)) ? 'Teams ✓' : 'Teams'}</button>`
               : '<span class="watch-sub">pas d’adresse</span>'}
-            <span class="pill pill-prioritaire">${pastille}</span>
           </div>
-        </div>`).join('') + `
+        </div>`).join('') + '</div>' + `
         <div class="relance-actions">
           <button class="btn btn-primary" type="button" data-relance="${messagerie}"${avecAdresse.length ? '' : ' disabled'}>Ouvrir dans ${messagerie === 'mail' ? 'ma messagerie' : MESSAGERIES[messagerie]} (${avecAdresse.length})</button>
           <button class="btn" type="button" data-relance="message">Copier le message de relance</button>
@@ -3363,7 +3371,7 @@ function renderConseillers(rows) {
     </div>
 
     <div class="card-title" style="margin-top:18px;">${ic('target', 15)}<span>Ambitions vs Réalisé</span></div>
-    <div class="card"><table>
+    <div class="card"><table class="table-ambitions">
       <thead><tr><th>Indicateur</th><th class="num">Ambition</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
       <tbody>${lignesObjectifsInd.map(ligneObjectifHTML).join('')}</tbody>
     </table></div>
@@ -3580,7 +3588,7 @@ function renderStatistiques(rows) {
   ];
 
   document.getElementById('stats-objectifs').innerHTML = rows.length ? `
-    <div class="card"><table>
+    <div class="card"><table class="table-ambitions">
       <thead><tr><th>Indicateur</th><th class="num">Ambition</th><th class="num">Réalisé</th><th>Atteinte</th></tr></thead>
       <tbody>${lignesObjectifs.map(ligneObjectifHTML).join('')}</tbody>
     </table></div>` : `<div class="card empty-state">Aucune saisie pour l'instant.</div>`;
