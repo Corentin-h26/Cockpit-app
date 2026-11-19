@@ -403,6 +403,8 @@
     font-variant-numeric: tabular-nums;
   }
   .entry-table input:focus { border-color: var(--gold); background: var(--bg); outline: none; }
+  /* Total calculé (RDV posés / RDV vus) : lecture seule, en gras, jamais focalisable à la souris ni au clavier. */
+  .entry-table input.champ-calcule { font-weight: 700; cursor: default; user-select: none; }
   .entry-table input[type="text"] { min-width: 100px; }
   .entry-table td.actions { width: 34px; }
 
@@ -518,6 +520,7 @@
     color: var(--heading-2);
     cursor: not-allowed;
   }
+  .mode-fiche input.champ-calcule { color: var(--heading); cursor: default; }
   .mode-fiche td:has(input[readonly]) { background: var(--cream); }
 
   .entry-table.mode-fiche tr:hover td { background: transparent; }
@@ -1351,7 +1354,7 @@
         </div>
 
         <div class="field-hint">
-          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Centre d'affaires — un champ en rouge signale un nom qui ne correspond à personne du roster. Un champ en orange signale un écart : RDV posés doit égaler R1 + R2 + Suivis, RDV vus doit égaler R1 vus + R2 vus + Suivi fait, et RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
+          Semaine : la date du jeudi qui ouvre la semaine (ex. 2026-08-27). RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Centre d'affaires — un champ en rouge signale un nom qui ne correspond à personne du roster. RDV posés (= R1 + R2 + Suivis) et RDV vus (= R1 vus + R2 vus + Suivi fait) se calculent tout seuls : tu n'as rien à y saisir. Un champ en rouge signale un écart : RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
         </div>
       </div>
 
@@ -1774,6 +1777,30 @@ function lirePoids() {
 
 const FIELDS = ['semaine', 'conseiller', 'rdv_poses', 'visio', 'r1', 'r2', 'suivis', 'potentiel', 'rdv_vus', 'visio_vues', 'r1_vus', 'r1_en_r2', 'r2_vus', 'r2_signes', 'suivis_faits', 'commissions', 'recommandations'];
 const NUM_FIELDS = FIELDS.slice(2);
+
+/**
+ * Totaux jamais saisis à la main : ils se calculent à partir de leurs composantes.
+ *  - RDV posés = R1 + R2 + Suivis               (répartition du prévu)
+ *  - RDV vus   = R1 vus + R2 vus + Suivi fait   (répartition du réalisé)
+ * Supprime à la source les écarts « RDV posés ≠ R1 + R2 + Suivis » qui bloquaient l'enregistrement.
+ */
+const TOTAUX_CALCULES = {
+  rdv_poses: ['r1', 'r2', 'suivis'],
+  rdv_vus: ['r1_vus', 'r2_vus', 'suivis_faits'],
+};
+
+/** Recalcule les totaux d'une ligne depuis ses composantes (dans le tableau). Renvoie true si une valeur a changé. */
+function recalculerTotaux(tr) {
+  let change = false;
+  for (const [total, composantes] of Object.entries(TOTAUX_CALCULES)) {
+    const champTotal = tr.querySelector(`[data-field="${total}"]`);
+    if (!champTotal) continue;
+    const somme = composantes.reduce((acc, f) => acc + (parseFloat(tr.querySelector(`[data-field="${f}"]`)?.value) || 0), 0);
+    const texte = String(Math.round(somme * 100) / 100);   // évite 0,1 + 0,2 = 0,30000000000000004
+    if (champTotal.value !== texte) { champTotal.value = texte; change = true; }
+  }
+  return change;
+}
 const LABELS_CHAMPS = {
   semaine: 'Semaine', conseiller: 'Conseiller', rdv_poses: 'RDV posés', visio: 'Visio', r1: 'R1', r2: 'R2', potentiel: 'Potentiel €', suivis: 'Suivis',
   rdv_vus: 'RDV vus', visio_vues: 'Visio vues', r1_vus: 'R1 vus', r2_vus: 'R2 vus',
@@ -3113,6 +3140,11 @@ function celluleChampValeur(f, valeur) {
   const label = LABELS_CHAMPS[f];
   if (f === 'semaine') return `<td data-label="${esc(label)}"><input type="text" data-field="semaine" placeholder="2026-08-27" value="${esc(valeur)}"></td>`;
   if (f === 'conseiller') return `<td data-label="${esc(label)}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${esc(valeur)}"></td>`;
+  const composantes = TOTAUX_CALCULES[f];
+  if (composantes) {
+    const detail = composantes.map(c => LABELS_CHAMPS[c]).join(' + ');
+    return `<td data-label="${esc(label)} · calculé"><input type="number" inputmode="decimal" data-field="${f}" class="champ-calcule" readonly tabindex="-1" title="${esc('Calculé automatiquement : ' + detail)}" value="${esc(valeur ?? 0)}"></td>`;
+  }
   return `<td data-label="${esc(label)}"><input type="number" inputmode="decimal" data-field="${f}" value="${esc(valeur ?? 0)}"></td>`;
 }
 
@@ -3263,12 +3295,12 @@ function calculerErreursLigne(tr) {
 
   const sommePrevu = r1 + r2 + suivis;
   if (rdv_poses !== sommePrevu) {
-    erreurs.push({ champ: 'rdv_poses', message: `RDV posés (${rdv_poses}) doit être égal à R1 + R2 + Suivis (${r1} + ${r2} + ${suivis} = ${sommePrevu}).` });
+    erreurs.push({ champ: 'rdv_poses', message: `RDV posés (${rdv_poses}) doit être égal à R1 + R2 + Suivis (${r1} + ${r2} + ${suivis} = ${sommePrevu}). Modifie un des chiffres de la ligne : le total se recalcule tout seul.` });
   }
 
   const sommeRealise = r1_vus + r2_vus + suivis_faits;
   if (rdv_vus !== sommeRealise) {
-    erreurs.push({ champ: 'rdv_vus', message: `RDV vus (${rdv_vus}) doit être égal à R1 vus + R2 vus + Suivi fait (${r1_vus} + ${r2_vus} + ${suivis_faits} = ${sommeRealise}).` });
+    erreurs.push({ champ: 'rdv_vus', message: `RDV vus (${rdv_vus}) doit être égal à R1 vus + R2 vus + Suivi fait (${r1_vus} + ${r2_vus} + ${suivis_faits} = ${sommeRealise}). Modifie un des chiffres de la ligne : le total se recalcule tout seul.` });
   }
   if (rdv_vus > rdv_poses) {
     erreurs.push({ champ: 'rdv_vus', message: `RDV vus (${rdv_vus}) ne peut pas dépasser RDV posés (${rdv_poses}).` });
@@ -3431,6 +3463,7 @@ function writeRowNow(tr) {
   const docId = tr.dataset.docId;
   if (!docId) return Promise.reject(new Error('Ligne pas encore créée'));
   clearTimeout(rowWriteTimers.get(docId));
+  recalculerTotaux(tr);   // RDV posés / RDV vus = somme de leurs composantes, toujours
   const data = rowDataFromTr(tr);
 
   const erreurs = calculerErreursLigne(tr);
@@ -3657,8 +3690,11 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
 });
 
 document.getElementById('rows-body').addEventListener('input', (e) => {
-  renderAll();
   const tr = e.target.closest('tr');
+  const champ = e.target.dataset ? e.target.dataset.field : '';
+  // Un chiffre de saisie a changé : RDV posés / RDV vus suivent (les totaux eux-mêmes sont en lecture seule).
+  if (tr && NUM_FIELDS.includes(champ) && !(champ in TOTAUX_CALCULES)) recalculerTotaux(tr);
+  renderAll();
   if (tr) scheduleRowWrite(tr);
 });
 
