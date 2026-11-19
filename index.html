@@ -2682,8 +2682,8 @@ function renderSuiviSaisie(toutesLignes) {
 document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
   const bouton = e.target.closest('[data-relance]');
   if (!bouton) return;
-  if (bouton.dataset.relance === 'mail') { memoriserMessagerie('mail'); ouvrirMessagerieRelance(bouton); return; }
-  if (bouton.dataset.relance === 'outlook' || bouton.dataset.relance === 'gmail') { memoriserMessagerie(bouton.dataset.relance); ouvrirWebmailRelance(bouton.dataset.relance, bouton); return; }
+  if (bouton.dataset.relance === 'mail') { memoriserMessagerie('mail'); ouvrirMessagerieRelance(bouton); majMessagerieAffichee(); return; }
+  if (bouton.dataset.relance === 'outlook' || bouton.dataset.relance === 'gmail') { memoriserMessagerie(bouton.dataset.relance); ouvrirWebmailRelance(bouton.dataset.relance, bouton); majMessagerieAffichee(); return; }
   copierTexteRessource(relanceCourante[bouton.dataset.relance] || '', bouton);
 });
 
@@ -2693,6 +2693,19 @@ function lireMessagerie() {
 }
 function memoriserMessagerie(type) {
   try { localStorage.setItem('cockpit_messagerie', type); } catch (e) { /* stockage indisponible : sans importance */ }
+}
+
+/** Après un clic : le bouton principal devient aussitôt celui de la messagerie qu'on vient d'utiliser (sans attendre la prochaine mise à jour de la carte). */
+function majMessagerieAffichee() {
+  const corps = document.getElementById('suivi-saisie-body');
+  const principal = corps && corps.querySelector('.btn-primary[data-relance]');
+  if (!principal) return;
+  const messagerie = lireMessagerie();
+  principal.dataset.relance = messagerie;
+  principal.textContent = `Ouvrir dans ${messagerie === 'mail' ? 'ma messagerie' : MESSAGERIES[messagerie]} (${relanceCourante.destinataires.length})`;
+  const autres = corps.querySelector('.relance-webmail');
+  if (autres) autres.innerHTML = 'Ouvrir plutôt dans : ' + Object.keys(MESSAGERIES).filter(k => k !== messagerie)
+    .map(k => `<button class="lien-bouton" type="button" data-relance="${k}">${MESSAGERIES[k]}</button>`).join(' · ');
 }
 
 const LIMITE_MAILTO = 1900;   // au-delà, certaines messageries ignorent le lien
