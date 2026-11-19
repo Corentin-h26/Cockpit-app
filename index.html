@@ -4196,9 +4196,15 @@ function analyserRattachement() {
     if (cible) { auto.push({ docId, nom, cible }); continue; }
 
     const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
-    const groupe = inconnus.get(nom) || { nom, docIds: [], semaines: [] };
+    const chiffre = champ => parseFloat(tr.querySelector(`[data-field="${champ}"]`)?.value) || 0;
+    const groupe = inconnus.get(nom) || { nom, docIds: [], semaines: [], comptes: [], rdvPoses: 0, commissions: 0 };
     groupe.docIds.push(docId);
     if (semaine) groupe.semaines.push(semaine);
+    // Qui a créé ces saisies, et ce qu'elles contiennent : de quoi reconnaître de qui il s'agit.
+    const compte = tr.dataset.ownerEmail || '';
+    if (compte && !groupe.comptes.includes(compte)) groupe.comptes.push(compte);
+    groupe.rdvPoses += chiffre('rdv_poses');
+    groupe.commissions += chiffre('commissions');
     inconnus.set(nom, groupe);
   }
 
@@ -4263,7 +4269,7 @@ function renderRattachement() {
   if (carte.contains(document.activeElement)) return;   // jamais reconstruire pendant qu'on choisit dans une liste
 
   const analyse = analyserRattachement();
-  const signature = JSON.stringify([analyse.nbLiees, analyse.auto.length, analyse.groupes.map(g => [g.nom, g.docIds.length, g.suggestion]), analyse.roster.map(r => r.id + r.conseiller)]);
+  const signature = JSON.stringify([analyse.nbLiees, analyse.auto.length, analyse.groupes.map(g => [g.nom, g.docIds.length, g.suggestion, g.comptes, g.rdvPoses, g.commissions]), analyse.roster.map(r => r.id + r.conseiller)]);
   if (signature === signatureRattachement) return;
   signatureRattachement = signature;
 
@@ -4288,6 +4294,9 @@ function renderRattachement() {
     const detail = document.createElement('span'); detail.className = 'rattachement-detail';
     const semaines = [...new Set(g.semaines)].sort();
     detail.textContent = `${pluriel(g.docIds.length, 'saisie')}${semaines.length ? ' · ' + semaines.slice(-3).map(libelleDateCourte).join(', ') : ''}`;
+    const origine = document.createElement('span'); origine.className = 'rattachement-detail';
+    origine.textContent = (g.comptes.length ? `créées avec : ${g.comptes.join(', ')}` : 'compte inconnu')
+      + ` · ${g.rdvPoses || g.commissions ? `RDV posés ${g.rdvPoses} · commissions ${euro(g.commissions)}` : 'aucun chiffre saisi'}`;
     const choix = document.createElement('select');
     choix.setAttribute('aria-label', `Conseiller du roster pour « ${g.nom || 'sans nom'} »`);
     choix.append(new Option('— choisir un conseiller —', ''));
@@ -4295,7 +4304,7 @@ function renderRattachement() {
     choix.value = g.suggestion;
     const bouton = document.createElement('button');
     bouton.type = 'button'; bouton.className = 'btn'; bouton.dataset.rattacher = '1'; bouton.dataset.nom = g.nom; bouton.textContent = 'Rattacher';
-    bloc.append(nom, detail, choix, bouton);
+    bloc.append(nom, detail, origine, choix, bouton);
     liste.append(bloc);
   });
 
