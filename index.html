@@ -368,6 +368,7 @@
   }
   .btn:hover { background: var(--cream-hover); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .btn-primary { background: var(--navy); color: var(--nav-text); border-color: var(--navy); }
   .btn-primary:hover { background: var(--navy-hover); }
   .btn-danger { color: var(--coral); }
@@ -2425,6 +2426,54 @@ function renderParametres() {
   label.style.fontWeight = '600';
 }
 
+// Dernier message de relance et dernière liste calculés (lus par les boutons « Copier »).
+let relanceCourante = { message: '', liste: '' };
+
+/** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
+function messageRelanceSemaine(semaine) {
+  const lien = location.href.split('#')[0].split('?')[0];
+  return `Bonjour, petit rappel : ta semaine du ${libelleDateCourte(semaine)} n’est pas encore remplie dans Cockpit. Peux-tu la compléter dès que possible ?\n${lien}\nMerci !`;
+}
+
+/** Roster vs saisies de la semaine commerciale en cours (jeudiCourant) : qui n'a pas encore de ligne « Ma semaine » pour cette semaine, avec de quoi les relancer. */
+function renderSuiviSaisie(toutesLignes) {
+  const roster = readRoster();
+  const semaineCourante = jeudiCourant();
+  const remplisCetteSemaine = new Set(toutesLignes.filter(r => r.semaine === semaineCourante).map(r => r.conseiller));
+  const nonRemplis = roster.map(r => r.conseiller).filter(nom => !remplisCetteSemaine.has(nom));
+  const [anSC, moSC, jrSC] = semaineCourante.split('-');
+  const suiviSemaineLabel = document.getElementById('suivi-saisie-semaine');
+  if (suiviSemaineLabel) suiviSemaineLabel.textContent = `semaine du ${jrSC}/${moSC}/${anSC}`;
+
+  relanceCourante = {
+    message: messageRelanceSemaine(semaineCourante),
+    liste: [...nonRemplis].sort((a, b) => a.localeCompare(b, 'fr')).join('\n'),
+  };
+
+  const suiviSaisieBody = document.getElementById('suivi-saisie-body');
+  if (!suiviSaisieBody) return;
+  suiviSaisieBody.innerHTML = !roster.length
+    ? `<div class="empty-state">Aucun conseiller dans le roster — à renseigner dans l'onglet Centre d'affaires.</div>`
+    : nonRemplis.length
+      ? nonRemplis.map(nom => `
+        <div class="watch-row-item">
+          <div class="watch-name">${esc(nom)}</div>
+          <span class="pill pill-prioritaire">Pas encore rempli</span>
+        </div>`).join('') + `
+        <div class="relance-actions">
+          <button class="btn" type="button" data-relance="message">Copier le message de relance</button>
+          <button class="btn" type="button" data-relance="liste">Copier la liste des noms</button>
+        </div>`
+      : `<div class="empty-state">${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.</div>`;
+}
+
+// Les boutons sont recréés à chaque mise à jour : on écoute donc le conteneur, qui, lui, ne change pas.
+document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
+  const bouton = e.target.closest('[data-relance]');
+  if (!bouton) return;
+  copierTexteRessource(relanceCourante[bouton.dataset.relance] || '', bouton);
+});
+
 function renderDashboard(rows, toutesLignes) {
   const equipe = agreger(rows);
   const classement = classementDe(rows);
@@ -2459,27 +2508,7 @@ function renderDashboard(rows, toutesLignes) {
     <div class="card"><div class="card-title">${ic('priority', 15)}<span>Conseillers à accompagner</span></div><div>${watchRows}</div></div>
     ${progCard}`;
 
-  // Roster vs saisies de la semaine commerciale en cours (jeudiCourant) —
-  // qui n'a pas encore de ligne "Ma semaine" pour cette semaine.
-  const roster = readRoster();
-  const semaineCourante = jeudiCourant();
-  const remplisCetteSemaine = new Set(toutesLignes.filter(r => r.semaine === semaineCourante).map(r => r.conseiller));
-  const nonRemplis = roster.map(r => r.conseiller).filter(nom => !remplisCetteSemaine.has(nom));
-  const [anSC, moSC, jrSC] = semaineCourante.split('-');
-  const suiviSemaineLabel = document.getElementById('suivi-saisie-semaine');
-  if (suiviSemaineLabel) suiviSemaineLabel.textContent = `semaine du ${jrSC}/${moSC}/${anSC}`;
-  const suiviSaisieBody = document.getElementById('suivi-saisie-body');
-  if (suiviSaisieBody) {
-    suiviSaisieBody.innerHTML = !roster.length
-      ? `<div class="empty-state">Aucun conseiller dans le roster — à renseigner dans l'onglet Centre d'affaires.</div>`
-      : nonRemplis.length
-        ? nonRemplis.map(nom => `
-          <div class="watch-row-item">
-            <div class="watch-name">${esc(nom)}</div>
-            <span class="pill pill-prioritaire">Pas encore rempli</span>
-          </div>`).join('')
-        : `<div class="empty-state">${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.</div>`;
-  }
+  renderSuiviSaisie(toutesLignes);
 
   // Top 10 du Leaderboard Dashboard, réparti en 2 colonnes de 5 (classement complet = onglet "Classement").
   const ligneLeaderboard = (c, rang) => `
