@@ -379,6 +379,13 @@
   .btn:hover { background: var(--cream-hover); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  #bloc-rattachement { margin-top: 26px; }
+  .rattachement-resume { font-size: 13px; line-height: 1.55; }
+  .rattachement-resume .ok { color: var(--success-text); font-weight: 600; }
+  .rattachement-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .rattachement-nom { font-weight: 700; font-size: 13px; }
+  .rattachement-detail { font-size: 12px; color: var(--heading-2); }
+  .rattachement-ligne select { font: inherit; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--heading); max-width: 240px; }
   .btn-primary { background: var(--navy); color: var(--nav-text); border-color: var(--navy); }
   .btn-primary:hover { background: var(--navy-hover); }
   .btn-danger { color: var(--coral-text); }
@@ -1532,6 +1539,15 @@
           </table>
         </div>
         <div class="field-hint" id="roster-total" style="color:var(--gold-text);font-weight:600;"></div>
+
+        <div id="bloc-rattachement" style="display:none;">
+          <div class="section-label">Saisies et conseillers</div>
+          <div class="card" id="card-rattachement">
+            <div id="rattachement-resume" class="rattachement-resume"></div>
+            <div id="rattachement-liste"></div>
+            <div class="relance-actions" id="rattachement-actions"></div>
+          </div>
+        </div>
       </div>
 
       <!-- ============================================= STATISTIQUES ============================================= -->
@@ -1905,6 +1921,7 @@ function lireAccompagnement(tr) {
 function readRowsBrut() {
   const body = document.getElementById('rows-body');
   const rows = [];
+  const parId = nomsParId();
   for (const tr of body.querySelectorAll('tr')) {
     const row = {};
     for (const field of FIELDS) {
@@ -1916,6 +1933,9 @@ function readRowsBrut() {
         row[field] = parseFloat(input.value) || 0;
       }
     }
+    // Rattachée par identifiant : le conseiller est celui du roster, sous son nom actuel.
+    const idConseiller = tr.dataset.conseillerId || '';
+    if (idConseiller && parId.has(idConseiller)) row.conseiller = parId.get(idConseiller);
     row.ressenti = lireRessenti(tr);
     row.accompagnement = lireAccompagnement(tr);
     if (row.conseiller) rows.push(row);
@@ -2134,9 +2154,35 @@ function readRoster() {
   for (const tr of body.querySelectorAll('tr')) {
     const nom = tr.querySelector('[data-field="r_conseiller"]')?.value.trim();
     const date = tr.querySelector('[data-field="r_date_entree"]')?.value.trim();
-    if (nom) roster.push({ conseiller: nom, date_entree: date || null });
+    if (nom) roster.push({ id: tr.dataset.docId || '', conseiller: nom, date_entree: date || null });
   }
   return roster;
+}
+
+/*
+ * Rattachement des saisies à un conseiller PAR IDENTIFIANT (id du document roster), pas seulement par son nom écrit.
+ * Une saisie porte `conseillerId` : tant que cet identifiant existe dans le roster, la saisie appartient à ce conseiller,
+ * quel que soit le nom stocké dans la saisie — renommer quelqu'un dans le roster ne fait plus « disparaître » ses semaines.
+ * Sans identifiant (anciennes saisies) ou identifiant inconnu : on retombe sur le nom saisi, comme avant.
+ */
+
+/** Nom actuel de chaque conseiller du roster, par identifiant. */
+function nomsParId(roster = readRoster()) {
+  return new Map(roster.filter(r => r.id).map(r => [r.id, r.conseiller]));
+}
+
+/** Identifiant roster d'un nom saisi (nom exact) ; '' si ce nom n'est pas dans le roster. */
+function idDepuisNom(nom, roster = readRoster()) {
+  const texte = String(nom || '').trim();
+  const entree = texte ? roster.find(r => r.conseiller === texte) : null;
+  return entree ? entree.id : '';
+}
+
+/** Nom d'une ligne de saisie : celui du roster si la ligne est rattachée par identifiant, sinon le nom saisi. */
+function nomLigne(tr, parId = nomsParId()) {
+  const id = tr.dataset.conseillerId;
+  if (id && parId.has(id)) return parId.get(id);
+  return tr.querySelector('[data-field="conseiller"]')?.value.trim() || '';
 }
 
 function parConseiller(rows) {
@@ -2422,6 +2468,7 @@ function renderAll() {
   renderClassement(rows);
   renderConseillers(rows);
   renderEquipe();
+  if (document.getElementById('view-equipe').classList.contains('active')) renderRattachement();
   if (document.getElementById('view-organisation').classList.contains('active')) renderOrganisation();
   if (document.getElementById('view-formation').classList.contains('active')) renderFormation();
   if (document.getElementById('view-groupes').classList.contains('active')) renderGroupes();
@@ -3288,7 +3335,7 @@ function construireLigneHTML(docId, data) {
     <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${esc(docId)}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span>${r.emoji} ${r.valeur}</span></label>
   `).join('');
 
-  return `<tr data-doc-id="${esc(docId)}" data-owner-email="${esc(data.ownerEmail)}">
+  return `<tr data-doc-id="${esc(docId)}" data-owner-email="${esc(data.ownerEmail)}" data-conseiller-id="${esc(data.conseillerId)}">
     <td class="fiche-resume"></td>
     ${celluleChampValeur('semaine', data.semaine)}${celluleChampValeur('conseiller', data.conseiller)}
     <td class="fiche-section-titre fiche-section-titre--premier" data-titre="Prévu"></td>
@@ -3344,6 +3391,7 @@ function ligneVideDefaut(conseillerPreRempli, semainePreRemplie) {
   return {
     semaine: semainePreRemplie ?? jeudiCourant(),
     conseiller: conseillerPreRempli || '',
+    conseillerId: idDepuisNom(conseillerPreRempli),
     rdv_poses: 0, visio: 0, r1: 0, r2: 0, potentiel: 0, suivis: 0,
     rdv_vus: 0, visio_vues: 0, r1_vus: 0, r2_vus: 0, r1_en_r2: 0, r2_signes: 0, recommandations: 0, commissions: 0, suivis_faits: 0,
     ressenti: null, accompagnement: [],
@@ -3392,10 +3440,15 @@ function ajouterLigne(conseillerPreRempli, semainePreRemplie) {
 document.getElementById('btn-add-row').addEventListener('click', () => ajouterLigne());
 
 function validerConseillersSaisis() {
-  const noms = new Set(readRoster().map(r => r.conseiller));
+  const roster = readRoster();
+  const noms = new Set(roster.map(r => r.conseiller));
+  const parId = nomsParId(roster);
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
     const input = tr.querySelector('[data-field="conseiller"]');
     if (!input) continue;
+    // Ligne rattachée par identifiant : on montre le nom actuel du roster (sauf pendant qu'on tape dans ce champ).
+    const nomRoster = parId.get(tr.dataset.conseillerId || '');
+    if (nomRoster !== undefined && input.value.trim() !== nomRoster && document.activeElement !== input) input.value = nomRoster;
     const valeur = input.value.trim();
     input.classList.toggle('conseiller-inconnu', valeur !== '' && !noms.has(valeur));
   }
@@ -3551,7 +3604,7 @@ function afficherErreursSaisie(problemes) {
     `${n} ligne${n > 1 ? 's' : ''} à corriger : ${n > 1 ? 'elles ne sont' : 'elle n’est'} pas enregistrée${n > 1 ? 's' : ''} tant que ce n’est pas corrigé`));
 
   for (const { tr, erreurs } of problemes) {
-    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim() || 'Ligne sans nom';
+    const nom = nomLigne(tr) || 'Ligne sans nom';
     const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim();
     const bouton = el('button', 'saisie-erreur-ligne');
     bouton.type = 'button';
@@ -3585,6 +3638,15 @@ function rowDataFromTr(tr) {
   }
   data.ressenti = lireRessenti(tr);
   data.accompagnement = lireAccompagnement(tr);
+
+  // Identifiant du conseiller : conservé tant que le nom saisi est celui du roster ; recalculé si on a changé de nom ;
+  // jamais effacé tant que le roster n'est pas chargé (sinon une saisie hors ligne détacherait la ligne).
+  const roster = readRoster();
+  const actuel = tr.dataset.conseillerId || '';
+  const entree = actuel ? roster.find(r => r.id === actuel) : null;
+  const id = !roster.length ? actuel : (entree && entree.conseiller === data.conseiller ? actuel : idDepuisNom(data.conseiller, roster));
+  data.conseillerId = id;
+  tr.dataset.conseillerId = id;
   return data;
 }
 // Saisies refusées pour incohérence : gardées ici pour ne pas être écrasées
@@ -3748,10 +3810,11 @@ function renderMaFiche() {
   const semaineCourante = jeudiCourant();
   let nbVisibles = 0;
   let aDesSemainesPassees = false;
+  const parId = nomsParId(roster);
   for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
     const nomInput = tr.querySelector('[data-field="conseiller"]');
     const semInput = tr.querySelector('[data-field="semaine"]');
-    const nomOK = !!qui && !!nomInput && nomInput.value.trim() === qui;
+    const nomOK = !!qui && !!nomInput && nomLigne(tr, parId) === qui;
     const estSemaineCourante = !!semInput && semInput.value.trim() === semaineCourante;
     if (nomOK && !estSemaineCourante) aDesSemainesPassees = true;
     const correspond = nomOK && (estSemaineCourante || afficherHistoriqueFiche);
@@ -3797,7 +3860,7 @@ document.getElementById('btn-add-ma-semaine').addEventListener('click', () => {
   const semaine = jeudiCourant();
 
   const dejaLa = [...document.getElementById('rows-body').querySelectorAll('tr')].find(tr => {
-    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim();
+    const nom = nomLigne(tr);
     const sem = tr.querySelector('[data-field="semaine"]')?.value.trim();
     return nom === qui && sem === semaine;
   });
@@ -3825,7 +3888,7 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
   if (e.target.classList.contains('row-delete')) {
     const tr = e.target.closest('tr');
     // Confirmation, sauf pour une ligne encore vierge (ni nom ni chiffre) : il n'y a rien à perdre.
-    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim() || '';
+    const nom = nomLigne(tr);
     const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
     const vierge = !nom && NUM_FIELDS.every(f => !(parseFloat(tr.querySelector(`[data-field="${f}"]`)?.value) || 0));
     if (!vierge) {
@@ -4082,6 +4145,233 @@ async function inverserNomConseiller(tr) {
     bouton.disabled = false;
   }
 }
+
+/* =========================================================
+   RATTACHEMENT DES SAISIES (admin) — relier chaque saisie au conseiller du roster par identifiant
+   ========================================================= */
+
+/** Nom comparable : sans accents ni majuscules, mots triés (« Alexandre PARIS » = « Paris Alexandre »). */
+function normaliserNom(nom) {
+  return String(nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).sort().join(' ');
+}
+
+function distanceEdition(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return d[a.length][b.length];
+}
+
+/**
+ * Classe chaque saisie : déjà rattachée / rattachable automatiquement (nom exact, ou même nom à l'ordre, aux accents
+ * et aux majuscules près, quand un seul conseiller correspond) / nom inconnu (regroupé par nom, avec une suggestion).
+ */
+function analyserRattachement() {
+  const roster = readRoster().filter(r => r.id);
+  const parId = nomsParId(roster);
+  const parCle = new Map();
+  for (const r of roster) {
+    const cle = normaliserNom(r.conseiller);
+    parCle.set(cle, [...(parCle.get(cle) || []), r]);
+  }
+
+  let nbLiees = 0;
+  const auto = [];
+  const inconnus = new Map();
+  for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
+    const docId = tr.dataset.docId;
+    if (!docId) continue;
+    const id = tr.dataset.conseillerId || '';
+    if (id && parId.has(id)) { nbLiees++; continue; }
+
+    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim() || '';
+    const exacts = roster.filter(r => r.conseiller === nom);
+    const memeNom = nom ? (parCle.get(normaliserNom(nom)) || []) : [];
+    const cible = exacts.length === 1 ? exacts[0] : (exacts.length === 0 && memeNom.length === 1 ? memeNom[0] : null);
+    if (cible) { auto.push({ docId, nom, cible }); continue; }
+
+    const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
+    const groupe = inconnus.get(nom) || { nom, docIds: [], semaines: [] };
+    groupe.docIds.push(docId);
+    if (semaine) groupe.semaines.push(semaine);
+    inconnus.set(nom, groupe);
+  }
+
+  const groupes = [...inconnus.values()].map(g => {
+    const cle = normaliserNom(g.nom);
+    let meilleur = null, distance = Infinity;
+    for (const r of roster) {
+      const dist = distanceEdition(cle, normaliserNom(r.conseiller));
+      if (dist < distance) { distance = dist; meilleur = r; }
+    }
+    const seuil = Math.max(2, Math.floor(cle.length * 0.25));
+    return { ...g, suggestion: cle && meilleur && distance <= seuil ? meilleur.id : '' };
+  }).sort((a, b) => b.docIds.length - a.docIds.length);
+
+  return { roster, nbLiees, auto, groupes, nbInconnues: groupes.reduce((n, g) => n + g.docIds.length, 0) };
+}
+
+/** Écrit conseillerId (et le nom du roster) sur des saisies — par lots de 400, limite d'un batch Firestore. */
+async function rattacherSaisies(affectations) {
+  for (let i = 0; i < affectations.length; i += 400) {
+    const lot = db.batch();
+    for (const { docId, cible } of affectations.slice(i, i + 400)) {
+      lot.update(db.collection('cockpit_semaines').doc(docId), { conseillerId: cible.id, conseiller: cible.conseiller });
+    }
+    await lot.commit();
+  }
+}
+
+/** Télécharge un fichier JSON avec toutes les saisies, le roster et l'organisation : à faire avant toute opération en masse. */
+async function telechargerSauvegarde() {
+  const [semaines, roster, equipes] = await Promise.all([
+    db.collection('cockpit_semaines').get(),
+    db.collection('cockpit_roster').get(),
+    db.collection('cockpit_parametres').doc('equipes').get(),
+  ]);
+  const sauvegarde = {
+    date: new Date().toISOString(),
+    semaines: semaines.docs.map(d => ({ id: d.id, ...d.data() })),
+    roster: roster.docs.map(d => ({ id: d.id, ...d.data() })),
+    organisation: equipes.exists ? equipes.data() : null,
+  };
+  const blob = new Blob([JSON.stringify(sauvegarde, null, 1)], { type: 'application/json' });
+  const lien = document.createElement('a');
+  lien.href = URL.createObjectURL(blob);
+  lien.download = `cockpit-sauvegarde-${dateLocaleISO()}.json`;
+  document.body.append(lien);
+  lien.click();
+  lien.remove();
+  setTimeout(() => URL.revokeObjectURL(lien.href), 10000);
+  return sauvegarde.semaines.length;
+}
+
+let sauvegardeFaiteCetteSession = false;
+let signatureRattachement = '';
+
+function renderRattachement() {
+  const bloc = document.getElementById('bloc-rattachement');
+  if (!bloc) return;
+  bloc.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin) return;
+  const carte = document.getElementById('card-rattachement');
+  if (carte.contains(document.activeElement)) return;   // jamais reconstruire pendant qu'on choisit dans une liste
+
+  const analyse = analyserRattachement();
+  const signature = JSON.stringify([analyse.nbLiees, analyse.auto.length, analyse.groupes.map(g => [g.nom, g.docIds.length, g.suggestion]), analyse.roster.map(r => r.id + r.conseiller)]);
+  if (signature === signatureRattachement) return;
+  signatureRattachement = signature;
+
+  const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+  const resume = document.getElementById('rattachement-resume');
+  resume.textContent = '';
+  const ligne = (texte, classe) => { const d = document.createElement('div'); if (classe) d.className = classe; d.textContent = texte; resume.append(d); };
+  if (!analyse.roster.length) ligne('Le roster est vide ou en cours de chargement.');
+  else {
+    ligne(`${pluriel(analyse.nbLiees, 'saisie')} rattachée${analyse.nbLiees > 1 ? 's' : ''} à un conseiller du roster : si tu changes son nom dans le roster, ses semaines suivent.`);
+    if (analyse.auto.length) ligne(`${pluriel(analyse.auto.length, 'saisie')} à rattacher automatiquement (nom reconnu, même écrit autrement).`);
+    if (analyse.nbInconnues) ligne(`${pluriel(analyse.groupes.length, 'nom')} ne correspond${analyse.groupes.length > 1 ? 'ent' : ''} à personne du roster (${pluriel(analyse.nbInconnues, 'saisie')}, non comptées dans les statistiques) :`);
+    if (!analyse.auto.length && !analyse.nbInconnues) ligne('Toutes les saisies sont rattachées.', 'ok');
+  }
+
+  const liste = document.getElementById('rattachement-liste');
+  liste.textContent = '';
+  analyse.groupes.forEach(g => {
+    const bloc = document.createElement('div');
+    bloc.className = 'rattachement-ligne';
+    const nom = document.createElement('span'); nom.className = 'rattachement-nom'; nom.textContent = g.nom || '(sans nom)';
+    const detail = document.createElement('span'); detail.className = 'rattachement-detail';
+    const semaines = [...new Set(g.semaines)].sort();
+    detail.textContent = `${pluriel(g.docIds.length, 'saisie')}${semaines.length ? ' · ' + semaines.slice(-3).map(libelleDateCourte).join(', ') : ''}`;
+    const choix = document.createElement('select');
+    choix.setAttribute('aria-label', `Conseiller du roster pour « ${g.nom || 'sans nom'} »`);
+    choix.append(new Option('— choisir un conseiller —', ''));
+    for (const r of analyse.roster.slice().sort((a, b) => a.conseiller.localeCompare(b.conseiller, 'fr'))) choix.append(new Option(r.conseiller, r.id));
+    choix.value = g.suggestion;
+    const bouton = document.createElement('button');
+    bouton.type = 'button'; bouton.className = 'btn'; bouton.dataset.rattacher = '1'; bouton.dataset.nom = g.nom; bouton.textContent = 'Rattacher';
+    bloc.append(nom, detail, choix, bouton);
+    liste.append(bloc);
+  });
+
+  const actions = document.getElementById('rattachement-actions');
+  actions.textContent = '';
+  const sauvegarde = document.createElement('button');
+  sauvegarde.type = 'button'; sauvegarde.className = 'btn'; sauvegarde.dataset.sauvegarde = '1'; sauvegarde.textContent = 'Télécharger une sauvegarde';
+  actions.append(sauvegarde);
+  if (analyse.auto.length) {
+    const auto = document.createElement('button');
+    auto.type = 'button'; auto.className = 'btn btn-primary'; auto.dataset.rattacherAuto = '1';
+    auto.textContent = `Rattacher automatiquement (${analyse.auto.length})`;
+    actions.append(auto);
+  }
+}
+
+/** Sauvegarde obligatoire avant la première opération en masse de la session ; renvoie false si l'admin renonce ou si elle échoue. */
+async function sauvegarderAvantRattachement() {
+  if (sauvegardeFaiteCetteSession) return true;
+  try {
+    const n = await telechargerSauvegarde();
+    sauvegardeFaiteCetteSession = true;
+    console.info(`Sauvegarde téléchargée (${n} saisies).`);
+    return true;
+  } catch (err) {
+    console.error('Sauvegarde', err);
+    alert('Sauvegarde impossible : ' + err.message + '\n\nAucune modification n’a été faite.');
+    return false;
+  }
+}
+
+document.getElementById('card-rattachement').addEventListener('click', async (e) => {
+  if (!isAdmin) return;
+  const bouton = e.target.closest('button');
+  if (!bouton) return;
+
+  if (bouton.dataset.sauvegarde) {
+    bouton.disabled = true;
+    try { await telechargerSauvegarde(); sauvegardeFaiteCetteSession = true; }
+    catch (err) { console.error('Sauvegarde', err); alert('Sauvegarde impossible : ' + err.message); }
+    finally { bouton.disabled = false; }
+    return;
+  }
+
+  const analyse = analyserRattachement();
+  let affectations = [];
+  let phrase = '';
+  if (bouton.dataset.rattacherAuto) {
+    affectations = analyse.auto;
+    phrase = `Rattacher ${affectations.length} saisie${affectations.length > 1 ? 's' : ''} à leur conseiller ?\n\nLe nom écrit dans la saisie est remplacé par celui du roster (ordre, accents, majuscules) et ces saisies compteront dans les statistiques.`;
+  } else if (bouton.dataset.rattacher) {
+    const groupe = analyse.groupes.find(g => g.nom === bouton.dataset.nom);   // retrouvé par nom : l'ordre peut changer entre l'affichage et le clic
+    const idCible = bouton.closest('.rattachement-ligne').querySelector('select').value;
+    const cible = analyse.roster.find(r => r.id === idCible);
+    if (!groupe) return;
+    if (!cible) { alert('Choisis d’abord le conseiller du roster.'); return; }
+    affectations = groupe.docIds.map(docId => ({ docId, cible }));
+    phrase = `Rattacher ${affectations.length} saisie${affectations.length > 1 ? 's' : ''} écrites « ${groupe.nom || 'sans nom'} » à ${cible.conseiller} ?\n\nCes saisies compteront dans ses statistiques.`;
+  } else return;
+  if (!affectations.length) return;
+  if (!confirm(phrase + '\n\nUne sauvegarde (fichier JSON) est téléchargée avant la première modification.')) return;
+
+  bouton.disabled = true;
+  try {
+    if (!(await sauvegarderAvantRattachement())) return;
+    await rattacherSaisies(affectations);
+    signatureRattachement = '';   // les saisies se mettent à jour toutes seules : on recalcule l'affichage
+    alert(`${affectations.length} saisie${affectations.length > 1 ? 's' : ''} rattachée${affectations.length > 1 ? 's' : ''}.`);
+  } catch (err) {
+    console.error('Rattachement', err);
+    alert('Rattachement impossible : ' + err.message);
+  } finally {
+    bouton.disabled = false;
+    bouton.blur();   // sinon l'affichage resterait figé tant que le bouton garde le focus
+  }
+});
 
 const rosterWriteTimers = new Map();
 document.getElementById('roster-body').addEventListener('input', (e) => {
@@ -5484,7 +5774,7 @@ document.getElementById('btn-point-faible').addEventListener('click', () => {
   if (!qui) return;
   const semaine = jeudiCourant();
   const tr = [...document.getElementById('rows-body').querySelectorAll('tr')].find(ligne =>
-    ligne.querySelector('[data-field="conseiller"]')?.value.trim() === qui
+    nomLigne(ligne) === qui
     && ligne.querySelector('[data-field="semaine"]')?.value.trim() === semaine);
   if (!tr || !ouvrirPointFaibleDepuisLigne(tr)) ouvrirPointFaible({ conseiller: qui, semaine, agg: null });
 });

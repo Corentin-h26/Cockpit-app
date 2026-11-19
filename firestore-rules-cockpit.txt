@@ -37,6 +37,7 @@ puis Publier. Rien d'autre ne change.
       return d.keys().size() <= 30
         && d.semaine is string && d.semaine.size() <= 10
         && d.conseiller is string && d.conseiller.size() <= 80
+        && d.get('conseillerId', '') is string && d.get('conseillerId', '').size() <= 40
         && cockpitNombre(d.get('rdv_poses', 0))
         && cockpitNombre(d.get('visio', 0))
         && cockpitNombre(d.get('r1', 0))
@@ -96,6 +97,7 @@ Ce que ça garantit :
   que ses propres lignes (ownerEmail = l'email du compte qui a créé la
   ligne) ; l'administrateur peut tout modifier.
 - Contenu des lignes (nouveau) : semaine ≤ 10 caractères, nom ≤ 80 caractères,
+  identifiant de conseiller (conseillerId) ≤ 40 caractères,
   tous les chiffres sont de vrais nombres entre 0 et 10 000 000, le ressenti et
   l'accompagnement ne prennent que les valeurs proposées par l'appli, et une
   ligne ne peut pas changer de propriétaire (sauf par l'administrateur).
