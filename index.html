@@ -41,10 +41,20 @@
     --nav-hover: #243246;
     --border: #E3D8C7;
     --heading: #152A49;
-    --heading-2: #5B6B82;
+    --heading-2: #546378;
     --nav-text: #FFFFFF;
     --nav-text-dim: #B9C1CC;
     --shadow: 0 1px 2px rgba(21, 42, 73, 0.06);
+
+    /* Variantes pour du TEXTE sur fond clair (blanc / crème) : contraste ≥ 4,5:1 (WCAG AA).
+       Les couleurs d'origine ci-dessus restent pour les aplats, barres, pastilles et fonds sombres (menu, bandeaux).
+       « -grand » : gros chiffres (≥ 24 px gras), 3:1 suffit — on garde ainsi la couleur de marque au plus près. */
+    --gold-text: #755F36;     --gold-grand: #A1824A;
+    --success-text: #1A704B;
+    --warning-text: #985D0C;  --warning-grand: #C0760F;
+    --coral-text: #C3132A;    --coral-grand: #ED4B60;    --coral-pill: #E81732;   /* fond d'une pastille à texte blanc */
+    --lime-text: #61711B;
+    --silver-text: #626B7C;
   }
 
   * { box-sizing: border-box; }
@@ -102,10 +112,10 @@
   .login-field input:focus { outline: none; border-color: var(--gold); background: var(--bg); }
 
   .login-hint { font-size: 11px; color: var(--heading-2); text-align: center; line-height: 1.4; }
-  .login-error { font-size: 12px; font-weight: 600; min-height: 16px; text-align: center; color: var(--coral); }
+  .login-error { font-size: 12px; font-weight: 600; min-height: 16px; text-align: center; color: var(--coral-text); }
 
   .login-links { display: flex; flex-direction: column; gap: 7px; align-items: center; margin-top: 2px; }
-  .login-links a { font-size: 12px; color: var(--gold); text-decoration: none; cursor: pointer; }
+  .login-links a { font-size: 12px; color: var(--gold-text); text-decoration: none; cursor: pointer; }
   .login-links a:hover { text-decoration: underline; }
 
   /* ---------------------------------------------------- App shell */
@@ -267,7 +277,7 @@
   hr.rule { border: none; border-top: 1px solid var(--border); margin: 18px 0 24px; }
 
   .section-label {
-    color: var(--gold);
+    color: var(--gold-text);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.3px;
@@ -297,17 +307,17 @@
     width: 34px; height: 34px; border-radius: 50%;
     background: var(--gold-tint);
     display: flex; align-items: center; justify-content: center;
-    color: var(--gold);
+    color: var(--gold-text);
   }
   .kpi-icon svg { width: 17px; height: 17px; }
 
   .kpi-title { font-size: 12px; font-weight: 600; }
-  .kpi-value { color: var(--gold); font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: auto; }
-  .kpi-value.warn { color: var(--warning); }
-  .kpi-value.bad { color: var(--coral); }
+  .kpi-value { color: var(--gold-grand); font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: auto; }
+  .kpi-value.warn { color: var(--warning-grand); }
+  .kpi-value.bad { color: var(--coral-grand); }
   .kpi-variation { color: var(--heading-2); font-size: 11px; font-weight: 600; }
-  .kpi-variation.positive { color: var(--success); }
-  .kpi-variation.negative { color: var(--coral); }
+  .kpi-variation.positive { color: var(--success-text); }
+  .kpi-variation.negative { color: var(--coral-text); }
 
   /* ---------------------------------------------------- Cards / tables */
 
@@ -326,7 +336,7 @@
   .pill-excellent { background: var(--silver); color: var(--navy); }
   .pill-correct { background: var(--lime); color: var(--navy); }
   .pill-accompagner { background: var(--warning); color: var(--navy); }
-  .pill-prioritaire { background: var(--coral); color: var(--bg); }
+  .pill-prioritaire { background: var(--coral-pill); color: #fff; }
 
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   thead th { text-align: left; color: var(--heading-2); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; padding: 0 6px 9px; border-bottom: 1px solid var(--border); }
@@ -345,9 +355,9 @@
   .bar-fill.warn { background: var(--warning); }
   .bar-fill.bad { background: var(--coral); }
   .bar-pct { font-size: 10.5px; font-weight: 700; width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
-  .bar-pct.ok { color: var(--success); }
-  .bar-pct.warn { color: var(--warning); }
-  .bar-pct.bad { color: var(--coral); }
+  .bar-pct.ok { color: var(--success-text); }
+  .bar-pct.warn { color: var(--warning-text); }
+  .bar-pct.bad { color: var(--coral-text); }
 
   .empty-state { color: var(--heading-2); font-size: 12.5px; padding: 20px 0; text-align: center; }
 
@@ -371,7 +381,7 @@
   .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .btn-primary { background: var(--navy); color: var(--nav-text); border-color: var(--navy); }
   .btn-primary:hover { background: var(--navy-hover); }
-  .btn-danger { color: var(--coral); }
+  .btn-danger { color: var(--coral-text); }
 
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
 
@@ -443,7 +453,7 @@
     white-space: normal;
     font-size: 11.5px;
     line-height: 1.35;
-    color: var(--coral);
+    color: var(--coral-text);
     vertical-align: top;
   }
   .cell-erreurs .erreurs-titre { font-weight: 700; margin-bottom: 2px; }
@@ -457,7 +467,7 @@
     background: var(--bg); border: 1px solid var(--coral); border-left-width: 4px;
     box-shadow: 0 6px 18px rgba(21, 42, 73, 0.18);
   }
-  .saisie-erreurs-titre { font-size: 13px; font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+  .saisie-erreurs-titre { font-size: 13px; font-weight: 700; color: var(--coral-text); margin-bottom: 8px; }
   .saisie-erreur-ligne {
     display: block; width: 100%; text-align: left; font: inherit; cursor: pointer;
     background: rgba(239, 91, 110, 0.07); border: 1px solid transparent; border-radius: 8px;
@@ -593,7 +603,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--gold);
+    color: var(--gold-text);
     border-top: 1px solid var(--border);
     padding-top: 14px;
     margin-top: 6px;
@@ -713,7 +723,7 @@
     font-size: 15px;
     padding: 4px;
   }
-  .row-delete:hover { color: var(--coral); }
+  .row-delete:hover { color: var(--coral-text); }
   .row-inverser {
     border: none;
     background: none;
@@ -722,7 +732,7 @@
     font-size: 15px;
     padding: 4px;
   }
-  .row-inverser:hover { color: var(--gold); }
+  .row-inverser:hover { color: var(--gold-text); }
   .row-inverser:disabled { opacity: 0.4; cursor: wait; }
 
   .field-hint { font-size: 10.5px; color: var(--heading-2); margin-top: 10px; }
@@ -751,8 +761,8 @@
 
   .roster-table { min-width: 0; width: 100%; }
   .roster-table th { border-bottom: 2px solid var(--gold); cursor: pointer; user-select: none; white-space: nowrap; }
-  .roster-table th[data-sort]:hover { color: var(--gold); }
-  .roster-table .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--gold); width: 8px; }
+  .roster-table th[data-sort]:hover { color: var(--gold-text); }
+  .roster-table .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--gold-text); width: 8px; }
   .roster-table td { padding: 14px 10px; font-size: 13px; }
   .roster-table input { padding: 0; border: 1px solid transparent; background: transparent; font-size: 13px; color: var(--heading); font-family: inherit; }
   .roster-table input:focus { border-color: var(--gold); background: var(--bg); border-radius: 6px; padding: 5px 7px; outline: none; }
@@ -764,7 +774,7 @@
   .org-grille { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
   .org-rt { background: var(--cream); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
   .org-rt-entete, .org-sa-entete { display: flex; align-items: center; gap: 8px; }
-  .org-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
+  .org-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold-text); flex: 0 0 auto; }
   .org-nom-input {
     flex: 1; min-width: 0; font: inherit; font-size: 14px; font-weight: 700; color: var(--heading);
     background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px;
@@ -814,7 +824,7 @@
     background: var(--bg); border-radius: 18px; width: min(580px, 100%); max-height: calc(100vh - 32px);
     overflow-y: auto; padding: 24px; box-shadow: 0 20px 50px rgba(17, 20, 64, 0.35);
   }
-  .pf-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold); }
+  .pf-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold-text); }
   .pf-titre { margin: 4px 0 2px; font-size: 21px; color: var(--heading); }
   .pf-sous-titre { font-size: 12.5px; color: var(--heading-2); }
   .pf-axe { background: var(--cream); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 16px; }
@@ -844,7 +854,7 @@
   }
   .pf-ressource-titre { font-size: 13.5px; font-weight: 600; word-break: break-word; }
   .pf-ressource-type { font-size: 11.5px; color: var(--heading-2); }
-  .pf-ressource-go { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--gold); flex: 0 0 auto; }
+  .pf-ressource-go { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--gold-text); flex: 0 0 auto; }
   .pf-texte { border: 1px solid var(--border); border-radius: 12px; background: var(--bg); margin-bottom: 8px; overflow: hidden; }
   .pf-texte-entete { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); background: var(--cream); }
   .pf-texte-entete .org-mini-btn { margin-left: auto; flex: 0 0 auto; }
@@ -906,7 +916,7 @@
   .formation-filtre.avec-accent.actif { background: rgb(var(--accent-rgb)); border-color: rgb(var(--accent-rgb)); }
   .formation-filtre.avec-accent.actif .ico { color: #fff; }
   .formation-filtre .nb { font-size: 11px; font-weight: 700; opacity: 0.6; }
-  .formation-filtre .pour-toi { color: var(--gold); display: inline-flex; }
+  .formation-filtre .pour-toi { color: var(--gold-text); display: inline-flex; }
 
   .formation-axe {
     --accent-rgb: 21, 42, 73;
@@ -927,7 +937,7 @@
   .formation-axe-nb { font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
   .formation-pour-toi {
     display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.3px;
-    padding: 6px 13px; border-radius: 999px; color: #fff; background: rgb(var(--accent-rgb));
+    padding: 6px 13px; border-radius: 999px; color: #fff; background: color-mix(in srgb, rgb(var(--accent-rgb)) 62%, #000);
   }
   .formation-axe.prioritaire { border-width: 2px; background: rgba(var(--accent-rgb), 0.12); box-shadow: 0 10px 28px rgba(var(--accent-rgb), 0.2); }
 
@@ -944,7 +954,7 @@
   .formation-grille .pf-ressource-ic { width: 42px; height: 42px; border-radius: 12px; }
   .formation-grille .pf-ressource-titre { font-size: 14px; font-weight: 700; line-height: 1.3; }
   .formation-grille .pf-ressource-type {
-    margin-top: 3px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: var(--gold);
+    margin-top: 3px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: var(--gold-text);
   }
   /* Flèche ronde à la place de « Ouvrir » */
   .formation-grille .pf-ressource-go {
@@ -972,7 +982,7 @@
   .formation-texte-titre { font-size: 14px; font-weight: 700; color: var(--heading); line-height: 1.3; }
   .formation-texte-apercu { margin-top: 3px; font-size: 12.5px; color: var(--heading-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .formation-texte.ouvert .formation-texte-apercu { display: none; }
-  .formation-texte-chevron { flex: 0 0 auto; width: 28px; text-align: center; font-size: 22px; line-height: 1; color: var(--gold); transition: transform 0.2s; }
+  .formation-texte-chevron { flex: 0 0 auto; width: 28px; text-align: center; font-size: 22px; line-height: 1; color: var(--gold-text); transition: transform 0.2s; }
   .formation-texte.ouvert .formation-texte-chevron { transform: rotate(90deg); }
   .formation-texte-corps {
     display: none; padding: 2px 20px 20px 72px; font-size: 13.5px; line-height: 1.65; color: var(--heading); white-space: pre-wrap;
@@ -1020,10 +1030,10 @@
     display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
   .groupe-titre { flex: 1; min-width: 0; font-size: 16px; font-weight: 800; color: var(--heading); }
-  .groupe-nb { font-size: 12px; font-weight: 800; color: #fff; background: rgb(var(--accent-rgb)); padding: 4px 11px; border-radius: 999px; }
+  .groupe-nb { font-size: 12px; font-weight: 800; color: #fff; background: color-mix(in srgb, rgb(var(--accent-rgb)) 62%, #000); padding: 4px 11px; border-radius: 999px; }
   .groupe-membre { margin-bottom: 8px; padding: 10px 13px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); }
   .groupe-membre-ligne { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--heading); }
-  .groupe-membre-pct { font-size: 12px; font-weight: 700; color: rgb(var(--accent-rgb)); white-space: nowrap; }
+  .groupe-membre-pct { font-size: 12px; font-weight: 700; color: color-mix(in srgb, rgb(var(--accent-rgb)) 62%, #000); white-space: nowrap; }
   .groupe-barre { height: 5px; margin-top: 7px; border-radius: 999px; overflow: hidden; background: rgba(var(--accent-rgb), 0.16); }
   .groupe-barre > div { height: 100%; border-radius: 999px; background: rgb(var(--accent-rgb)); }
   .groupe-detail { margin-top: 6px; font-size: 11.5px; color: var(--heading-2); }
@@ -1064,7 +1074,7 @@
   .ia-statut { font-size: 12.5px; color: var(--heading-2); }
   .ia-resultat h3 { font-size: 15px; margin: 20px 0 8px; color: var(--heading); }
   .ia-resultat h3:first-child { margin-top: 0; }
-  .ia-resultat h4 { font-size: 13.5px; margin: 14px 0 4px; color: var(--gold); }
+  .ia-resultat h4 { font-size: 13.5px; margin: 14px 0 4px; color: var(--gold-text); }
   .ia-resultat ul { margin: 4px 0 8px 18px; padding: 0; }
   .ia-resultat li { margin: 3px 0; font-size: 13px; line-height: 1.45; }
   .ia-resultat p { margin: 6px 0; font-size: 13px; line-height: 1.5; }
@@ -1129,8 +1139,8 @@
   /* ---------------------------------------------------- Classement (tri) */
 
   .classement-table th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
-  .classement-table th[data-sort]:hover { color: var(--gold); }
-  .classement-table .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--gold); width: 8px; }
+  .classement-table th[data-sort]:hover { color: var(--gold-text); }
+  .classement-table .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--gold-text); width: 8px; }
   .roster-table .anc-duree,
   .roster-table .anc-niveau { color: var(--heading); }
 
@@ -1172,7 +1182,7 @@
 
   .pchain-stage { flex: 1; min-width: 76px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
 
-  .pchain-icon { color: var(--gold); }
+  .pchain-icon { color: var(--gold-text); }
   .pchain-icon svg { width: 15px; height: 15px; }
 
   .pchain-label { color: var(--heading-2); font-size: 9px; font-weight: 600; height: 22px; display: flex; align-items: center; }
@@ -1180,9 +1190,9 @@
   .pchain-ref { color: var(--heading-2); font-size: 9px; margin-bottom: 2px; }
 
   .pchain-statut { font-size: 13px; font-weight: 700; }
-  .pchain-statut.bon { color: var(--success); }
-  .pchain-statut.moyen { color: var(--warning); }
-  .pchain-statut.insuffisant { color: var(--coral); }
+  .pchain-statut.bon { color: var(--success-text); }
+  .pchain-statut.moyen { color: var(--warning-text); }
+  .pchain-statut.insuffisant { color: var(--coral-text); }
 
   .pchain-arrow { color: var(--heading-2); font-size: 12px; padding-top: 40px; flex: 0 0 auto; }
 
@@ -1324,7 +1334,7 @@
       <div class="view active" id="view-dashboard">
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Vue d'ensemble du centre d'affaires, calculée en direct à partir des saisies de "Ma semaine".</div>
-        <div class="field-hint" id="dashboard-semaine-auto" style="display:none; color:var(--gold); font-weight:600;"></div>
+        <div class="field-hint" id="dashboard-semaine-auto" style="display:none; color:var(--gold-text); font-weight:600;"></div>
         <div class="field-hint" id="dashboard-hors-roster" style="display:none;"></div>
         <hr class="rule">
 
@@ -1521,7 +1531,7 @@
             <tbody id="roster-body"></tbody>
           </table>
         </div>
-        <div class="field-hint" id="roster-total" style="color:var(--gold);font-weight:600;"></div>
+        <div class="field-hint" id="roster-total" style="color:var(--gold-text);font-weight:600;"></div>
       </div>
 
       <!-- ============================================= STATISTIQUES ============================================= -->
@@ -1781,7 +1791,7 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
-  errEl.style.color = 'var(--coral)';
+  errEl.style.color = 'var(--coral-text)';
   errEl.textContent = '';
 
   if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
@@ -1800,12 +1810,12 @@ document.getElementById('forgot-password-link').addEventListener('click', (e) =>
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
   const errEl = document.getElementById('login-error');
-  if (!email) { errEl.style.color = 'var(--coral)'; errEl.textContent = "Indique ton email dans le champ ci-dessus d'abord."; return; }
+  if (!email) { errEl.style.color = 'var(--coral-text)'; errEl.textContent = "Indique ton email dans le champ ci-dessus d'abord."; return; }
   auth.sendPasswordResetEmail(email).then(() => {
-    errEl.style.color = 'var(--success)';
+    errEl.style.color = 'var(--success-text)';
     errEl.textContent = "Email de réinitialisation envoyé.";
   }).catch(() => {
-    errEl.style.color = 'var(--coral)';
+    errEl.style.color = 'var(--coral-text)';
     errEl.textContent = "Impossible d'envoyer l'email (vérifie l'adresse).";
   });
 });
@@ -2004,6 +2014,11 @@ function niveauDe(perf) {
   return { texte: 'Prioritaire', classe: 'pill-prioritaire' };
 }
 
+/** Couleur d'accent → version lisible en TEXTE sur fond clair (la barre garde la couleur vive). */
+function couleurTexte(c) {
+  return ({ 'var(--gold)': 'var(--gold-text)', 'var(--silver)': 'var(--silver-text)', 'var(--success)': 'var(--success-text)',
+            'var(--warning)': 'var(--warning-text)', 'var(--lime)': 'var(--lime-text)', 'var(--coral)': 'var(--coral-text)' })[c] || c;
+}
 const COULEUR_NIVEAU = { 'pill-elite': 'var(--gold)', 'pill-excellent': 'var(--silver)', 'pill-correct': 'var(--lime)', 'pill-accompagner': 'var(--warning)', 'pill-prioritaire': 'var(--coral)' };
 function niveauEmoji(perf) {
   const n = niveauDe(perf);
@@ -2422,7 +2437,7 @@ function renderParametres() {
   const total = POIDS_CLES.reduce((acc, cle) => acc + (POIDS[cle] || 0), 0);
   const ok = total === 100;
   label.textContent = `Total : ${total} / 100` + (ok ? '' : '  (doit faire 100 pour un Performance ID cohérent)');
-  label.style.color = ok ? 'var(--success)' : 'var(--coral)';
+  label.style.color = ok ? 'var(--success-text)' : 'var(--coral-text)';
   label.style.fontWeight = '600';
 }
 
@@ -2862,8 +2877,8 @@ function ligneComparaisonHTML(label, valA, valB, fmt, inverse) {
     meilleurA = inverse ? valA < valB : valA > valB;
     meilleurB = inverse ? valB < valA : valB > valA;
   }
-  const styleA = meilleurA ? 'color:var(--success);font-weight:700;' : '';
-  const styleB = meilleurB ? 'color:var(--success);font-weight:700;' : '';
+  const styleA = meilleurA ? 'color:var(--success-text);font-weight:700;' : '';
+  const styleB = meilleurB ? 'color:var(--success-text);font-weight:700;' : '';
   return `<tr>
     <td>${label}</td>
     <td class="num" style="${styleA}">${fmtVal(valA)}</td>
@@ -2885,8 +2900,8 @@ function renderComparaison(classement) {
 
   zone.style.display = 'block';
   const niveauA = niveauDe(a.performance), niveauB = niveauDe(b.performance);
-  const stylePerfA = a.performance !== b.performance ? (a.performance > b.performance ? 'color:var(--success);font-weight:700;' : '') : '';
-  const stylePerfB = a.performance !== b.performance ? (b.performance > a.performance ? 'color:var(--success);font-weight:700;' : '') : '';
+  const stylePerfA = a.performance !== b.performance ? (a.performance > b.performance ? 'color:var(--success-text);font-weight:700;' : '') : '';
+  const stylePerfB = a.performance !== b.performance ? (b.performance > a.performance ? 'color:var(--success-text);font-weight:700;' : '') : '';
 
   const lignes = [
     ligneComparaisonHTML('RDV posés', a.rdv_poses, b.rdv_poses, 'entier'),
@@ -2951,7 +2966,7 @@ function renderEquipe() {
         <div class="bar-cell">
           <div style="width:150px;font-size:12.5px;">${LIBELLES_ANCIENNETE[cle]}</div>
           <div class="bar-track"><div class="bar-fill" style="width:${(val / total) * 100}%;background:${couleurs[cle]}"></div></div>
-          <div class="bar-pct" style="color:${couleurs[cle]}">${val}</div>
+          <div class="bar-pct" style="color:${couleurTexte(couleurs[cle])}">${val}</div>
         </div>`).join('')}
     </div>` : `<div class="empty-state">Aucun conseiller dans le roster.</div>`;
 
@@ -3106,7 +3121,7 @@ function renderStatistiques(rows) {
     <div class="bar-cell" style="margin-bottom:8px;">
       <div style="width:120px;font-size:12px;">${label}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${(compteNiveaux[cle] / nbConseillers) * 100}%;background:${couleur}"></div></div>
-      <div class="bar-pct" style="color:${couleur}">${compteNiveaux[cle]}</div>
+      <div class="bar-pct" style="color:${couleurTexte(couleur)}">${compteNiveaux[cle]}</div>
     </div>`).join('') : `<div class="empty-state">Aucune donnée.</div>`;
 
   const topReco = [...classement].sort((a, b) => b.recommandations - a.recommandations).slice(0, 6);
@@ -3202,7 +3217,7 @@ function renderAlertes(rows) {
       <div class="card-title">${ic(cat.ic, 15)}<span>${cat.titre} — ${cat.items.length} alerte(s)</span></div>
       ${cat.items.length
         ? cat.items.map(t => `<div class="watch-sub" style="padding:4px 0;">${t}</div>`).join('')
-        : `<div class="watch-sub" style="color:var(--success);">${ic('checkcircle', 13)} Aucune alerte sur cet indicateur.</div>`}
+        : `<div class="watch-sub" style="color:var(--success-text);">${ic('checkcircle', 13)} Aucune alerte sur cet indicateur.</div>`}
     </div>`).join('');
 }
 
