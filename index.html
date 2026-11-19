@@ -325,6 +325,28 @@
   .kpi-value.warn { color: var(--warning-grand); }
   .kpi-value.bad { color: var(--coral-grand); }
   .kpi-variation { color: var(--heading-2); font-size: 11px; font-weight: 600; }
+
+  /* Dashboard : le verdict (Santé) et les résultats financiers dominent ; les indicateurs d'activité viennent dessous. */
+  .kpi-hero { display: grid; grid-template-columns: 5fr 7fr; gap: 16px; margin-bottom: 16px; }
+  .kpi-sante { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; min-height: 190px; }
+  .kpi-sante-texte { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .kpi-sante-jauge { flex: 0 1 220px; min-width: 150px; }
+  .kpi-sante-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .kpi-value--hero { font-size: 46px; line-height: 1; margin-top: 6px; }
+  .kpi-sur { font-size: 18px; font-weight: 600; color: var(--heading-2); }
+  .kpi-resultats { justify-content: space-between; }
+  .kpi-periode { font-weight: 400; color: var(--heading-2); margin-left: 6px; }
+  .kpi-resultats-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin: 6px 0; }
+  .kpi-sous-titre { font-size: 12px; font-weight: 600; color: var(--heading-2); margin-bottom: 4px; }
+  .kpi-value--moyen { font-size: 30px; margin-top: 0; white-space: nowrap; }
+  .kpi-resultats .bar-track { flex: none; height: 8px; border-radius: 4px; }   /* « flex: 1 » étirait la barre dans une carte en colonne */
+  .kpi-resultats .bar-fill { border-radius: 4px; }
+  .kpi-tendance { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi-tendance.bon { color: var(--success-text); }
+  .kpi-tendance.mauvais { color: var(--coral-text); }
+  .kpi-tendance.neutre { color: var(--heading-2); }
+  .kpi-legende { font-size: 12px; color: var(--heading-2); margin: -6px 0 12px; }
+  .kpi-legende:empty { display: none; }
   .kpi-variation.positive { color: var(--success-text); }
   .kpi-variation.negative { color: var(--coral-text); }
 
@@ -1252,6 +1274,8 @@
 
   @media (max-width: 1000px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-hero { grid-template-columns: 1fr; }
+    .kpi-sante-jauge { flex-basis: 170px; }
     .watch-row { grid-template-columns: 1fr; }
     .leaderboard-split { grid-template-columns: 1fr; gap: 12px 0; }
     .leaderboard-split table:first-child { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
@@ -1275,6 +1299,13 @@
     }
     /* L'ombre n'existe que tiroir ouvert : fermé, elle débordait en bande grise sur le bord gauche de l'écran. */
     .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(10, 12, 38, 0.35); }
+  }
+
+  @media (max-width: 700px) {
+    .kpi-value--hero { font-size: 40px; }
+    .kpi-value--moyen { font-size: 26px; }
+    .kpi-resultats-grille { grid-template-columns: repeat(2, 1fr); }
+    .kpi-resultats-grille > div:last-child { grid-column: 1 / -1; }   /* la concrétisation passe sur toute la largeur */
   }
 
   @media (max-width: 480px) {
@@ -1383,6 +1414,8 @@
         <hr class="rule">
 
         <div class="section-label">Vue d'ensemble</div>
+        <div class="kpi-legende" id="kpi-legende"></div>
+        <div class="kpi-hero" id="kpi-hero"></div>
         <div class="kpi-grid" id="kpi-grid"></div>
 
         <div class="section-label">À surveiller</div>
@@ -2300,10 +2333,51 @@ function icon(name) { return `<svg viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
 function ic(name, size = 14) { return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="vertical-align:-2px;flex:0 0 auto;">${ICONS[name]}</svg>`; }
 
 /** statut : 'warn'/'bad' pour repasser la valeur en orange/rouge selon les seuils réels de l'indicateur — omis (ou 'ok'), la valeur reste dorée comme avant. */
-function kpiCard({ ic, title, value, variation, tone, statut }) {
+function kpiCard({ ic, title, value, variation, tone, statut, tendance }) {
   const cls = tone === 'positive' ? ' positive' : tone === 'negative' ? ' negative' : '';
   const valCls = statut === 'warn' ? ' warn' : statut === 'bad' ? ' bad' : '';
-  return `<div class="kpi-card"><div class="kpi-icon">${icon(ic)}</div><div class="kpi-title">${title}</div><div class="kpi-value${valCls}">${value}</div><div class="kpi-variation${cls}">${variation}</div></div>`;
+  return `<div class="kpi-card"><div class="kpi-icon">${icon(ic)}</div><div class="kpi-title">${title}</div><div class="kpi-value${valCls}">${value}</div>${tendanceHTML(tendance)}<div class="kpi-variation${cls}">${variation}</div></div>`;
+}
+
+/** Évolution par rapport à la semaine précédente : flèche + signe + valeur (jamais la couleur seule). null si pas de comparaison. */
+function tendanceDe(actuel, precedent, type, mieuxQuand = 'hausse') {
+  if (![actuel, precedent].every(v => typeof v === 'number' && Number.isFinite(v))) return null;
+  const delta = actuel - precedent;
+  const seuilStable = type === 'taux' ? 0.0005 : type === 'euro' ? 0.5 : 0.05;
+  if (Math.abs(delta) < seuilStable) return { texte: '= stable', classe: 'neutre' };
+  const hausse = delta > 0;
+  const ecart = Math.abs(delta);
+  const valeur = type === 'taux' ? `${(ecart * 100).toFixed(1)} pts` : type === 'euro' ? euro(ecart) : type === 'score' ? `${ecart.toFixed(1)} pts` : ecart.toFixed(1);
+  return { texte: `${hausse ? '▲ +' : '▼ −'}${valeur}`, classe: (mieuxQuand === 'hausse') === hausse ? 'bon' : 'mauvais' };
+}
+function tendanceHTML(t) {
+  return t ? `<div class="kpi-tendance ${t.classe}">${esc(t.texte)}</div>` : '';
+}
+
+/** Chiffres clés du dashboard pour un ensemble de saisies (sert aussi à la semaine précédente). */
+function indicateursDashboard(rows) {
+  const equipe = agreger(rows);
+  const classement = classementDe(rows);
+  const nbConseillers = classement.length || 1;
+  const nbSemaines = Math.max(new Set(rows.map(r => r.semaine)).size, 1);
+  return {
+    vide: !rows.length, nb: classement.length,
+    perf: classement.length ? sum(classement, 'performance') / nbConseillers : null,
+    reco: equipe.recommandations / nbConseillers / nbSemaines,
+    concretisation: equipe.taux_concretisation, r1r2: equipe.taux_r1_r2,
+    potentiel: equipe.potentiel, commissions: equipe.commissions,
+    visio: equipe.taux_visio, casse: equipe.taux_casse, tauxRdvVu: equipe.taux_rdv_vu,
+  };
+}
+
+/** Saisies de la semaine qui précède celle affichée (même population) ; null si le filtre n'est pas « une semaine précise ». */
+function semainePrecedenteDuDashboard(toutesLignes) {
+  const choisie = document.getElementById('filtre-semaine').value;
+  if (!choisie || document.getElementById('filtre-mois').value !== '') return null;
+  const population = filtrerParEquipeEtAnciennete(toutesLignes);
+  const avant = [...new Set(population.map(r => r.semaine).filter(sem => sem && sem < choisie))].sort();
+  const precedente = avant[avant.length - 1];
+  return precedente ? { semaine: precedente, rows: population.filter(r => r.semaine === precedente) } : null;
 }
 
 /* =========================================================
@@ -2585,17 +2659,56 @@ function renderDashboard(rows, toutesLignes) {
   const nbConseillers = classement.length || 1;
   const nbSemaines = Math.max(new Set(rows.map(r => r.semaine)).size, 1);
 
-  const cards = [
-    { ic: 'heart', title: 'Santé du Cabinet', value: classement.length ? `${(sum(classement, 'performance') / nbConseillers).toFixed(1)} / 100` : '— / 100', variation: classement.length ? `Niveau : ${niveauEmoji(sum(classement, 'performance') / nbConseillers)}` : 'Aucune donnée saisie' },
-    { ic: 'users', title: 'Moyenne de recommandations (hebdo)', value: (equipe.recommandations / nbConseillers / nbSemaines).toFixed(1), variation: `Ambition : ${OBJECTIFS.recommandations}` },
-    { ic: 'target', title: 'Taux de concrétisation', value: `${(equipe.taux_concretisation * 100).toFixed(1)} %`, variation: `${euro(equipe.commissions)} / ${euro(equipe.potentiel)}` },
-    { ic: 'rotate', title: 'Transformation R1 → R2', value: `${(equipe.taux_r1_r2 * 100).toFixed(1)} %`, variation: `Ambition : ${OBJECTIFS.r1_r2 * 100} %` },
-    { ic: 'sack', title: 'Potentiel', value: euro(equipe.potentiel), variation: 'Cumulé sur les semaines saisies' },
-    { ic: 'coins', title: 'Commissions réalisées', value: euro(equipe.commissions), variation: 'Cumulé sur les semaines saisies' },
-    { ic: 'video', title: 'Taux de RDV Visio', value: `${(equipe.taux_visio * 100).toFixed(1)} %`, variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %` },
-    { ic: 'calendarx', title: 'Taux de casse', value: `${(equipe.taux_casse * 100).toFixed(1)} %`, variation: "RDV posés qui n'ont pas eu lieu" },
-  ];
-  document.getElementById('kpi-grid').innerHTML = cards.map(kpiCard).join('');
+  // ---- Hiérarchie : 1) le verdict, 2) les résultats financiers, 3) quatre indicateurs d'activité — chacun comparé à la semaine précédente.
+  const cur = indicateursDashboard(rows);
+  const precedente = semainePrecedenteDuDashboard(toutesLignes);
+  const prec = precedente ? indicateursDashboard(precedente.rows) : null;
+  const tend = (cle, type, mieuxQuand) => prec && !prec.vide ? tendanceDe(cur[cle], prec[cle], type, mieuxQuand) : null;
+  const classeStatut = st => cur.vide ? '' : st === 'warn' ? ' warn' : st === 'bad' ? ' bad' : '';
+  const stat = {
+    perf: cur.perf === null ? 'ok' : statutDepuisPerformance(cur.perf),
+    concretisation: statutAtteinte(cur.concretisation, OBJECTIFS.concretisation),
+    reco: statutAtteinteReco(cur.reco, OBJECTIFS.recommandations),
+    r1r2: statutAtteinte(cur.r1r2, OBJECTIFS.r1_r2),
+    visio: statutAtteinte(cur.visio, OBJECTIFS.visio_max, true),
+    casse: statutVersOkWarnBad(statutSeuil(cur.tauxRdvVu * 100, 66, 50)),
+  };
+  const pct = v => `${(v * 100).toFixed(1)} %`;
+
+  const legende = document.getElementById('kpi-legende');
+  if (legende) legende.textContent = precedente && !prec.vide
+    ? `▲ ▼ : évolution par rapport à la semaine du ${libelleDateCourte(precedente.semaine)} ${precedente.semaine.slice(0, 4)}`
+    : '';
+
+  const niveau = cur.perf === null ? null : niveauDe(cur.perf);
+  const bonStatut = st => st === 'bad' ? 'bad' : st === 'warn' ? 'warn' : 'ok';
+  const ratioCommissions = cur.potentiel ? Math.min(cur.commissions / cur.potentiel, 1) : 0;
+  document.getElementById('kpi-hero').innerHTML = `
+    <div class="kpi-card kpi-sante">
+      <div class="kpi-sante-texte">
+        <div class="kpi-title">${ic('heart', 14)} Santé du Cabinet</div>
+        <div class="kpi-value kpi-value--hero${classeStatut(stat.perf)}">${cur.perf === null ? '—' : cur.perf.toFixed(1)}<span class="kpi-sur"> / 100</span></div>
+        <div class="kpi-sante-ligne">${niveau ? `<span class="pill ${niveau.classe}">${niveau.texte}</span>` : ''}${tendanceHTML(tend('perf', 'score', 'hausse'))}</div>
+        <div class="kpi-variation">Performance ID moyenne${cur.nb ? ` · ${cur.nb} conseiller${cur.nb > 1 ? 's' : ''}` : ''}</div>
+      </div>
+      ${cur.perf === null ? '' : `<div class="kpi-sante-jauge">${gaugeChartSVG(cur.perf, 100)}</div>`}
+    </div>
+    <div class="kpi-card kpi-resultats">
+      <div class="kpi-title">${ic('coins', 14)} Résultats financiers <span class="kpi-periode">sur la période affichée</span></div>
+      <div class="kpi-resultats-grille">
+        <div><div class="kpi-sous-titre">Commissions réalisées</div><div class="kpi-value kpi-value--moyen">${euro(cur.commissions)}</div>${tendanceHTML(tend('commissions', 'euro', 'hausse'))}</div>
+        <div><div class="kpi-sous-titre">Potentiel</div><div class="kpi-value kpi-value--moyen">${euro(cur.potentiel)}</div>${tendanceHTML(tend('potentiel', 'euro', 'hausse'))}</div>
+        <div><div class="kpi-sous-titre">Concrétisation</div><div class="kpi-value kpi-value--moyen${classeStatut(stat.concretisation)}">${pct(cur.concretisation)}</div>${tendanceHTML(tend('concretisation', 'taux', 'hausse'))}<div class="kpi-variation">Ambition : ${OBJECTIFS.concretisation * 100} %</div></div>
+      </div>
+      <div class="bar-track" role="img" aria-label="Commissions réalisées sur le potentiel : ${pct(ratioCommissions)}"><div class="bar-fill ${cur.vide ? '' : bonStatut(stat.concretisation)}" style="width:${(ratioCommissions * 100).toFixed(1)}%"></div></div>
+    </div>`;
+
+  document.getElementById('kpi-grid').innerHTML = [
+    { ic: 'users', title: 'Recommandations (moy. hebdo)', value: cur.reco.toFixed(1), variation: `Ambition : ${OBJECTIFS.recommandations}`, statut: cur.vide ? undefined : stat.reco, tendance: tend('reco', 'nombre', 'hausse') },
+    { ic: 'rotate', title: 'Transformation R1 → R2', value: pct(cur.r1r2), variation: `Ambition : ${OBJECTIFS.r1_r2 * 100} %`, statut: cur.vide ? undefined : stat.r1r2, tendance: tend('r1r2', 'taux', 'hausse') },
+    { ic: 'video', title: 'Taux de RDV Visio', value: pct(cur.visio), variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %`, statut: cur.vide ? undefined : stat.visio, tendance: tend('visio', 'taux', 'baisse') },
+    { ic: 'calendarx', title: 'Taux de casse', value: pct(cur.casse), variation: "RDV posés qui n'ont pas eu lieu", statut: cur.vide ? undefined : stat.casse, tendance: tend('casse', 'taux', 'baisse') },
+  ].map(kpiCard).join('');
 
   const aAccompagner = classement.filter(c => c.performance < SEUILS.bon).slice(-3).reverse();
   const watchRows = aAccompagner.map(c => `
