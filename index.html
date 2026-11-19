@@ -3861,16 +3861,35 @@ document.getElementById('rows-body').addEventListener('click', (e) => {
     const tr = btnValider.closest('tr');
     const texteInitial = btnValider.innerHTML;
     btnValider.disabled = true;
-    writeRowNow(tr).then(() => {
+
+    // Sans réseau, la promesse d'écriture Firestore ne se termine qu'au retour de la connexion : au-delà de
+    // quelques secondes on confirme donc « enregistré sur l'appareil » (c'est vrai, l'envoi suivra) au lieu de laisser le bouton bloqué.
+    let termine = false;
+    const confirmer = (sansReponse) => {
+      if (termine) return;
+      termine = true;
       try { ouvrirPointFaibleDepuisLigne(tr); } catch (e) { console.error('Point à travailler', e); }
       btnValider.classList.add('valide');
-      btnValider.innerHTML = `${ic('checkcircle', 15)} Enregistré`;
+      btnValider.innerHTML = `${ic('checkcircle', 15)} ${sansReponse && navigator.onLine === false ? 'Enregistré sur l’appareil, envoi au retour du réseau' : 'Enregistré'}`;
       setTimeout(() => {
         btnValider.classList.remove('valide');
         btnValider.innerHTML = texteInitial;
         btnValider.disabled = false;
-      }, 2200);
+      }, sansReponse ? 3500 : 2200);
+    };
+    const minuteur = setTimeout(() => confirmer(true), 3500);
+
+    writeRowNow(tr).then(() => {
+      clearTimeout(minuteur);
+      confirmer(false);
     }).catch(err => {
+      clearTimeout(minuteur);
+      if (termine) {
+        // Déjà confirmé « sur l'appareil » : le serveur a finalement refusé l'envoi différé.
+        console.error('Envoi différé refusé', err);
+        alert('Ta saisie n’a pas pu être envoyée au serveur : ' + err.message);
+        return;
+      }
       btnValider.disabled = false;
       if (err.code === 'incoherent') {
         alert('Validation impossible, corrige d’abord :\n\n• ' + err.erreurs.map(e => e.message).join('\n• '));
@@ -6379,9 +6398,19 @@ function completerLiensOrganisation() {
 }
 
 function marquerSynchronise(ok) {
-  document.getElementById('sync-dot').classList.toggle('off', !ok);
-  document.getElementById('sync-label').textContent = ok ? 'Synchronisé' : 'Synchronisation interrompue';
+  const horsLigne = navigator.onLine === false;
+  document.getElementById('sync-dot').classList.toggle('off', !ok || horsLigne);
+  document.getElementById('sync-label').textContent = horsLigne
+    ? 'Hors ligne : tes saisies sont gardées sur cet appareil'
+    : ok ? 'Synchronisé' : 'Synchronisation interrompue';
 }
+
+// Hors ligne, Firestore garde les saisies dans l'appareil (enablePersistence) et les envoie au retour du réseau.
+window.addEventListener('offline', () => marquerSynchronise(true));
+window.addEventListener('online', () => {
+  document.getElementById('sync-label').textContent = 'Reconnexion : envoi des saisies en attente…';
+  db.waitForPendingWrites().then(() => marquerSynchronise(true)).catch(() => marquerSynchronise(false));
+});
 
 let unsubscribers = [];
 
@@ -6439,6 +6468,14 @@ auth.onAuthStateChanged(user => {
 
   demarrerEcoutes();
 });
+
+// Service worker (sw.js) : l'application s'ouvre même sans réseau ; les données viennent du cache Firestore.
+// Absent en file:// : ne sert qu'en https (ou localhost).
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker non installé', err));
+  });
+}
 </script>
 </body>
 </html>
