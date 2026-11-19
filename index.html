@@ -414,6 +414,8 @@
   .aide-saisie summary:hover { color: var(--heading); }
   .aide-saisie .field-hint { font-size: 12.5px; line-height: 1.6; margin-top: 8px; max-width: 900px; }
   .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .relance-onglets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .relance-onglets .btn.actif { background: var(--navy); color: #fff; border-color: var(--navy); }
   .relance-webmail { margin-top: 10px; font-size: 12px; color: var(--heading-2); }
   .lien-bouton { font: inherit; font-weight: 600; color: var(--gold-text); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
   .lien-bouton:hover { color: var(--heading); }
@@ -1458,7 +1460,7 @@
         <div id="bloc-suivi-saisie" style="display:none;">
           <div class="section-label">Suivi des saisies</div>
           <div class="card" id="card-suivi-saisie">
-            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>N'ont pas rempli leur semaine</span><span id="suivi-saisie-semaine" style="font-weight:400;color:var(--heading-2);font-size:12px;margin-left:auto;"></span></div>
+            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>Relances de la semaine</span><span id="suivi-saisie-semaine" style="font-weight:400;color:var(--heading-2);font-size:12px;margin-left:auto;"></span></div>
             <div id="suivi-saisie-body"></div>
           </div>
         </div>
@@ -2627,15 +2629,32 @@ let relanceCourante = { message: '', liste: '', destinataires: [], sujet: '', ad
 
 // Conseillers déjà relancés par Teams pendant cette session (repère « Teams ✓ » pour suivre la liste) : mémorisé par semaine.
 const relancesFaites = new Set((() => { try { return JSON.parse(sessionStorage.getItem('cockpit_relances') || '[]'); } catch (e) { return []; } })());
-const cleRelance = nom => `${jeudiCourant()}|${nom}`;
+const cleRelance = nom => `${typeRelance === 'realise' ? semaineBilan() : jeudiCourant()}|${typeRelance}|${nom}`;
 
-/** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
-function messageRelanceSemaine(semaine) {
-  const lien = location.href.split('#')[0].split('?')[0];
-  return `Bonjour, petit rappel : ta semaine du ${libelleDateCourte(semaine)} n’est pas encore remplie dans Cockpit. Peux-tu la compléter dès que possible ?\n${lien}\nMerci !`;
+// Deux relances possibles : « semaine » (aucune ligne cette semaine) et « realise » (ligne présente, bilan du mercredi non rempli).
+// Le mercredi, on propose d'office le bilan.
+let typeRelance = new Date().getDay() === 3 ? 'realise' : 'semaine';
+
+/** Semaine dont on relance le bilan : la semaine en cours, sauf jeudi et vendredi où l'on relance celle qui vient de se terminer (le mercredi précédent). */
+function semaineBilan(jour = new Date().getDay()) {
+  return jour === 4 || jour === 5 ? ajouterJoursISO(jeudiCourant(), -7) : jeudiCourant();
 }
 
-/** Roster vs saisies de la semaine commerciale en cours (jeudiCourant) : qui n'a pas encore de ligne « Ma semaine » pour cette semaine, avec de quoi les relancer. */
+/** Bilan rempli : un chiffre du réalisé saisi, ou la question « Comment évalues-tu ta semaine ? » répondue (même si tout vaut 0). */
+const bilanRempli = r => realiseRenseigne(r) || CHAMPS_REALISE.some(c => (r[c] || 0) > 0) || !!r.ressenti;
+
+/** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
+function messageRelance(type, semaine) {
+  const lien = location.href.split('#')[0].split('?')[0];
+  return type === 'realise'
+    ? `Bonjour, petit rappel : le bilan de ta semaine du ${libelleDateCourte(semaine)} (le réalisé) n’est pas encore rempli dans Cockpit. Peux-tu le compléter dès que possible ?\n${lien}\nMerci !`
+    : `Bonjour, petit rappel : ta semaine du ${libelleDateCourte(semaine)} n’est pas encore remplie dans Cockpit. Peux-tu la compléter dès que possible ?\n${lien}\nMerci !`;
+}
+
+/**
+ * Carte de relance (administrateur). Deux listes : « Semaine non remplie » (aucune ligne pour la semaine en cours) et
+ * « Réalisé non rempli » (une ligne existe mais le bilan du mercredi est vide), chacune avec de quoi relancer.
+ */
 function renderSuiviSaisie(toutesLignes) {
   // Réservé à l'administrateur : pour tout autre compte, la section est masquée et RIEN n'est écrit dans la page
   // (ni noms des retardataires, ni adresses).
@@ -2649,40 +2668,69 @@ function renderSuiviSaisie(toutesLignes) {
   }
   const roster = readRoster();
   const semaineCourante = jeudiCourant();
+  const semaineDuBilan = semaineBilan();
+  const noms = roster.map(r => r.conseiller);
+
   const remplisCetteSemaine = new Set(toutesLignes.filter(r => r.semaine === semaineCourante).map(r => r.conseiller));
-  const nonRemplis = roster.map(r => r.conseiller).filter(nom => !remplisCetteSemaine.has(nom));
-  const [anSC, moSC, jrSC] = semaineCourante.split('-');
+  const nonRemplis = noms.filter(nom => !remplisCetteSemaine.has(nom));
+  const ayantUneLigne = new Set(toutesLignes.filter(r => r.semaine === semaineDuBilan).map(r => r.conseiller));
+  const avecBilan = new Set(toutesLignes.filter(r => r.semaine === semaineDuBilan && bilanRempli(r)).map(r => r.conseiller));
+  const sansRealise = noms.filter(nom => ayantUneLigne.has(nom) && !avecBilan.has(nom));
+
+  const type = typeRelance;
+  const concernes = type === 'realise' ? sansRealise : nonRemplis;
+  const semaineConcernee = type === 'realise' ? semaineDuBilan : semaineCourante;
+  const [anSC, moSC, jrSC] = semaineConcernee.split('-');
   const suiviSemaineLabel = document.getElementById('suivi-saisie-semaine');
   if (suiviSemaineLabel) suiviSemaineLabel.textContent = `semaine du ${jrSC}/${moSC}/${anSC}`;
 
-  // Adresses des retardataires (renseignées dans Centre d'affaires) pour « Ouvrir dans ma messagerie ».
+  // Adresses des retardataires (renseignées dans Centre d'affaires).
   const messagerie = lireMessagerie();
   const adresseDe = new Map(roster.map(r => [r.conseiller, r.email]));
-  const avecAdresse = nonRemplis.filter(nom => emailValide(adresseDe.get(nom)));
-  const sansAdresse = nonRemplis.filter(nom => !avecAdresse.includes(nom));
+  const avecAdresse = concernes.filter(nom => emailValide(adresseDe.get(nom)));
+  const sansAdresse = concernes.filter(nom => !avecAdresse.includes(nom));
 
   relanceCourante = {
-    message: messageRelanceSemaine(semaineCourante),
-    liste: [...nonRemplis].sort((a, b) => a.localeCompare(b, 'fr')).join('\n'),
+    type,
+    message: messageRelance(type, semaineConcernee),
+    liste: [...concernes].sort((a, b) => a.localeCompare(b, 'fr')).join('\n'),
     destinataires: avecAdresse.map(nom => adresseDe.get(nom)),
-    sujet: `Rappel Cockpit : ta semaine du ${libelleDateCourte(semaineCourante)}`,
+    sujet: type === 'realise'
+      ? `Rappel Cockpit : bilan de ta semaine du ${libelleDateCourte(semaineConcernee)}`
+      : `Rappel Cockpit : ta semaine du ${libelleDateCourte(semaineConcernee)}`,
     adresses: avecAdresse.map(nom => adresseDe.get(nom)).join('; '),
     adresseParNom: Object.fromEntries(avecAdresse.map(nom => [nom, adresseDe.get(nom)])),
   };
 
   const suiviSaisieBody = document.getElementById('suivi-saisie-body');
   if (!suiviSaisieBody) return;
-  suiviSaisieBody.innerHTML = !roster.length
-    ? `<div class="empty-state">Aucun conseiller dans le roster — à renseigner dans l'onglet Centre d'affaires.</div>`
-    : nonRemplis.length
-      ? nonRemplis.map(nom => `
+  if (!roster.length) {
+    suiviSaisieBody.innerHTML = `<div class="empty-state">Aucun conseiller dans le roster — à renseigner dans l'onglet Centre d'affaires.</div>`;
+    return;
+  }
+
+  const jour = new Date().getDay();
+  const onglets = `
+    <div class="relance-onglets" role="group" aria-label="Type de relance">
+      <button class="btn${type === 'semaine' ? ' actif' : ''}" type="button" data-relance-type="semaine" aria-pressed="${type === 'semaine'}">Semaine non remplie (${nonRemplis.length})</button>
+      <button class="btn${type === 'realise' ? ' actif' : ''}" type="button" data-relance-type="realise" aria-pressed="${type === 'realise'}">Réalisé non rempli (${sansRealise.length})</button>
+    </div>
+    ${type === 'realise' ? `<div class="relance-note">Bilan du mercredi : conseillers qui ont une ligne pour cette semaine mais n'ont rien saisi dans « Réalisé » ni répondu à « Comment évalues-tu ta semaine ? ». Ceux sans aucune ligne sont dans « Semaine non remplie ».${[3, 4, 5].includes(jour) ? '' : ' Le réalisé se remplit en fin de semaine : relance plutôt le mercredi soir.'}</div>` : ''}`;
+
+  const pastille = type === 'realise' ? 'Réalisé non rempli' : 'Pas encore rempli';
+  const vide = type === 'realise'
+    ? `${ic('checkcircle', 13)} Tous les bilans de la semaine sont remplis.`
+    : `${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.`;
+
+  suiviSaisieBody.innerHTML = onglets + (concernes.length
+      ? concernes.map(nom => `
         <div class="watch-row-item">
           <div class="watch-name">${esc(nom)}</div>
           <div class="watch-actions">
             ${avecAdresse.includes(nom)
               ? `<button class="lien-bouton${relancesFaites.has(cleRelance(nom)) ? ' fait' : ''}" type="button" data-teams="${esc(nom)}" title="Ouvre une conversation Teams avec ${esc(nom)}, message prérempli">${relancesFaites.has(cleRelance(nom)) ? 'Teams ✓' : 'Teams'}</button>`
               : '<span class="watch-sub">pas d’adresse</span>'}
-            <span class="pill pill-prioritaire">Pas encore rempli</span>
+            <span class="pill pill-prioritaire">${pastille}</span>
           </div>
         </div>`).join('') + `
         <div class="relance-actions">
@@ -2702,11 +2750,13 @@ function renderSuiviSaisie(toutesLignes) {
               ? `${sansAdresse.length} sans adresse e-mail, non incluse${sansAdresse.length > 1 ? 's' : ''} : ${sansAdresse.map(esc).join(', ')}. Avant d’envoyer, vérifie que les adresses sont bien dans « Cci » (copie cachée) : sinon tout le monde voit les adresses des autres.`
               : 'Avant d’envoyer, vérifie que les adresses sont bien dans « Cci » (copie cachée) : sinon tout le monde voit les adresses des autres.'
         }</div>`
-      : `<div class="empty-state">${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.</div>`;
+      : `<div class="empty-state">${vide}</div>`);
 }
 
 // Les boutons sont recréés à chaque mise à jour : on écoute donc le conteneur, qui, lui, ne change pas.
 document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
+  const onglet = e.target.closest('[data-relance-type]');
+  if (onglet) { typeRelance = onglet.dataset.relanceType; renderAll(); return; }
   const teams = e.target.closest('[data-teams]');
   if (teams) { ouvrirTeamsRelance([teams.dataset.teams], teams); return; }
   const bouton = e.target.closest('[data-relance]');
