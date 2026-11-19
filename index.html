@@ -251,6 +251,15 @@
   .topbar-left { display: flex; align-items: center; gap: 12px; }
 
   .topbar-filtres { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* Les filtres ne s'affichent que là où ils servent : « tous » (période + équipe), « equipe » (équipe seulement), « aucun ». */
+  .topbar[data-portee="equipe"] #filtre-semaine, .topbar[data-portee="equipe"] #filtre-mois { display: none; }
+  .topbar[data-portee="aucun"] .topbar-filtres, .topbar[data-portee="aucun"] .btn-filtres { display: none !important; }
+  .btn-filtres {
+    display: none; margin-left: auto; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    color: var(--nav-text); background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 8px; padding: 6px 12px;
+  }
+  .btn-filtres:hover { background: rgba(255, 255, 255, 0.18); }
 
   .topbar-select {
     font: inherit;
@@ -378,6 +387,10 @@
   }
   .btn:hover { background: var(--cream-hover); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .aide-saisie { margin: 0 0 14px; }
+  .aide-saisie summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--heading-2); width: fit-content; }
+  .aide-saisie summary:hover { color: var(--heading); }
+  .aide-saisie .field-hint { font-size: 12.5px; line-height: 1.6; margin-top: 8px; max-width: 900px; }
   .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   #bloc-rattachement { margin-top: 26px; }
   .rattachement-resume { font-size: 13px; line-height: 1.55; }
@@ -425,6 +438,13 @@
   .entry-table input.champ-calcule { font-weight: 700; cursor: default; user-select: none; }
   .entry-table input[type="text"] { min-width: 100px; }
   .entry-table input[type="date"] { min-width: 132px; }
+  .entry-table input[data-field="conseiller"] { min-width: 190px; }
+
+  /* « Ma semaine » : Semaine et Conseiller restent visibles quand on fait défiler le tableau (19 colonnes) vers la droite. */
+  .entry-table:not(.mode-fiche) .col-semaine { position: sticky; left: 0; z-index: 2; width: 150px; min-width: 150px; max-width: 150px; }
+  .entry-table:not(.mode-fiche) .col-conseiller { position: sticky; left: 150px; z-index: 2; min-width: 200px; box-shadow: 5px 0 6px -4px rgba(21, 42, 73, 0.3); }
+  .entry-table:not(.mode-fiche) th.col-semaine, .entry-table:not(.mode-fiche) th.col-conseiller { z-index: 4; }
+  .entry-table:not(.mode-fiche) th { z-index: 3; }
   .entry-table td.actions { width: 34px; }
 
   /* "Ma semaine" (table non repliée en fiche) : masque les semaines qui ne
@@ -464,6 +484,11 @@
     vertical-align: top;
   }
   .cell-erreurs .erreurs-titre { font-weight: 700; margin-bottom: 2px; }
+  /* En tableau, le détail passe dans l'infobulle (la bannière du dessus le donne aussi) : sinon une ligne en erreur devient très haute. */
+  .entry-table:not(.mode-fiche) td.cell-erreurs { min-width: 150px; max-width: 190px; }
+  .entry-table:not(.mode-fiche) .cell-erreurs .erreurs-ligne { display: none; }
+  .entry-table:not(.mode-fiche) .cell-erreurs .erreurs-titre { margin: 0; cursor: help; }
+  .mode-fiche .cell-erreurs .erreurs-titre::after { content: ' :'; }
   .cell-erreurs .erreurs-ligne + .erreurs-ligne { margin-top: 2px; }
 
   /* Récapitulatif des erreurs au-dessus du tableau "Ma semaine" : la colonne « Contrôle » est tout à droite
@@ -1215,6 +1240,13 @@
   }
 
   .alerte-card.has-items { border-color: var(--coral); }
+  .alerte-card.has-items.moyen { border-color: var(--warning); }
+  .alertes-bascule { display: flex; gap: 6px; margin-bottom: 16px; }
+  .alertes-bascule .btn.actif { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .alerte-compteur { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--heading-2); }
+  .alerte-ligne { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 12.5px; line-height: 1.45; }
+  .alerte-ico { flex: 0 0 auto; margin-top: 1px; color: var(--heading-2); }
+  .alerte-ligne:first-of-type { border-top: none; }
 
   .locked-hint { font-size: 10.5px; color: var(--heading-2); margin-top: 8px; }
 
@@ -1224,7 +1256,11 @@
     .leaderboard-split { grid-template-columns: 1fr; gap: 12px 0; }
     .leaderboard-split table:first-child { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
     .conseiller-layout { grid-template-columns: 1fr; }
-    .topbar { flex-direction: column; align-items: flex-start; }
+    .topbar { flex-direction: column; align-items: stretch; }
+    .topbar-left { width: 100%; }
+    .btn-filtres { display: inline-flex; }
+    .topbar-filtres { display: none; width: 100%; }
+    .topbar.filtres-ouverts .topbar-filtres { display: flex; }
 
     .menu-toggle { display: flex; }
 
@@ -1235,10 +1271,10 @@
       bottom: 0;
       z-index: 200;
       transform: translateX(-100%);
-      transition: transform 0.25s ease;
-      box-shadow: 4px 0 24px rgba(10, 12, 38, 0.35);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
-    .sidebar.open { transform: translateX(0); }
+    /* L'ombre n'existe que tiroir ouvert : fermé, elle débordait en bande grise sur le bord gauche de l'écran. */
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(10, 12, 38, 0.35); }
   }
 
   @media (max-width: 480px) {
@@ -1314,12 +1350,13 @@
   </aside>
 
   <div class="main">
-    <div class="topbar">
+    <div class="topbar" data-portee="tous">
       <div class="topbar-left">
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Menu">☰</button>
         <span id="topbar-title">Dashboard</span>
+        <button class="btn-filtres" id="btn-filtres" type="button" aria-expanded="false" aria-controls="topbar-filtres">Filtres</button>
       </div>
-      <div class="topbar-filtres">
+      <div class="topbar-filtres" id="topbar-filtres">
         <select class="topbar-select" id="filtre-semaine" title="Filtrer par semaine"><option value="">Toutes les semaines</option></select>
         <select class="topbar-select" id="filtre-mois" title="Filtrer par bloc mensuel"><option value="">Tous les mois</option></select>
         <select class="topbar-select" id="filtre-rt" title="Filtrer par RT" style="display:none;"><option value="">Tous les centres</option></select>
@@ -1394,6 +1431,13 @@
           </label>
         </div>
 
+        <details class="aide-saisie">
+          <summary>Comment remplir ce tableau ?</summary>
+          <div class="field-hint">
+          Semaine : choisis dans le calendrier le jeudi qui ouvre la semaine (ex. 27/08/2026) ; une autre date est ramenée au jeudi précédent. RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Centre d'affaires — un champ en rouge signale un nom qui ne correspond à personne du roster. RDV posés (= R1 + R2 + Suivis) et RDV vus (= R1 vus + R2 vus + Suivi fait) se calculent tout seuls : tu n'as rien à y saisir. Un champ en rouge signale un écart : RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
+          </div>
+        </details>
+
         <div class="saisie-erreurs" id="saisie-erreurs" style="display:none;" role="alert"></div>
 
         <div id="saisie-table-slot">
@@ -1401,8 +1445,8 @@
             <table class="entry-table">
               <thead>
                 <tr>
-                  <th>Semaine</th>
-                  <th>Conseiller</th>
+                  <th class="col-semaine">Semaine</th>
+                  <th class="col-conseiller">Conseiller</th>
                   <th>RDV posés</th>
                   <th>Visio</th>
                   <th>R1</th>
@@ -1427,9 +1471,6 @@
           </div>
         </div>
 
-        <div class="field-hint">
-          Semaine : choisis dans le calendrier le jeudi qui ouvre la semaine (ex. 27/08/2026) ; une autre date est ramenée au jeudi précédent. RDV/Visio/R1/R2/Suivis/Potentiel = prévu du jeudi (Suivis = RDV suivis client prévus). RDV vus → Recos = bilan du mercredi, à remplir une fois la semaine terminée. Conseiller : tape ton nom, les suggestions viennent du roster Centre d'affaires — un champ en rouge signale un nom qui ne correspond à personne du roster. RDV posés (= R1 + R2 + Suivis) et RDV vus (= R1 vus + R2 vus + Suivi fait) se calculent tout seuls : tu n'as rien à y saisir. Un champ en rouge signale un écart : RDV vus / R1 en R2 / R2 signés ne peuvent pas dépasser respectivement RDV posés / R1 vus / R2 vus.
-        </div>
       </div>
 
       <!-- ============================================= MA FICHE ============================================= -->
@@ -1458,7 +1499,7 @@
       <!-- ============================================= ORGANISATION ============================================= -->
       <div class="view" id="view-organisation">
         <div class="page-title">Organisation</div>
-        <div class="page-sub">Les centres d'affaires par RT et SA. L'administrateur glisse un conseiller d'un centre d'affaires à l'autre pour le réaffecter ; les filtres RT / SA en haut de page s'appliquent ensuite à tous les écrans.</div>
+        <div class="page-sub">Les centres d'affaires par RT et SA. L'administrateur glisse un conseiller d'un centre d'affaires à l'autre pour le réaffecter ; les filtres RT / SA du bandeau, sur les écrans d'analyse, s'appliquent ensuite aux statistiques.</div>
         <hr class="rule">
         <div class="org-outils" id="org-outils">
           <button class="btn btn-primary" id="btn-org-ajouter-rt" type="button">+ Ajouter un RT</button>
@@ -1556,11 +1597,9 @@
         <div class="page-sub">Vue analytique du centre d'affaires : pipeline, répartition des niveaux et top recommandations.</div>
         <hr class="rule">
 
-        <div class="section-label">Indicateurs clés (centre d'affaires)</div>
         <div class="card" id="stats-pipeline"></div>
 
-        <div class="section-label">Évolution des taux clés (centre d'affaires)</div>
-        <div class="card" id="stats-evolution"></div>
+        <div class="card" id="stats-evolution" style="margin-top:16px;"></div>
 
         <div class="section-label">Vue d'ensemble</div>
         <div class="watch-row">
@@ -1577,8 +1616,7 @@
         <div class="section-label">Ambitions vs Réalisé (centre d'affaires)</div>
         <div id="stats-objectifs"></div>
 
-        <div class="section-label">Indicateur global de Performance ID</div>
-        <div class="card" id="stats-indicateur-global"></div>
+        <div class="card" id="stats-indicateur-global" style="margin-top:16px;"></div>
 
         <div class="section-label">Moyennes avancées</div>
         <div class="kpi-grid" id="stats-moyennes"></div>
@@ -1589,6 +1627,10 @@
         <div class="page-title">Alertes</div>
         <div class="page-sub" id="alertes-sub"></div>
         <hr class="rule">
+        <div class="alertes-bascule" role="group" aria-label="Regrouper les alertes">
+          <button type="button" class="btn actif" data-alertes-vue="conseiller" aria-pressed="true">Par conseiller</button>
+          <button type="button" class="btn" data-alertes-vue="indicateur" aria-pressed="false">Par indicateur</button>
+        </div>
         <div id="alertes-body"></div>
         <div class="field-hint">Ressenti et Accompagnement viennent de la dernière semaine connue de chaque conseiller (comme le bilan du mercredi) — remplis via l'onglet "Ma fiche".</div>
       </div>
@@ -2374,7 +2416,7 @@ function populerFiltresSemaineEtMois(rows) {
   const selSemaine = document.getElementById('filtre-semaine');
   const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
   const valeurSemaine = selSemaine.value;
-  selSemaine.innerHTML = '<option value="">Toutes les semaines</option>' + semaines.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  selSemaine.innerHTML = '<option value="">Toutes les semaines</option>' + semaines.map(s => `<option value="${esc(s)}">${esc(dateISOReelle(s) ? `Semaine du ${libelleDateCourte(s)} ${s.slice(0, 4)}` : s)}</option>`).join('');
   if (!filtreSemaineManuel && semaines.length) {
     selSemaine.value = semaineParDefaut(rows);   // suit l'avancement du réalisé tant que l'utilisateur n'a pas choisi
   } else if (semaines.includes(valeurSemaine)) {
@@ -2476,6 +2518,7 @@ function renderAll() {
   renderAlertes(rows);
   renderParametres();
   if (modeFicheActif) renderMaFiche();
+  majBoutonFiltres();
 }
 
 function renderParametres() {
@@ -2719,7 +2762,7 @@ function gaugeChartSVG(valeur, maximum = 100) {
 
 /** Plusieurs séries 0-100 % partageant le même axe X (mois) — reprend MultiLineChart.paintEvent() + build_legende(). */
 function multiLineChartSVG(labelsX, series) {
-  if (!labelsX.length) return `<div class="empty-state">Pas encore assez d'historique pour une évolution mensuelle.</div>`;
+  if (labelsX.length < 2) return `<div class="empty-state">Pas encore assez d'historique : la courbe apparaît dès que deux blocs mensuels sont saisis.</div>`;
   const w = 760, h = 240;
   const zoneL = 34, zoneR = w - 16, zoneT = 14, zoneB = h - 26;
   const zoneW = zoneR - zoneL, zoneH = zoneB - zoneT;
@@ -3207,37 +3250,41 @@ function renderStatistiques(rows) {
    ALERTES
    ========================================================= */
 
+/** Regroupement des alertes : par conseiller (défaut, lisible d'un coup d'œil) ou par indicateur. */
+let alertesParConseiller = true;
+
 function renderAlertes(rows) {
   const classement = classementDe(rows);
+  const toutes = readRows();
 
+  // Chaque alerte : { conseiller, detail (texte brut), grave }. « grave » = situation à traiter en priorité.
   const categories = [
-    { ic: 'alerttriangle', titre: 'Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => `${esc(c.conseiller)} — ${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})`) },
-    { ic: 'rotate', titre: 'Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${esc(c.conseiller)} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (ambition ${OBJECTIFS.r1_r2 * 100} %)`) },
-    { ic: 'pen', titre: 'Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${esc(c.conseiller)} — ${(c.taux_signature * 100).toFixed(1)} % (ambition ${OBJECTIFS.signature * 100} %)`) },
-    { ic: 'coins', titre: 'Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${esc(c.conseiller)} — ${(c.taux_concretisation * 100).toFixed(1)} % (ambition ${OBJECTIFS.concretisation * 100} %)`) },
+    { ic: 'alerttriangle', titre: 'Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => ({ conseiller: c.conseiller, grave: true, detail: `${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})` })) },
+    { ic: 'rotate', titre: 'Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => ({ conseiller: c.conseiller, detail: `${(c.taux_r1_r2 * 100).toFixed(1)} % (ambition ${OBJECTIFS.r1_r2 * 100} %)` })) },
+    { ic: 'pen', titre: 'Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => ({ conseiller: c.conseiller, detail: `${(c.taux_signature * 100).toFixed(1)} % (ambition ${OBJECTIFS.signature * 100} %)` })) },
+    { ic: 'coins', titre: 'Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => ({ conseiller: c.conseiller, detail: `${(c.taux_concretisation * 100).toFixed(1)} % (ambition ${OBJECTIFS.concretisation * 100} %)` })) },
     // Objectif hebdomadaire fixe : ramené à une moyenne par semaine (propre
     // à chaque conseiller) pour rester comparable sur une période de
     // plusieurs semaines — sinon un total qui s'additionne semble toujours
     // "en dessous" ou "au dessus" indépendamment de la vraie performance.
-    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => (c.recommandations / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.recommandations).map(c => `${esc(c.conseiller)} — ${(c.recommandations / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.recommandations})`) },
-    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => (c.rdv_poses / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.rdv).map(c => `${esc(c.conseiller)} — ${(c.rdv_poses / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.rdv})`) },
+    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => (c.recommandations / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.recommandations).map(c => ({ conseiller: c.conseiller, detail: `${(c.recommandations / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.recommandations})` })) },
+    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => (c.rdv_poses / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.rdv).map(c => ({ conseiller: c.conseiller, detail: `${(c.rdv_poses / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.rdv})` })) },
     { ic: 'trending', titre: 'Absence de progression (semaine sur semaine)', items: (() => {
         const out = [];
         for (const c of classement) {
-          const hist = historiqueDe(readRows(), c.conseiller);
+          const hist = historiqueDe(toutes, c.conseiller);
           if (hist.length < 2) continue;
           const delta = Math.round((hist[hist.length - 1].performance - hist[hist.length - 2].performance) * 10) / 10;
-          if (delta <= 0) out.push(`${esc(c.conseiller)} — ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente`);
+          if (delta <= 0) out.push({ conseiller: c.conseiller, detail: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente` });
         }
         return out;
       })() },
     { ic: 'usercheck', titre: 'Besoin d\'accompagnement déclaré', items: (() => {
         const out = [];
         for (const c of classement) {
-          const derniere = derniereLigneDe(readRows(), c.conseiller);
+          const derniere = derniereLigneDe(toutes, c.conseiller);
           if (derniere && derniere.accompagnement.length) {
-            const urgent = derniere.accompagnement.includes('Urgent');
-            out.push(`${urgent ? ic('priority', 12) + ' ' : ''}${esc(c.conseiller)} — ${esc(derniere.accompagnement.join(', '))}`);
+            out.push({ conseiller: c.conseiller, grave: derniere.accompagnement.includes('Urgent'), detail: derniere.accompagnement.join(', ') });
           }
         }
         return out;
@@ -3245,9 +3292,9 @@ function renderAlertes(rows) {
     { ic: 'usercheck', titre: 'Ressenti bas sur la semaine', items: (() => {
         const out = [];
         for (const c of classement) {
-          const derniere = derniereLigneDe(readRows(), c.conseiller);
+          const derniere = derniereLigneDe(toutes, c.conseiller);
           if (derniere && derniere.ressenti && RESSENTI_SEUIL_ALERTE.has(derniere.ressenti)) {
-            out.push(`${esc(c.conseiller)} — ${esc(derniere.ressenti)}`);
+            out.push({ conseiller: c.conseiller, grave: true, detail: derniere.ressenti });
           }
         }
         return out;
@@ -3259,14 +3306,50 @@ function renderAlertes(rows) {
     ? 'Aucune alerte active — tout va bien.'
     : `${total} alerte(s) active(s) sur le centre d'affaires, détectées automatiquement par rapport aux ambitions.`;
 
-  document.getElementById('alertes-body').innerHTML = categories.map(cat => `
-    <div class="card alerte-card ${cat.items.length ? 'has-items' : ''}" style="margin-bottom:14px;">
-      <div class="card-title">${ic(cat.ic, 15)}<span>${cat.titre} — ${cat.items.length} alerte(s)</span></div>
-      ${cat.items.length
-        ? cat.items.map(t => `<div class="watch-sub" style="padding:4px 0;">${t}</div>`).join('')
-        : `<div class="watch-sub" style="color:var(--success-text);">${ic('checkcircle', 13)} Aucune alerte sur cet indicateur.</div>`}
-    </div>`).join('');
+  for (const bouton of document.querySelectorAll('[data-alertes-vue]')) {
+    const actif = (bouton.dataset.alertesVue === 'conseiller') === alertesParConseiller;
+    bouton.classList.toggle('actif', actif);
+    bouton.setAttribute('aria-pressed', String(actif));
+  }
+
+  const ligne = (e, avecConseiller) => `
+    <div class="alerte-ligne">
+      <span class="alerte-ico">${ic(e.grave ? 'priority' : e.ic, 13)}</span>
+      <span><strong>${esc(avecConseiller ? e.conseiller : e.cat)}</strong> — ${esc(e.detail)}</span>
+    </div>`;
+
+  let html;
+  if (total === 0) {
+    html = `<div class="card alerte-card"><div class="watch-sub" style="color:var(--success-text);">${ic('checkcircle', 13)} Aucune alerte active.</div></div>`;
+  } else if (alertesParConseiller) {
+    const parConseiller = new Map();
+    for (const cat of categories) for (const it of cat.items) {
+      const liste = parConseiller.get(it.conseiller) || [];
+      liste.push({ ...it, ic: cat.ic, cat: cat.titre });
+      parConseiller.set(it.conseiller, liste);
+    }
+    html = [...parConseiller].map(([nom, liste]) => ({ nom, liste, graves: liste.filter(e => e.grave).length }))
+      .sort((a, b) => b.graves - a.graves || b.liste.length - a.liste.length || a.nom.localeCompare(b.nom, 'fr'))
+      .map(({ nom, liste, graves }) => `
+        <div class="card alerte-card has-items ${graves ? 'grave' : 'moyen'}" style="margin-bottom:12px;">
+          <div class="card-title"><span>${esc(nom)}</span><span class="alerte-compteur">${liste.length} alerte${liste.length > 1 ? 's' : ''}${graves ? ` · ${graves} prioritaire${graves > 1 ? 's' : ''}` : ''}</span></div>
+          ${liste.sort((a, b) => (b.grave ? 1 : 0) - (a.grave ? 1 : 0)).map(e => ligne({ ...e, conseiller: e.cat }, false)).join('')}
+        </div>`).join('');
+  } else {
+    html = categories.map(cat => `
+      <div class="card alerte-card ${cat.items.length ? 'has-items' : ''}" style="margin-bottom:14px;">
+        <div class="card-title">${ic(cat.ic, 15)}<span>${cat.titre} — ${cat.items.length} alerte(s)</span></div>
+        ${cat.items.length
+          ? cat.items.map(it => ligne({ ...it, ic: cat.ic, cat: cat.titre }, true)).join('')
+          : `<div class="watch-sub" style="color:var(--success-text);">${ic('checkcircle', 13)} Aucune alerte sur cet indicateur.</div>`}
+      </div>`).join('');
+  }
+  document.getElementById('alertes-body').innerHTML = html;
 }
+
+document.querySelectorAll('[data-alertes-vue]').forEach(bouton => {
+  bouton.addEventListener('click', () => { alertesParConseiller = bouton.dataset.alertesVue === 'conseiller'; renderAll(); });
+});
 
 /* =========================================================
    SAISIE — construction des lignes depuis Firestore
@@ -3307,9 +3390,9 @@ function celluleChampValeur(f, valeur) {
     // Calendrier natif : la date s'affiche dans la langue du navigateur, .value reste AAAA-MM-JJ.
     // Une ancienne valeur qui n'est pas une vraie date reste en texte (un champ date l'effacerait) et sera signalée en rouge.
     const type = !valeur || dateISOReelle(valeur) ? 'date' : 'text';
-    return `<td data-label="${esc(label)}"><input type="${type}" data-field="semaine"${type === 'text' ? ' placeholder="2026-08-27"' : ''} value="${esc(valeur)}"></td>`;
+    return `<td class="col-semaine" data-label="${esc(label)}"><input type="${type}" data-field="semaine"${type === 'text' ? ' placeholder="2026-08-27"' : ''} value="${esc(valeur)}"></td>`;
   }
-  if (f === 'conseiller') return `<td data-label="${esc(label)}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${esc(valeur)}"></td>`;
+  if (f === 'conseiller') return `<td class="col-conseiller" data-label="${esc(label)}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${esc(valeur)}"></td>`;
   const composantes = TOTAUX_CALCULES[f];
   if (composantes) {
     const detail = composantes.map(c => LABELS_CHAMPS[c]).join(' + ');
@@ -3577,8 +3660,9 @@ function validerCoherenceRDV() {
       }
     };
 
-    if (erreurs.length) ajouterBloc('Non enregistré — à corriger :', erreurs.map(e => e.message));
-    if (rappels.length) ajouterBloc('À compléter (n’empêche pas l’enregistrement) :', rappels);
+    if (erreurs.length) ajouterBloc('Non enregistré — à corriger', erreurs.map(e => e.message));
+    if (rappels.length) ajouterBloc('À compléter (n’empêche pas l’enregistrement)', rappels);
+    cellule.title = [...erreurs.map(e => e.message), ...rappels].join('\n');
     cellule.classList.toggle('a-erreurs', erreurs.length > 0);
     cellule.classList.toggle('a-rappel', erreurs.length === 0 && rappels.length > 0);
   }
@@ -6627,6 +6711,36 @@ const TITLES = {
   analyse: 'Analyse IA', parametres: 'Paramètres',
 };
 
+// Filtres du bandeau : utiles seulement sur les écrans d'analyse. Formation / Groupes n'utilisent que l'équipe et l'ancienneté.
+const PORTEE_FILTRES = {
+  dashboard: 'tous', classement: 'tous', conseillers: 'tous', statistiques: 'tous', alertes: 'tous', analyse: 'tous',
+  formation: 'equipe', groupes: 'equipe',
+};
+
+function majBoutonFiltres() {
+  const bouton = document.getElementById('btn-filtres');
+  const topbar = document.querySelector('.topbar');
+  if (!bouton || !topbar) return;
+  // Filtres réellement choisis et visibles (la semaine suit toute seule le réalisé tant qu'on n'a pas choisi : elle ne compte pas).
+  const nb = [...document.querySelectorAll('.topbar-filtres select')].filter(sel =>
+    sel.value && getComputedStyle(sel).display !== 'none' && !(sel.id === 'filtre-semaine' && !filtreSemaineManuel)).length;
+  bouton.textContent = nb ? `Filtres (${nb})` : 'Filtres';
+}
+
+function majPorteeFiltres(vue) {
+  const topbar = document.querySelector('.topbar');
+  topbar.dataset.portee = PORTEE_FILTRES[vue] || 'aucun';
+  topbar.classList.remove('filtres-ouverts');
+  document.getElementById('btn-filtres').setAttribute('aria-expanded', 'false');
+  majBoutonFiltres();
+}
+
+document.getElementById('btn-filtres').addEventListener('click', () => {
+  const topbar = document.querySelector('.topbar');
+  const ouvert = topbar.classList.toggle('filtres-ouverts');
+  document.getElementById('btn-filtres').setAttribute('aria-expanded', String(ouvert));
+});
+
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -6634,6 +6748,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
     document.getElementById('topbar-title').textContent = TITLES[btn.dataset.view];
+    majPorteeFiltres(btn.dataset.view);
 
     if (btn.dataset.view === 'analyse') {
       const noms = readRoster().map(r => r.conseiller);
