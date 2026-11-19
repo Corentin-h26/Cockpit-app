@@ -4167,6 +4167,14 @@ function distanceEdition(a, b) {
   return d[a.length][b.length];
 }
 
+/** Ligne sans nom, sans aucun chiffre, sans ressenti ni accompagnement : rien à perdre en la supprimant. */
+function ligneEntierementVide(tr) {
+  return !tr.querySelector('[data-field="conseiller"]')?.value.trim()
+    && NUM_FIELDS.every(f => !(parseFloat(tr.querySelector(`[data-field="${f}"]`)?.value) || 0))
+    && !lireRessenti(tr)
+    && !lireAccompagnement(tr).length;
+}
+
 /**
  * Classe chaque saisie : déjà rattachée / rattachable automatiquement (nom exact, ou même nom à l'ordre, aux accents
  * et aux majuscules près, quand un seul conseiller correspond) / nom inconnu (regroupé par nom, avec une suggestion).
@@ -4197,13 +4205,14 @@ function analyserRattachement() {
 
     const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
     const chiffre = champ => parseFloat(tr.querySelector(`[data-field="${champ}"]`)?.value) || 0;
-    const groupe = inconnus.get(nom) || { nom, docIds: [], semaines: [], comptes: [], rdvPoses: 0, commissions: 0 };
+    const groupe = inconnus.get(nom) || { nom, docIds: [], semaines: [], comptes: [], rdvPoses: 0, commissions: 0, vides: 0 };
     groupe.docIds.push(docId);
     if (semaine) groupe.semaines.push(semaine);
     // Qui a créé ces saisies, et ce qu'elles contiennent : de quoi reconnaître de qui il s'agit.
     const compte = tr.dataset.ownerEmail || '';
     if (compte && !groupe.comptes.includes(compte)) groupe.comptes.push(compte);
     groupe.rdvPoses += chiffre('rdv_poses');
+    if (ligneEntierementVide(tr)) groupe.vides++;
     groupe.commissions += chiffre('commissions');
     inconnus.set(nom, groupe);
   }
@@ -4269,7 +4278,7 @@ function renderRattachement() {
   if (carte.contains(document.activeElement)) return;   // jamais reconstruire pendant qu'on choisit dans une liste
 
   const analyse = analyserRattachement();
-  const signature = JSON.stringify([analyse.nbLiees, analyse.auto.length, analyse.groupes.map(g => [g.nom, g.docIds.length, g.suggestion, g.comptes, g.rdvPoses, g.commissions]), analyse.roster.map(r => r.id + r.conseiller)]);
+  const signature = JSON.stringify([analyse.nbLiees, analyse.auto.length, analyse.groupes.map(g => [g.nom, g.docIds.length, g.suggestion, g.comptes, g.rdvPoses, g.commissions, g.vides]), analyse.roster.map(r => r.id + r.conseiller)]);
   if (signature === signatureRattachement) return;
   signatureRattachement = signature;
 
@@ -4305,6 +4314,12 @@ function renderRattachement() {
     const bouton = document.createElement('button');
     bouton.type = 'button'; bouton.className = 'btn'; bouton.dataset.rattacher = '1'; bouton.dataset.nom = g.nom; bouton.textContent = 'Rattacher';
     bloc.append(nom, detail, origine, choix, bouton);
+    if (g.nom === '' && g.vides === g.docIds.length) {
+      const supprimer = document.createElement('button');
+      supprimer.type = 'button'; supprimer.className = 'btn btn-danger'; supprimer.dataset.supprimerVides = '1';
+      supprimer.textContent = `Supprimer ces ${pluriel(g.docIds.length, 'saisie')} vide${g.docIds.length > 1 ? 's' : ''}`;
+      bloc.append(supprimer);
+    }
     liste.append(bloc);
   });
 
@@ -4350,6 +4365,33 @@ document.getElementById('card-rattachement').addEventListener('click', async (e)
   }
 
   const analyse = analyserRattachement();
+
+  if (bouton.dataset.supprimerVides) {
+    const groupe = analyse.groupes.find(g => g.nom === '');
+    // Garde-fou : on ne supprime que si TOUTES les saisies du groupe sont encore entièrement vides.
+    if (!groupe || groupe.vides !== groupe.docIds.length) { alert('Ces saisies ont changé : vérifie la carte avant de supprimer.'); return; }
+    const n = groupe.docIds.length;
+    if (!confirm(`Supprimer définitivement ${n} saisie${n > 1 ? 's' : ''} entièrement vide${n > 1 ? 's' : ''} (aucun nom, aucun chiffre) ?\n\nIl n'y a aucune donnée à perdre. Une sauvegarde (fichier JSON) est téléchargée avant la première modification.`)) return;
+    bouton.disabled = true;
+    try {
+      if (!(await sauvegarderAvantRattachement())) return;
+      for (let i = 0; i < groupe.docIds.length; i += 400) {
+        const lot = db.batch();
+        groupe.docIds.slice(i, i + 400).forEach(id => lot.delete(db.collection('cockpit_semaines').doc(id)));
+        await lot.commit();
+      }
+      signatureRattachement = '';
+      alert(`${n} saisie${n > 1 ? 's' : ''} vide${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''}.`);
+    } catch (err) {
+      console.error('Suppression des saisies vides', err);
+      alert('Suppression impossible : ' + err.message);
+    } finally {
+      bouton.disabled = false;
+      bouton.blur();
+    }
+    return;
+  }
+
   let affectations = [];
   let phrase = '';
   if (bouton.dataset.rattacherAuto) {
