@@ -2100,6 +2100,14 @@ const ICONS = {
   barchart: '<rect x="4" y="12" width="4" height="8" rx="1" fill="currentColor" opacity="0.55"/><rect x="10" y="7" width="4" height="13" rx="1" fill="currentColor"/><rect x="16" y="3" width="4" height="17" rx="1" fill="currentColor" opacity="0.8"/>',
   compare: '<rect x="3" y="4" width="8" height="16" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="13" y="4" width="8" height="16" rx="1.5" fill="currentColor"/>',
 };
+/**
+ * Échappe une valeur avant de l'insérer dans du HTML (contenu OU attribut entre guillemets).
+ * À utiliser sur TOUTE donnée venant de Firestore ou d'un champ de saisie (noms, semaines, e-mails…) :
+ * n'importe quel compte @capfinances.fr peut écrire dans ses propres lignes, donc ces valeurs ne sont pas sûres.
+ */
+function esc(valeur) {
+  return String(valeur ?? '').replace(/[&<>"'`]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
+}
 function icon(name) { return `<svg viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
 /** Icône fine en ligne, dimensionnée sur le texte environnant (couleur héritée via currentColor) — pour remplacer les emoji dans les titres, la nav, les alertes... */
 function ic(name, size = 14) { return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="vertical-align:-2px;flex:0 0 auto;">${ICONS[name]}</svg>`; }
@@ -2221,7 +2229,7 @@ function populerFiltresSemaineEtMois(rows) {
   const selSemaine = document.getElementById('filtre-semaine');
   const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort();
   const valeurSemaine = selSemaine.value;
-  selSemaine.innerHTML = '<option value="">Toutes les semaines</option>' + semaines.map(s => `<option value="${s}">${s}</option>`).join('');
+  selSemaine.innerHTML = '<option value="">Toutes les semaines</option>' + semaines.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
   if (!filtreSemaineManuel && semaines.length) {
     selSemaine.value = semaineParDefaut(rows);   // suit l'avancement du réalisé tant que l'utilisateur n'a pas choisi
   } else if (semaines.includes(valeurSemaine)) {
@@ -2232,7 +2240,7 @@ function populerFiltresSemaineEtMois(rows) {
   const selMois = document.getElementById('filtre-mois');
   dernierBlocsMois = blocsSemaines(rows);
   const valeurMois = selMois.value;
-  selMois.innerHTML = '<option value="">Tous les mois</option>' + dernierBlocsMois.map((b, i) => `<option value="${i}">${b.libelle}</option>`).join('');
+  selMois.innerHTML = '<option value="">Tous les mois</option>' + dernierBlocsMois.map((b, i) => `<option value="${i}">${esc(b.libelle)}</option>`).join('');
   if (valeurMois !== '' && Number(valeurMois) < dernierBlocsMois.length) selMois.value = valeurMois;
 }
 
@@ -2355,13 +2363,13 @@ function renderDashboard(rows, toutesLignes) {
   const aAccompagner = classement.filter(c => c.performance < SEUILS.bon).slice(-3).reverse();
   const watchRows = aAccompagner.map(c => `
     <div class="watch-row-item">
-      <div><div class="watch-name">${c.conseiller}</div><div class="watch-sub">${c.performance.toFixed(1)} / 100</div></div>
+      <div><div class="watch-name">${esc(c.conseiller)}</div><div class="watch-sub">${c.performance.toFixed(1)} / 100</div></div>
       <span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span>
     </div>`).join('') || `<div class="empty-state">Personne en dessous du seuil actuellement.</div>`;
 
   const progression = meilleureProgression(toutesLignes);
   const progCard = progression
-    ? kpiCard({ ic: 'star', title: 'Plus forte progression', value: progression.conseiller, variation: `${progression.delta > 0 ? '+' : ''}${progression.delta.toFixed(1)} pts vs semaine précédente`, tone: progression.delta >= 0 ? 'positive' : 'negative' })
+    ? kpiCard({ ic: 'star', title: 'Plus forte progression', value: esc(progression.conseiller), variation: `${progression.delta > 0 ? '+' : ''}${progression.delta.toFixed(1)} pts vs semaine précédente`, tone: progression.delta >= 0 ? 'positive' : 'negative' })
     : kpiCard({ ic: 'star', title: 'Plus forte progression', value: '—', variation: 'Pas encore assez d’historique (2 semaines mini).' });
 
   document.getElementById('watch-row').innerHTML = `
@@ -2384,7 +2392,7 @@ function renderDashboard(rows, toutesLignes) {
       : nonRemplis.length
         ? nonRemplis.map(nom => `
           <div class="watch-row-item">
-            <div class="watch-name">${nom}</div>
+            <div class="watch-name">${esc(nom)}</div>
             <span class="pill pill-prioritaire">Pas encore rempli</span>
           </div>`).join('')
         : `<div class="empty-state">${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.</div>`;
@@ -2394,7 +2402,7 @@ function renderDashboard(rows, toutesLignes) {
   const ligneLeaderboard = (c, rang) => `
     <tr>
       <td class="num rank">${rang}</td>
-      <td>${c.conseiller}</td>
+      <td>${esc(c.conseiller)}</td>
       <td class="num">${c.performance.toFixed(1)}</td>
       <td><span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span></td>
     </tr>`;
@@ -2445,7 +2453,7 @@ function renderClassement(rows) {
   document.getElementById('classement-body').innerHTML = classement.length ? classement.map((c, i) => `
     <tr>
       <td class="num rank">${i + 1}</td>
-      <td>${c.conseiller}</td>
+      <td>${esc(c.conseiller)}</td>
       <td class="num">${c.rdv_poses}</td>
       <td class="num">${(c.taux_r1_r2 * 100).toFixed(0)} %</td>
       <td class="num">${(c.taux_signature * 100).toFixed(0)} %</td>
@@ -2498,7 +2506,7 @@ function svgEvolution(points) {
   // Note affichée au-dessus de chaque point — sans ça la courbe seule
   // (sans axe gradué) ne permettait pas de lire la valeur réelle.
   const valeurs = points.map((p, i) => `<text x="${xs[i].toFixed(1)}" y="${(ys[i] - 10).toFixed(1)}" font-size="11" font-weight="700" fill="var(--heading)" text-anchor="middle">${p.performance.toFixed(1)}</text>`).join('');
-  const labels = points.map((p, i) => `<text x="${xs[i].toFixed(1)}" y="${h - 4}" font-size="9" fill="var(--heading-2)" text-anchor="middle">${p.semaine}</text>`).join('');
+  const labels = points.map((p, i) => `<text x="${xs[i].toFixed(1)}" y="${h - 4}" font-size="9" fill="var(--heading-2)" text-anchor="middle">${esc(p.semaine)}</text>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;overflow:visible;">
     <path d="${aire}" fill="var(--gold)" opacity="0.12"/>
     <path d="${ligne}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>
@@ -2600,7 +2608,7 @@ function renderConseillers(rows) {
   if (!conseillerSelectionne && classement.length) conseillerSelectionne = classement[0].conseiller;
 
   document.getElementById('conseiller-list').innerHTML = classement.length
-    ? classement.map(c => `<button class="conseiller-item ${c.conseiller === conseillerSelectionne ? 'active' : ''}" data-nom="${c.conseiller}" type="button">${c.conseiller}</button>`).join('')
+    ? classement.map(c => `<button class="conseiller-item ${c.conseiller === conseillerSelectionne ? 'active' : ''}" data-nom="${esc(c.conseiller)}" type="button">${esc(c.conseiller)}</button>`).join('')
     : `<div class="empty-state">Aucun conseiller — remplis "Ma semaine".</div>`;
 
   document.querySelectorAll('.conseiller-item').forEach(btn => {
@@ -2609,7 +2617,7 @@ function renderConseillers(rows) {
 
   const selCompare = document.getElementById('conseiller-compare-qui');
   const valeurCompareActuelle = selCompare.value;
-  selCompare.innerHTML = '<option value="">-- choisir --</option>' + classement.map(c => `<option value="${c.conseiller}">${c.conseiller}</option>`).join('');
+  selCompare.innerHTML = '<option value="">-- choisir --</option>' + classement.map(c => `<option value="${esc(c.conseiller)}">${esc(c.conseiller)}</option>`).join('');
   if (classement.some(c => c.conseiller === valeurCompareActuelle)) selCompare.value = valeurCompareActuelle;
 
   renderComparaison(classement);
@@ -2694,7 +2702,7 @@ function renderConseillers(rows) {
     <div class="card" style="margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
-          <div style="font-size:20px;font-weight:700;">${conseillerSelectionne}</div>
+          <div style="font-size:20px;font-weight:700;">${esc(conseillerSelectionne)}</div>
           <div class="watch-sub">${mois !== null ? `${dureeMois(mois)} d'ancienneté` : "Ancienneté inconnue (à renseigner dans Centre d'affaires)"}</div>
         </div>
         <div style="display:flex;gap:22px;">
@@ -2783,7 +2791,7 @@ function renderComparaison(classement) {
   zone.innerHTML = `
     <div class="card-title">${ic('compare', 15)}<span>Comparaison</span></div>
     <div class="card"><table>
-      <thead><tr><th>Indicateur</th><th class="num">${a.conseiller}</th><th class="num">${b.conseiller}</th></tr></thead>
+      <thead><tr><th>Indicateur</th><th class="num">${esc(a.conseiller)}</th><th class="num">${esc(b.conseiller)}</th></tr></thead>
       <tbody>
         <tr>
           <td>Performance ID</td>
@@ -2993,7 +3001,7 @@ function renderStatistiques(rows) {
   const maxReco = Math.max(...topReco.map(c => c.recommandations), 1);
   document.getElementById('stats-top-reco').innerHTML = topReco.length ? topReco.map(c => `
     <div class="bar-cell" style="margin-bottom:8px;">
-      <div style="width:120px;font-size:12px;">${c.conseiller}</div>
+      <div style="width:120px;font-size:12px;">${esc(c.conseiller)}</div>
       <div class="bar-track"><div class="bar-fill ok" style="width:${(c.recommandations / maxReco) * 100}%"></div></div>
       <div class="bar-pct ok">${c.recommandations}</div>
     </div>`).join('') : `<div class="empty-state">Aucune recommandation enregistrée.</div>`;
@@ -3029,23 +3037,23 @@ function renderAlertes(rows) {
   const classement = classementDe(rows);
 
   const categories = [
-    { ic: 'alerttriangle', titre: 'Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => `${c.conseiller} — ${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})`) },
-    { ic: 'rotate', titre: 'Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${c.conseiller} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (ambition ${OBJECTIFS.r1_r2 * 100} %)`) },
-    { ic: 'pen', titre: 'Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${c.conseiller} — ${(c.taux_signature * 100).toFixed(1)} % (ambition ${OBJECTIFS.signature * 100} %)`) },
-    { ic: 'coins', titre: 'Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${c.conseiller} — ${(c.taux_concretisation * 100).toFixed(1)} % (ambition ${OBJECTIFS.concretisation * 100} %)`) },
+    { ic: 'alerttriangle', titre: 'Performance globale (< 60/100)', items: classement.filter(c => c.performance < SEUILS.progression).map(c => `${esc(c.conseiller)} — ${c.performance.toFixed(1)}/100 (${niveauDe(c.performance).texte})`) },
+    { ic: 'rotate', titre: 'Transformation R1 → R2', items: classement.filter(c => c.taux_r1_r2 < OBJECTIFS.r1_r2).map(c => `${esc(c.conseiller)} — ${(c.taux_r1_r2 * 100).toFixed(1)} % (ambition ${OBJECTIFS.r1_r2 * 100} %)`) },
+    { ic: 'pen', titre: 'Taux de signature', items: classement.filter(c => c.taux_signature < OBJECTIFS.signature).map(c => `${esc(c.conseiller)} — ${(c.taux_signature * 100).toFixed(1)} % (ambition ${OBJECTIFS.signature * 100} %)`) },
+    { ic: 'coins', titre: 'Concrétisation', items: classement.filter(c => c.taux_concretisation < OBJECTIFS.concretisation).map(c => `${esc(c.conseiller)} — ${(c.taux_concretisation * 100).toFixed(1)} % (ambition ${OBJECTIFS.concretisation * 100} %)`) },
     // Objectif hebdomadaire fixe : ramené à une moyenne par semaine (propre
     // à chaque conseiller) pour rester comparable sur une période de
     // plusieurs semaines — sinon un total qui s'additionne semble toujours
     // "en dessous" ou "au dessus" indépendamment de la vraie performance.
-    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => (c.recommandations / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.recommandations).map(c => `${c.conseiller} — ${(c.recommandations / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.recommandations})`) },
-    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => (c.rdv_poses / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.rdv).map(c => `${c.conseiller} — ${(c.rdv_poses / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.rdv})`) },
+    { ic: 'users', titre: 'Recommandations', items: classement.filter(c => (c.recommandations / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.recommandations).map(c => `${esc(c.conseiller)} — ${(c.recommandations / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.recommandations})`) },
+    { ic: 'calendarcheck', titre: 'RDV posés', items: classement.filter(c => (c.rdv_poses / nbSemainesDe(rows, c.conseiller)) < OBJECTIFS.rdv).map(c => `${esc(c.conseiller)} — ${(c.rdv_poses / nbSemainesDe(rows, c.conseiller)).toFixed(1)} (ambition ${OBJECTIFS.rdv})`) },
     { ic: 'trending', titre: 'Absence de progression (semaine sur semaine)', items: (() => {
         const out = [];
         for (const c of classement) {
           const hist = historiqueDe(readRows(), c.conseiller);
           if (hist.length < 2) continue;
           const delta = Math.round((hist[hist.length - 1].performance - hist[hist.length - 2].performance) * 10) / 10;
-          if (delta <= 0) out.push(`${c.conseiller} — ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente`);
+          if (delta <= 0) out.push(`${esc(c.conseiller)} — ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente`);
         }
         return out;
       })() },
@@ -3055,7 +3063,7 @@ function renderAlertes(rows) {
           const derniere = derniereLigneDe(readRows(), c.conseiller);
           if (derniere && derniere.accompagnement.length) {
             const urgent = derniere.accompagnement.includes('Urgent');
-            out.push(`${urgent ? ic('priority', 12) + ' ' : ''}${c.conseiller} — ${derniere.accompagnement.join(', ')}`);
+            out.push(`${urgent ? ic('priority', 12) + ' ' : ''}${esc(c.conseiller)} — ${esc(derniere.accompagnement.join(', '))}`);
           }
         }
         return out;
@@ -3065,7 +3073,7 @@ function renderAlertes(rows) {
         for (const c of classement) {
           const derniere = derniereLigneDe(readRows(), c.conseiller);
           if (derniere && derniere.ressenti && RESSENTI_SEUIL_ALERTE.has(derniere.ressenti)) {
-            out.push(`${c.conseiller} — ${derniere.ressenti}`);
+            out.push(`${esc(c.conseiller)} — ${esc(derniere.ressenti)}`);
           }
         }
         return out;
@@ -3103,9 +3111,9 @@ function jeudiCourant() {
 
 function celluleChampValeur(f, valeur) {
   const label = LABELS_CHAMPS[f];
-  if (f === 'semaine') return `<td data-label="${label}"><input type="text" data-field="semaine" placeholder="2026-08-27" value="${valeur ?? ''}"></td>`;
-  if (f === 'conseiller') return `<td data-label="${label}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${valeur ?? ''}"></td>`;
-  return `<td data-label="${label}"><input type="number" inputmode="decimal" data-field="${f}" value="${valeur ?? 0}"></td>`;
+  if (f === 'semaine') return `<td data-label="${esc(label)}"><input type="text" data-field="semaine" placeholder="2026-08-27" value="${esc(valeur)}"></td>`;
+  if (f === 'conseiller') return `<td data-label="${esc(label)}"><input type="text" data-field="conseiller" list="roster-datalist" placeholder="Nom Prénom" value="${esc(valeur)}"></td>`;
+  return `<td data-label="${esc(label)}"><input type="number" inputmode="decimal" data-field="${f}" value="${esc(valeur ?? 0)}"></td>`;
 }
 
 const CHAMPS_PREVU = ['rdv_poses', 'visio', 'r1', 'r2', 'suivis', 'potentiel'];
@@ -3122,10 +3130,10 @@ function construireLigneHTML(docId, data) {
   `).join('');
 
   const ressentiHTML = RESSENTI_OPTIONS.map(r => `
-    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${docId}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span>${r.emoji} ${r.valeur}</span></label>
+    <label class="fiche-radio"><input type="radio" data-field="ressenti" name="ressenti-${esc(docId)}" value="${r.valeur}" ${data.ressenti === r.valeur ? 'checked' : ''}><span>${r.emoji} ${r.valeur}</span></label>
   `).join('');
 
-  return `<tr data-doc-id="${docId}" data-owner-email="${data.ownerEmail || ''}">
+  return `<tr data-doc-id="${esc(docId)}" data-owner-email="${esc(data.ownerEmail)}">
     ${celluleChampValeur('semaine', data.semaine)}${celluleChampValeur('conseiller', data.conseiller)}
     <td class="fiche-section-titre fiche-section-titre--premier" data-titre="Prévu"></td>
     ${prevuHTML}
@@ -3396,7 +3404,7 @@ function afficherErreursSaisie(problemes) {
 
 function populerDatalistRoster() {
   const datalist = document.getElementById('roster-datalist');
-  datalist.innerHTML = readRoster().map(r => `<option value="${r.conseiller}"></option>`).join('');
+  datalist.innerHTML = readRoster().map(r => `<option value="${esc(r.conseiller)}"></option>`).join('');
 }
 
 /* ---- Écriture différée (debounce) vers Firestore, ligne par ligne ---- */
@@ -3444,7 +3452,14 @@ function scheduleRowWrite(tr) {
   clearTimeout(rowWriteTimers.get(docId));
   rowWriteTimers.set(docId, setTimeout(() => {
     writeRowNow(tr).catch(err => {
-      if (err.code !== 'incoherent') console.error('Écriture ligne échouée', err);
+      if (err.code === 'incoherent') return;
+      console.error('Écriture ligne échouée', err);
+      // Refus des règles Firestore (valeur hors limites…) : sans ce message, la saisie semblerait enregistrée alors qu'elle ne l'est pas.
+      if (err.code === 'permission-denied') {
+        const etat = document.getElementById('sync-label');
+        if (etat) etat.textContent = 'Enregistrement refusé : vérifie les valeurs saisies';
+        document.getElementById('sync-dot')?.classList.add('off');
+      }
     });
   }, 600));
 }
@@ -3512,7 +3527,7 @@ function renderMaFiche() {
   const selQui = document.getElementById('fiche-qui');
   const roster = readRoster();
   const valeurSouhaitee = selQui.value || sessionStorage.getItem('cockpit_qui') || '';
-  selQui.innerHTML = '<option value="">-- choisir --</option>' + roster.map(r => `<option value="${r.conseiller}">${r.conseiller}</option>`).join('');
+  selQui.innerHTML = '<option value="">-- choisir --</option>' + roster.map(r => `<option value="${esc(r.conseiller)}">${esc(r.conseiller)}</option>`).join('');
   if (roster.some(r => r.conseiller === valeurSouhaitee)) selQui.value = valeurSouhaitee;
 
   const qui = selQui.value;
@@ -3652,9 +3667,9 @@ document.getElementById('rows-body').addEventListener('input', (e) => {
    ========================================================= */
 
 function construireLigneRosterHTML(docId, data) {
-  return `<tr data-doc-id="${docId}">
-    <td><input type="text" data-field="r_conseiller" placeholder="Nom Prénom" value="${data.conseiller || ''}"></td>
-    <td><input type="date" data-field="r_date_entree" value="${data.date_entree || ''}"></td>
+  return `<tr data-doc-id="${esc(docId)}">
+    <td><input type="text" data-field="r_conseiller" placeholder="Nom Prénom" value="${esc(data.conseiller)}"></td>
+    <td><input type="date" data-field="r_date_entree" value="${esc(data.date_entree)}"></td>
     <td class="anc-duree"></td>
     <td class="anc-niveau"></td>
     <td class="actions"><button class="row-inverser" type="button" title="Inverser prénom et nom (met à jour les saisies et l’organisation)">⇄</button><button class="row-delete" type="button" title="Supprimer">✕</button></td>
