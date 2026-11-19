@@ -527,7 +527,61 @@
   .entry-table.mode-fiche tr:hover td[data-label] { background: var(--bg); }
   .entry-table.mode-fiche tr:hover td[data-label]:has(input[readonly]) { background: var(--cream); }
 
-  .fiche-section-titre, .fiche-groupe, .fiche-valider, .fiche-proprio { display: none; }
+  .fiche-section-titre, .fiche-groupe, .fiche-valider, .fiche-proprio, .fiche-resume { display: none; }
+
+  /* Semaines passées de "Ma fiche" : une ligne de résumé, la carte complète se déplie au clic. */
+  .mode-fiche .fiche-resume { display: none; }   /* sinon « .mode-fiche td { display: block } » en ferait une case vide de la grille */
+  .mode-fiche tr.fiche-passee .fiche-resume { display: block; grid-column: 1 / -1; }
+  .mode-fiche tr.fiche-repliee { padding: 0; gap: 0; }
+  .mode-fiche tr.fiche-repliee > td:not(.fiche-resume) { display: none; }
+  .mode-fiche tr.fiche-repliee:hover { border-color: var(--gold); }
+  .fiche-resume-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font: inherit;
+    color: var(--heading);
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    padding: 14px 18px;
+    cursor: pointer;
+  }
+  .fiche-resume-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .fiche-resume-titre { font-size: 13.5px; font-weight: 700; }
+  .fiche-resume-puces { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fiche-puce {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--heading-2);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+  .fiche-puce--vide { font-style: italic; font-weight: 500; }
+  .fiche-puce--erreur { color: var(--coral); border-color: var(--coral); background: rgba(239, 91, 110, 0.08); }
+  /* Chevron dessiné en CSS : → replié, ↓ déplié (piloté par aria-expanded). */
+  .fiche-resume-fleche { margin-left: auto; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--heading-2); }
+  .fiche-resume-fleche::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s;
+  }
+  .fiche-resume-btn[aria-expanded="true"] .fiche-resume-fleche::before { transform: rotate(45deg); }
+  .mode-fiche tr.fiche-passee:not(.fiche-repliee) .fiche-resume {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: -4px;
+  }
+  .mode-fiche tr.fiche-passee:not(.fiche-repliee) .fiche-resume-btn { padding: 0 0 8px; }
 
   .mode-fiche .fiche-section-titre {
     display: block;
@@ -3166,6 +3220,7 @@ function construireLigneHTML(docId, data) {
   `).join('');
 
   return `<tr data-doc-id="${esc(docId)}" data-owner-email="${esc(data.ownerEmail)}">
+    <td class="fiche-resume"></td>
     ${celluleChampValeur('semaine', data.semaine)}${celluleChampValeur('conseiller', data.conseiller)}
     <td class="fiche-section-titre fiche-section-titre--premier" data-titre="Prévu"></td>
     ${prevuHTML}
@@ -3519,6 +3574,52 @@ let modeFicheActif = false;
 let afficherHistoriqueSaisie = false;
 let afficherHistoriqueFiche = false;
 
+// Semaines passées de "Ma fiche" : repliées par défaut (résumé sur une ligne), dépliées au clic.
+// L'état est gardé ici car les lignes sont reconstruites à chaque mise à jour de la base.
+const fichesDeployees = new Set();
+
+function dateFinSemaineLibelle(semaine) {
+  const fin = ajouterJoursISO(semaine, 6);
+  return `${libelleDateCourte(fin)} ${fin.slice(0, 4)}`;
+}
+
+/** Ligne de résumé d'une semaine passée : dates, chiffres clés, ressenti, et « À corriger » si la ligne est incohérente. */
+function majResumeFiche(tr, ouverte) {
+  const cellule = tr.querySelector('.fiche-resume');
+  if (!cellule) return;
+  const val = f => parseFloat(tr.querySelector(`[data-field="${f}"]`)?.value) || 0;
+  const semaine = tr.querySelector('[data-field="semaine"]').value.trim();
+
+  let bouton = cellule.querySelector('.fiche-resume-btn');
+  if (!bouton) {
+    bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'fiche-resume-btn';
+    for (const classe of ['fiche-resume-titre', 'fiche-resume-puces', 'fiche-resume-fleche']) {
+      const zone = document.createElement('span');
+      zone.className = classe;
+      bouton.append(zone);
+    }
+    cellule.append(bouton);
+  }
+  bouton.setAttribute('aria-expanded', String(ouverte));
+  bouton.querySelector('.fiche-resume-titre').textContent = `Semaine du ${libelleDateCourte(semaine)} au ${dateFinSemaineLibelle(semaine)}`;
+
+  const puces = [];
+  if (NUM_FIELDS.every(f => !val(f))) puces.push(['Non rempli', 'vide']);
+  else puces.push([`RDV vus ${val('rdv_vus')} / ${val('rdv_poses')}`], [`Commissions ${euro(val('commissions'))}`], [`Recos ${val('recommandations')}`]);
+  const ressenti = RESSENTI_OPTIONS.find(r => r.valeur === lireRessenti(tr));
+  if (ressenti) puces.push([`${ressenti.emoji} ${ressenti.valeur}`]);
+  if (calculerErreursLigne(tr).length) puces.push(['À corriger', 'erreur']);
+
+  bouton.querySelector('.fiche-resume-puces').replaceChildren(...puces.map(([texte, variante]) => {
+    const puce = document.createElement('span');
+    puce.className = 'fiche-puce' + (variante ? ` fiche-puce--${variante}` : '');
+    puce.textContent = texte;
+    return puce;
+  }));
+}
+
 /** Masque (tr.semaine-masquee) les lignes qui ne sont pas la semaine en cours, sauf si l'historique est révélé — n'affecte que "Ma semaine" (voir CSS .entry-table:not(.mode-fiche)), jamais readRows(). */
 function appliquerFiltreSemaineSaisie() {
   const semaineCourante = jeudiCourant();
@@ -3578,6 +3679,14 @@ function renderMaFiche() {
     const correspond = nomOK && (estSemaineCourante || afficherHistoriqueFiche);
     tr.classList.toggle('fiche-visible', correspond);
     if (correspond) nbVisibles++;
+
+    // Semaine passée (date valide, avant la semaine en cours) : carte repliée sur un résumé, sauf si dépliée par l'utilisateur.
+    const semaine = semInput ? semInput.value.trim() : '';
+    const passee = correspond && /^\d{4}-\d{2}-\d{2}$/.test(semaine) && semaine < semaineCourante;
+    const ouverte = !passee || fichesDeployees.has(tr.dataset.docId);
+    tr.classList.toggle('fiche-passee', passee);
+    tr.classList.toggle('fiche-repliee', passee && !ouverte);
+    if (passee) majResumeFiche(tr, ouverte);
   }
 
   const toggleHistoriqueLabel = document.getElementById('toggle-historique-fiche')?.closest('label');
@@ -3625,6 +3734,16 @@ document.getElementById('btn-add-ma-semaine').addEventListener('click', () => {
 });
 
 document.getElementById('rows-body').addEventListener('click', (e) => {
+  const resume = e.target.closest('.fiche-resume-btn');
+  if (resume) {
+    const id = resume.closest('tr').dataset.docId;
+    if (id) {
+      if (fichesDeployees.has(id)) fichesDeployees.delete(id); else fichesDeployees.add(id);
+      renderMaFiche();
+    }
+    return;
+  }
+
   if (e.target.classList.contains('row-delete')) {
     const tr = e.target.closest('tr');
     // Confirmation, sauf pour une ligne encore vierge (ni nom ni chiffre) : il n'y a rien à perdre.
