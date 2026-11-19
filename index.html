@@ -426,6 +426,37 @@
   .lien-bouton.fait { color: var(--success-text); text-decoration: none; }
   .watch-actions { display: flex; align-items: center; gap: 12px; }
   /* Liste des retardataires : plusieurs colonnes (23 noms ne tiennent plus sur 23 lignes pleine largeur). */
+  .comparatif-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 18px; }
+  .comparatif-groupe { display: flex; flex-wrap: wrap; gap: 6px; }
+  .comparatif-groupe .btn.actif { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .comparatif-controles label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
+  .comparatif-controles select { font: inherit; font-size: 12.5px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--heading); max-width: 260px; }
+  .comparatif-controles select:disabled { opacity: 0.5; }
+  .cmp-legende { font-size: 12px; color: var(--heading-2); margin: 10px 0 0; line-height: 1.5; }
+  .table-comparatif { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .table-comparatif th, .table-comparatif td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .table-comparatif th:first-child, .table-comparatif td:first-child { text-align: left; position: sticky; left: 0; background: var(--cream); z-index: 1; min-width: 230px; font-weight: 600; box-shadow: 4px 0 6px -4px rgba(21, 42, 73, 0.25); }
+  .table-comparatif thead th { background: var(--cream); color: var(--heading); font-size: 12px; text-transform: none; letter-spacing: 0; vertical-align: bottom; }
+  .table-comparatif thead th small { display: block; font-weight: 400; color: var(--heading-2); font-size: 11px; margin-top: 2px; }
+  .table-comparatif .cmp-ensemble { background: rgba(21, 42, 73, 0.05); }
+  .table-comparatif tbody tr:last-child td { border-bottom: none; }
+  .cmp-valeur-cell { font-weight: 600; color: var(--heading); }
+  .cmp-ecart { display: block; font-size: 11px; font-weight: 500; color: var(--heading-2); margin-top: 1px; }
+  .cmp-meilleur .cmp-valeur-cell { color: var(--success-text); }
+  .cmp-pire .cmp-valeur-cell { color: var(--coral-text); }
+  .cmp-marque { margin-left: 4px; font-size: 10px; }
+  .cmp-peu td, .cmp-peu-th { color: var(--heading-2); }
+  .cmp-barres { display: flex; flex-direction: column; gap: 10px; }
+  .cmp-ligne { display: grid; grid-template-columns: minmax(130px, 220px) 1fr 92px; align-items: center; gap: 12px; font-size: 12.5px; }
+  .cmp-nom { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmp-nom small { display: block; font-weight: 400; color: var(--heading-2); font-size: 11px; }
+  .cmp-piste { position: relative; height: 12px; border-radius: 6px; background: rgba(21, 42, 73, 0.1); }
+  .cmp-piste .barre { height: 100%; border-radius: 6px; background: var(--gold); }
+  .cmp-piste .barre.meilleur { background: var(--success); }
+  .cmp-piste .barre.pire { background: var(--coral); }
+  .cmp-piste .barre.peu { background: var(--silver); opacity: 0.7; }
+  .cmp-piste .repere { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--navy); border-radius: 1px; }
+  .cmp-valeur { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
   .relance-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 36px; }
   .relance-liste .watch-row-item:last-child { border-bottom: 1px solid var(--border); }
   .reglage-ligne { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -1390,6 +1421,7 @@
       <button class="nav-item" data-view="organisation" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="9" y="2.8" width="6" height="4.6" rx="1.2" fill="currentColor"/><rect x="2.4" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="9.2" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><rect x="16" y="16.6" width="5.6" height="4.6" rx="1.2" fill="currentColor" opacity="0.7"/><path d="M12 7.4v4.4M5.2 16.6v-3.2a1.6 1.6 0 0 1 1.6-1.6h10.4a1.6 1.6 0 0 1 1.6 1.6v3.2M12 11.8v4.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Organisation</span></button>
       <button class="nav-item" data-view="classement" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M7 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5z" fill="currentColor"/><path d="M7 5H4a3 3 0 0 0 3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 5h3a3 3 0 0 1-3 5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.4" y="12" width="3.2" height="4" fill="currentColor"/><rect x="7.3" y="17" width="9.4" height="2.3" rx="1.15" fill="currentColor"/></svg><span>Classement</span></button>
       <button class="nav-item" data-view="statistiques" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Statistiques</span></button>
+      <button class="nav-item" data-view="comparatif" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><rect x="4" y="11" width="4.4" height="9" rx="1.2" fill="currentColor" opacity="0.55"/><rect x="9.8" y="4" width="4.4" height="16" rx="1.2" fill="currentColor"/><rect x="15.6" y="8" width="4.4" height="12" rx="1.2" fill="currentColor" opacity="0.8"/></svg><span>Comparatif</span></button>
       <button class="nav-item" data-view="alertes" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>Alertes</span></button>
       <button class="nav-item" data-view="analyse" id="nav-analyse" type="button" style="display:none;"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" fill="currentColor" opacity="0.6"/></svg><span>Analyse IA</span></button>
       <button class="nav-item" data-view="parametres" type="button"><svg class="nav-icon" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="19" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><rect x="8" y="19" width="8" height="2" rx="1" fill="currentColor"/></svg><span>Paramètres</span></button>
@@ -1687,6 +1719,19 @@
 
         <div class="section-label">Moyennes avancées</div>
         <div class="kpi-grid" id="stats-moyennes"></div>
+      </div>
+
+      <!-- ============================================= COMPARATIF ============================================= -->
+      <div class="view" id="view-comparatif">
+        <div class="page-title">Comparatif</div>
+        <div class="page-sub">Compare les indicateurs entre blocs mensuels, semaines, centres (RT), SA ou niveaux d'ancienneté. Les moyennes sont ramenées « par conseiller et par semaine » pour rester comparables entre groupes de tailles différentes ; les semaines dont le bilan n'est pas rempli ne sont pas comptées (réglage de Paramètres).</div>
+        <hr class="rule">
+        <div class="comparatif-controles">
+          <div class="comparatif-groupe" role="group" aria-label="Comparer par" id="cmp-dimensions"></div>
+          <label>Période <select id="cmp-periode"></select></label>
+          <label>Graphique <select id="cmp-indicateur"></select></label>
+        </div>
+        <div id="cmp-contenu"></div>
       </div>
 
       <!-- ============================================= ALERTES ============================================= -->
@@ -2690,6 +2735,7 @@ function renderAll() {
   if (document.getElementById('view-groupes').classList.contains('active')) renderGroupes();
   renderStatistiques(rows);
   renderAlertes(rows);
+  if (document.getElementById('view-comparatif').classList.contains('active')) renderComparatif();
   renderParametres();
   if (modeFicheActif) renderMaFiche();
   majBoutonFiltres();
@@ -3779,6 +3825,201 @@ function renderAlertes(rows) {
 document.querySelectorAll('[data-alertes-vue]').forEach(bouton => {
   bouton.addEventListener('click', () => { alertesParConseiller = bouton.dataset.alertesVue === 'conseiller'; renderAll(); });
 });
+
+
+/* =========================================================
+   COMPARATIF — blocs mensuels, semaines, centres (RT), SA, ancienneté
+   ========================================================= */
+
+const DIMENSIONS_COMPARATIF = { bloc: 'Blocs mensuels', semaine: 'Semaines', rt: 'Centres (RT)', sa: 'SA', anciennete: 'Ancienneté' };
+
+/**
+ * Indicateurs comparés. « mieux » = sens favorable. Les moyennes sont PAR CONSEILLER ET PAR SEMAINE (ligne de saisie)
+ * pour rester comparables entre des groupes de tailles différentes.
+ */
+const METRIQUES_COMPARATIF = [
+  { cle: 'perf', label: 'Performance ID (moyenne)', fmt: 'score', mieux: 'haut' },
+  { cle: 'rdvPoses', label: 'RDV posés / conseiller / semaine', fmt: 'nombre', mieux: 'haut' },
+  { cle: 'tauxRdvVu', label: 'Taux de RDV vu', fmt: 'taux', mieux: 'haut' },
+  { cle: 'tauxVisio', label: 'Taux de visio', fmt: 'taux', mieux: 'bas' },
+  { cle: 'tauxR1R2', label: 'Transformation R1 → R2', fmt: 'taux', mieux: 'haut' },
+  { cle: 'tauxSignature', label: 'Taux de signature', fmt: 'taux', mieux: 'haut' },
+  { cle: 'concretisation', label: 'Concrétisation', fmt: 'taux', mieux: 'haut' },
+  { cle: 'reco', label: 'Recommandations / conseiller / semaine', fmt: 'nombre', mieux: 'haut' },
+  { cle: 'commissionsParLigne', label: 'Commissions / conseiller / semaine', fmt: 'euro', mieux: 'haut' },
+  { cle: 'tauxCasse', label: 'Taux de casse', fmt: 'taux', mieux: 'bas' },
+];
+const SEUIL_PEU_DE_DONNEES = 3;   // moins de 3 semaines de conseiller : comparaison peu fiable, groupe non classé meilleur/moins bon
+
+let etatComparatif = { dimension: 'bloc', periode: '', indicateur: 'perf' };
+
+/** Indicateurs d'un ensemble de lignes (déjà débarrassées des semaines sans bilan). Valeurs nulles s'il n'y a aucune ligne. */
+function indicateursComparatif(rows) {
+  const n = rows.length;
+  const a = agreger(rows);
+  const classement = classementDe(rows);
+  const parLigne = v => n ? v / n : null;
+  return {
+    nbConseillers: classement.length, nbLignes: n,
+    perf: classement.length ? sum(classement, 'performance') / classement.length : null,
+    rdvPoses: parLigne(a.rdv_poses),
+    tauxRdvVu: n ? a.taux_rdv_vu : null, tauxVisio: n ? a.taux_visio : null, tauxR1R2: n ? a.taux_r1_r2 : null,
+    tauxSignature: n ? a.taux_signature : null, concretisation: n ? a.taux_concretisation : null, tauxCasse: n ? a.taux_casse : null,
+    reco: parLigne(a.recommandations), commissionsParLigne: parLigne(a.commissions),
+  };
+}
+
+function formaterComparatif(valeur, fmt) {
+  if (valeur === null || valeur === undefined || !Number.isFinite(valeur)) return '—';
+  if (fmt === 'taux') return `${(valeur * 100).toFixed(1)} %`;
+  if (fmt === 'euro') return euro(valeur);
+  return valeur.toFixed(1);
+}
+
+function ecartComparatif(valeur, reference, fmt) {
+  if (![valeur, reference].every(v => typeof v === 'number' && Number.isFinite(v))) return '';
+  const d = valeur - reference;
+  const stable = fmt === 'taux' ? 0.0005 : fmt === 'euro' ? 0.5 : 0.05;
+  if (Math.abs(d) < stable) return '= ensemble';
+  const ecart = Math.abs(d);
+  const texte = fmt === 'taux' ? `${(ecart * 100).toFixed(1)} pts` : fmt === 'euro' ? euro(ecart) : ecart.toFixed(1);
+  return `${d > 0 ? '+' : '−'}${texte}`;
+}
+
+/** Groupes à comparer : { cle, libelle, detail, rows } ; les groupes sans aucune ligne sont omis. */
+function groupesComparatif(dimension, rows, indexPeriode) {
+  const blocs = blocsSemaines(rows);
+  const periode = indexPeriode !== '' && blocs[Number(indexPeriode)] ? new Set(blocs[Number(indexPeriode)].semaines) : null;
+  const rowsPeriode = periode && dimension !== 'bloc' && dimension !== 'semaine' ? rows.filter(r => periode.has(r.semaine)) : rows;
+  let groupes = [];
+
+  if (dimension === 'bloc') {
+    groupes = blocs.map(b => ({ cle: b.labelCourt, libelle: b.labelCourt, detail: b.libelle.slice(b.labelCourt.length).trim().replace(/^\(|\)$/g, ''), rows: rows.filter(r => b.semaines.includes(r.semaine)) }));
+  } else if (dimension === 'semaine') {
+    const semaines = [...new Set(rows.map(r => r.semaine).filter(Boolean))].sort().slice(-12);
+    groupes = semaines.map(sem => ({ cle: sem, libelle: libelleDateCourte(sem), detail: sem.slice(0, 4), rows: rows.filter(r => r.semaine === sem) }));
+  } else if (dimension === 'rt') {
+    groupes = organisation.rts.map(rt => ({ cle: rt.id, libelle: `RT ${rt.nom}`, detail: rt.personne || '', rows: rowsPeriode.filter(r => equipeDe(r.conseiller)?.rt?.id === rt.id) }));
+    groupes.push({ cle: '__aucun__', libelle: 'Sans centre', detail: '', rows: rowsPeriode.filter(r => !equipeDe(r.conseiller)?.rt) });
+  } else if (dimension === 'sa') {
+    for (const rt of organisation.rts) {
+      for (const sa of rt.sas) groupes.push({ cle: sa.id, libelle: `SA ${sa.nom}`, detail: `RT ${rt.nom}`, rows: rowsPeriode.filter(r => equipeDe(r.conseiller)?.sa?.id === sa.id) });
+    }
+    groupes.push({ cle: '__aucun__', libelle: 'Sans SA', detail: '', rows: rowsPeriode.filter(r => !equipeDe(r.conseiller)?.sa) });
+  } else if (dimension === 'anciennete') {
+    const roster = readRoster();
+    const cleDe = nom => clientAncienneteDe(nom, roster) || '__inconnue__';
+    for (const cle of ['nouveau', 'progression', 'confirme', 'expert', '__inconnue__']) {
+      groupes.push({ cle, libelle: cle === '__inconnue__' ? 'Date d’entrée manquante' : LIBELLES_ANCIENNETE[cle], detail: '', rows: rowsPeriode.filter(r => cleDe(r.conseiller) === cle) });
+    }
+  }
+  return groupes.filter(g => g.rows.length);
+}
+
+/** Clés (par indicateur) des meilleurs et des moins bons groupes parmi ceux qui ont assez de données ; en cas d'égalité, tous les ex æquo. */
+function extremesComparatif(metrique, groupes) {
+  const eligibles = groupes.filter(g => g.ind.nbLignes >= SEUIL_PEU_DE_DONNEES && typeof g.ind[metrique.cle] === 'number' && Number.isFinite(g.ind[metrique.cle]));
+  if (eligibles.length < 2) return { meilleur: [], pire: [] };
+  const valeurs = eligibles.map(g => g.ind[metrique.cle]);
+  const haut = Math.max(...valeurs), bas = Math.min(...valeurs);
+  if (haut === bas) return { meilleur: [], pire: [] };
+  const [m, p] = metrique.mieux === 'haut' ? [haut, bas] : [bas, haut];
+  return { meilleur: eligibles.filter(g => g.ind[metrique.cle] === m).map(g => g.cle), pire: eligibles.filter(g => g.ind[metrique.cle] === p).map(g => g.cle) };
+}
+
+function renderComparatif() {
+  const rows = lignesComptees(readRows());
+  const blocs = blocsSemaines(rows);
+  const dimension = etatComparatif.dimension;
+  const dependDeLOrganisation = dimension === 'rt' || dimension === 'sa';
+  const periodeActive = dimension !== 'bloc' && dimension !== 'semaine';
+
+  // Contrôles
+  const zoneDim = document.getElementById('cmp-dimensions');
+  zoneDim.replaceChildren(...Object.entries(DIMENSIONS_COMPARATIF).map(([cle, libelle]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cle === dimension ? ' actif' : ''); b.dataset.cmpDimension = cle; b.textContent = libelle;
+    b.setAttribute('aria-pressed', String(cle === dimension));
+    return b;
+  }));
+  const selPeriode = document.getElementById('cmp-periode');
+  const periodeAvant = etatComparatif.periode;
+  selPeriode.replaceChildren(new Option('Toutes les semaines', ''), ...blocs.map((b, i) => new Option(b.libelle, String(i))));
+  selPeriode.value = blocs[Number(periodeAvant)] && periodeAvant !== '' ? periodeAvant : '';
+  etatComparatif.periode = selPeriode.value;
+  selPeriode.disabled = !periodeActive;
+  selPeriode.title = periodeActive ? '' : 'La période ne s’applique pas : ce comparatif parcourt déjà le temps.';
+  const selInd = document.getElementById('cmp-indicateur');
+  selInd.replaceChildren(...METRIQUES_COMPARATIF.map(m => new Option(m.label, m.cle)));
+  selInd.value = METRIQUES_COMPARATIF.some(m => m.cle === etatComparatif.indicateur) ? etatComparatif.indicateur : 'perf';
+
+  const contenu = document.getElementById('cmp-contenu');
+  if (!rows.length) { contenu.innerHTML = `<div class="card empty-state">Aucune saisie avec un bilan rempli pour l'instant.</div>`; return; }
+  if (dependDeLOrganisation && !organisation.rts.length) {
+    contenu.innerHTML = `<div class="card empty-state">L'organisation (RT et SA) n'est pas encore renseignée : ajoute-la dans l'onglet Organisation pour comparer les ${dimension === 'rt' ? 'centres' : 'SA'}.</div>`;
+    return;
+  }
+
+  const groupes = groupesComparatif(dimension, rows, etatComparatif.periode).map(g => ({ ...g, ind: indicateursComparatif(g.rows) }));
+  if (!groupes.length) { contenu.innerHTML = `<div class="card empty-state">Aucune donnée à comparer sur cette période.</div>`; return; }
+  const ensemble = indicateursComparatif(groupes.flatMap(g => g.rows));
+  const plusieurs = n => n > 1 ? 's' : '';
+  const entete = (libelle, detail, ind, classe = '') => `<th class="${classe}${ind && ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' cmp-peu-th' : ''}">${esc(libelle)}${detail ? `<small>${esc(detail)}</small>` : ''}<small>${ind.nbConseillers} conseiller${plusieurs(ind.nbConseillers)} · ${ind.nbLignes} semaine${plusieurs(ind.nbLignes)}${ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' · peu de données' : ''}</small></th>`;
+
+  // Tableau : indicateurs en lignes, groupes en colonnes
+  const extremes = Object.fromEntries(METRIQUES_COMPARATIF.map(m => [m.cle, extremesComparatif(m, groupes)]));
+  const lignes = METRIQUES_COMPARATIF.map(m => `
+    <tr>
+      <td>${esc(m.label)}</td>
+      <td class="cmp-ensemble"><span class="cmp-valeur-cell">${formaterComparatif(ensemble[m.cle], m.fmt)}</span></td>
+      ${groupes.map(g => {
+        const v = g.ind[m.cle];
+        const meilleur = extremes[m.cle].meilleur.includes(g.cle), pire = extremes[m.cle].pire.includes(g.cle);
+        const marque = meilleur ? '<span class="cmp-marque" title="Meilleur groupe sur cet indicateur">▲</span>' : pire ? '<span class="cmp-marque" title="Moins bon groupe sur cet indicateur">▼</span>' : '';
+        return `<td class="${meilleur ? 'cmp-meilleur' : pire ? 'cmp-pire' : ''}${g.ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' cmp-peu' : ''}"><span class="cmp-valeur-cell">${formaterComparatif(v, m.fmt)}</span>${marque}<span class="cmp-ecart">${esc(ecartComparatif(v, ensemble[m.cle], m.fmt))}</span></td>`;
+      }).join('')}
+    </tr>`).join('');
+
+  // Graphique : un indicateur, groupes classés du meilleur au moins bon
+  const m = METRIQUES_COMPARATIF.find(x => x.cle === selInd.value) || METRIQUES_COMPARATIF[0];
+  etatComparatif.indicateur = m.cle;
+  const avecValeur = groupes.filter(g => typeof g.ind[m.cle] === 'number' && Number.isFinite(g.ind[m.cle]));
+  const maxi = Math.max(...avecValeur.map(g => g.ind[m.cle]), typeof ensemble[m.cle] === 'number' ? ensemble[m.cle] : 0, 0.0001) * 1.08;
+  const ordonnes = [...avecValeur].sort((a, b) => m.mieux === 'haut' ? b.ind[m.cle] - a.ind[m.cle] : a.ind[m.cle] - b.ind[m.cle]);
+  const barres = ordonnes.map(g => {
+    const v = g.ind[m.cle];
+    const classe = g.ind.nbLignes < SEUIL_PEU_DE_DONNEES ? 'peu' : extremes[m.cle].meilleur.includes(g.cle) ? 'meilleur' : extremes[m.cle].pire.includes(g.cle) ? 'pire' : '';
+    return `<div class="cmp-ligne">
+      <div class="cmp-nom" title="${esc(g.libelle)}">${esc(g.libelle)}<small>${g.ind.nbConseillers} conseiller${plusieurs(g.ind.nbConseillers)} · ${g.ind.nbLignes} semaine${plusieurs(g.ind.nbLignes)}${g.ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' · peu de données' : ''}</small></div>
+      <div class="cmp-piste" role="img" aria-label="${esc(g.libelle)} : ${formaterComparatif(v, m.fmt)}">
+        <div class="barre ${classe}" style="width:${Math.max(v / maxi * 100, 0.5).toFixed(1)}%"></div>
+        ${typeof ensemble[m.cle] === 'number' ? `<span class="repere" style="left:${(ensemble[m.cle] / maxi * 100).toFixed(1)}%" title="Ensemble : ${formaterComparatif(ensemble[m.cle], m.fmt)}"></span>` : ''}
+      </div>
+      <div class="cmp-valeur">${formaterComparatif(v, m.fmt)}</div>
+    </div>`;
+  }).join('');
+
+  contenu.innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><span>${esc(m.label)}</span><span class="alerte-compteur">${m.mieux === 'haut' ? 'plus c’est haut, mieux c’est' : 'plus c’est bas, mieux c’est'}</span></div>
+      <div class="cmp-barres">${barres || '<div class="empty-state">Pas de valeur pour cet indicateur.</div>'}</div>
+      <div class="cmp-legende">Trait sombre = ensemble (${formaterComparatif(ensemble[m.cle], m.fmt)}). Vert = meilleur groupe, rouge = moins bon, gris = peu de données (moins de ${SEUIL_PEU_DE_DONNEES} semaines de conseiller).</div>
+    </div>
+    <div class="table-wrap"><table class="table-comparatif">
+      <thead><tr><th>Indicateur</th>${entete('Ensemble', '', ensemble, 'cmp-ensemble')}${groupes.map(g => entete(g.libelle, g.detail, g.ind)).join('')}</tr></thead>
+      <tbody>${lignes}</tbody>
+    </table></div>
+    <div class="cmp-legende">▲ meilleur groupe · ▼ moins bon groupe, par indicateur (seulement parmi les groupes d'au moins ${SEUIL_PEU_DE_DONNEES} semaines de conseiller). Sous chaque valeur : écart avec l'ensemble. Taux de visio et de casse : plus bas = mieux.</div>`;
+}
+
+document.getElementById('view-comparatif').addEventListener('click', (e) => {
+  const bouton = e.target.closest('[data-cmp-dimension]');
+  if (!bouton) return;
+  etatComparatif.dimension = bouton.dataset.cmpDimension;
+  renderComparatif();
+});
+document.getElementById('cmp-periode').addEventListener('change', (e) => { etatComparatif.periode = e.target.value; renderComparatif(); });
+document.getElementById('cmp-indicateur').addEventListener('change', (e) => { etatComparatif.indicateur = e.target.value; renderComparatif(); });
 
 /* =========================================================
    SAISIE — construction des lignes depuis Firestore
@@ -7218,7 +7459,7 @@ window.addEventListener('focus', verifierChangementDeJour);
 
 const TITLES = {
   dashboard: 'Dashboard', saisie: 'Ma semaine', 'ma-fiche': 'Ma fiche', conseillers: 'Conseillers',
-  equipe: "Centre d'affaires", organisation: 'Organisation', formation: 'Formation', groupes: 'Groupes de formation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
+  equipe: "Centre d'affaires", organisation: 'Organisation', comparatif: 'Comparatif', formation: 'Formation', groupes: 'Groupes de formation', classement: 'Classement', statistiques: 'Statistiques', alertes: 'Alertes',
   analyse: 'Analyse IA', parametres: 'Paramètres',
 };
 
