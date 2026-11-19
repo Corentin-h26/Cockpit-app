@@ -3627,12 +3627,25 @@ document.getElementById('btn-add-ma-semaine').addEventListener('click', () => {
 document.getElementById('rows-body').addEventListener('click', (e) => {
   if (e.target.classList.contains('row-delete')) {
     const tr = e.target.closest('tr');
+    // Confirmation, sauf pour une ligne encore vierge (ni nom ni chiffre) : il n'y a rien à perdre.
+    const nom = tr.querySelector('[data-field="conseiller"]')?.value.trim() || '';
+    const semaine = tr.querySelector('[data-field="semaine"]')?.value.trim() || '';
+    const vierge = !nom && NUM_FIELDS.every(f => !(parseFloat(tr.querySelector(`[data-field="${f}"]`)?.value) || 0));
+    if (!vierge) {
+      const quand = /^\d{4}-\d{2}-\d{2}$/.test(semaine) ? ` pour la semaine du ${libelleDateCourte(semaine)}` : '';
+      if (!confirm(`Supprimer la saisie de ${nom || 'cette ligne sans nom'}${quand} ?\n\nC’est définitif : ces chiffres disparaissent aussi des statistiques et du classement.`)) return;
+    }
     const docId = tr.dataset.docId;
     tr.remove();
     renderAll();
     if (docId) {
+      clearTimeout(rowWriteTimers.get(docId));   // une saisie en attente ne doit pas recréer la ligne
+      rowWriteTimers.delete(docId);
       brouillonsBloques.delete(docId);
-      db.collection('cockpit_semaines').doc(docId).delete().catch(err => console.error(err));
+      db.collection('cockpit_semaines').doc(docId).delete().catch(err => {
+        console.error(err);
+        alert('Suppression impossible : ' + err.message);
+      });
     }
     return;
   }
@@ -3745,10 +3758,17 @@ document.getElementById('roster-body').addEventListener('click', (e) => {
   if (e.target.classList.contains('row-delete')) {
     if (!isAdmin) return;
     const tr = e.target.closest('tr');
+    const nom = tr.querySelector('[data-field="r_conseiller"]')?.value.trim() || '';
+    if (nom && !confirm(`Retirer « ${nom} » du roster ?\n\nSes saisies restent enregistrées, mais ne comptent plus dans les statistiques, le classement ni les groupes tant qu’il n’est pas remis dans le roster.`)) return;
     const docId = tr.dataset.docId;
     tr.remove();
     renderAll();
-    if (docId) db.collection('cockpit_roster').doc(docId).delete().catch(err => console.error(err));
+    if (docId) {
+      db.collection('cockpit_roster').doc(docId).delete().catch(err => {
+        console.error(err);
+        alert('Suppression impossible : ' + err.message);
+      });
+    }
   }
 });
 
