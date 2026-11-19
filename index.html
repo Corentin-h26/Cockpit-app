@@ -432,6 +432,9 @@
   .comparatif-controles label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--heading-2); }
   .comparatif-controles select { font: inherit; font-size: 12.5px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--heading); max-width: 260px; }
   .comparatif-controles select:disabled { opacity: 0.5; }
+  .table-comparatif td small, .table-comparatif td.cmp-ensemble-ligne small { display: block; font-weight: 400; color: var(--heading-2); font-size: 11px; }
+  .table-comparatif .cmp-tri { font-size: 11.5px; font-weight: 700; color: var(--heading); text-decoration: none; text-align: center; line-height: 1.25; }
+  .table-comparatif .cmp-tri:hover, .table-comparatif .cmp-tri.actif { color: var(--gold-text); text-decoration: underline; }
   .cmp-legende { font-size: 12px; color: var(--heading-2); margin: 10px 0 0; line-height: 1.5; }
   .table-comparatif { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .table-comparatif th, .table-comparatif td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1729,6 +1732,7 @@
         <div class="comparatif-controles">
           <div class="comparatif-groupe" role="group" aria-label="Comparer par" id="cmp-dimensions"></div>
           <label>Période <select id="cmp-periode"></select></label>
+          <label id="cmp-limite-label" style="display:none;">Limiter à <select id="cmp-limite"></select></label>
           <label>Graphique <select id="cmp-indicateur"></select></label>
         </div>
         <div id="cmp-contenu"></div>
@@ -3831,7 +3835,7 @@ document.querySelectorAll('[data-alertes-vue]').forEach(bouton => {
    COMPARATIF — blocs mensuels, semaines, centres (RT), SA, ancienneté
    ========================================================= */
 
-const DIMENSIONS_COMPARATIF = { bloc: 'Blocs mensuels', semaine: 'Semaines', rt: 'Centres (RT)', sa: 'SA', anciennete: 'Ancienneté' };
+const DIMENSIONS_COMPARATIF = { bloc: 'Blocs mensuels', semaine: 'Semaines', rt: 'Centres (RT)', sa: 'SA', anciennete: 'Ancienneté', conseiller: 'Conseillers' };
 
 /**
  * Indicateurs comparés. « mieux » = sens favorable. Les moyennes sont PAR CONSEILLER ET PAR SEMAINE (ligne de saisie)
@@ -3849,9 +3853,11 @@ const METRIQUES_COMPARATIF = [
   { cle: 'commissionsParLigne', label: 'Commissions / conseiller / semaine', fmt: 'euro', mieux: 'haut' },
   { cle: 'tauxCasse', label: 'Taux de casse', fmt: 'taux', mieux: 'bas' },
 ];
-const SEUIL_PEU_DE_DONNEES = 3;   // moins de 3 semaines de conseiller : comparaison peu fiable, groupe non classé meilleur/moins bon
+// Moins de N semaines de conseiller : comparaison peu fiable, groupe non classé meilleur / moins bon.
+// Un conseiller seul n'a qu'une ligne par semaine : seuil de 2 semaines (3 pour les groupes).
+const seuilDonnees = () => etatComparatif.dimension === 'conseiller' ? 2 : 3;
 
-let etatComparatif = { dimension: 'bloc', periode: '', indicateur: 'perf' };
+let etatComparatif = { dimension: 'bloc', periode: '', indicateur: 'perf', limite: '', tri: { cle: 'perf', sens: 'meilleur' } };
 
 /** Indicateurs d'un ensemble de lignes (déjà débarrassées des semaines sans bilan). Valeurs nulles s'il n'y a aucune ligne. */
 function indicateursComparatif(rows) {
@@ -3887,7 +3893,7 @@ function ecartComparatif(valeur, reference, fmt) {
 }
 
 /** Groupes à comparer : { cle, libelle, detail, rows } ; les groupes sans aucune ligne sont omis. */
-function groupesComparatif(dimension, rows, indexPeriode) {
+function groupesComparatif(dimension, rows, indexPeriode, limite = '') {
   const blocs = blocsSemaines(rows);
   const periode = indexPeriode !== '' && blocs[Number(indexPeriode)] ? new Set(blocs[Number(indexPeriode)].semaines) : null;
   const rowsPeriode = periode && dimension !== 'bloc' && dimension !== 'semaine' ? rows.filter(r => periode.has(r.semaine)) : rows;
@@ -3906,6 +3912,22 @@ function groupesComparatif(dimension, rows, indexPeriode) {
       for (const sa of rt.sas) groupes.push({ cle: sa.id, libelle: `SA ${sa.nom}`, detail: `RT ${rt.nom}`, rows: rowsPeriode.filter(r => equipeDe(r.conseiller)?.sa?.id === sa.id) });
     }
     groupes.push({ cle: '__aucun__', libelle: 'Sans SA', detail: '', rows: rowsPeriode.filter(r => !equipeDe(r.conseiller)?.sa) });
+  } else if (dimension === 'conseiller') {
+    const roster = readRoster();
+    const [type, id] = limite.split(':');
+    const retenu = r => {
+      const eq = equipeDe(r.conseiller);
+      if (type === 'rt') return eq?.rt?.id === id;
+      if (type === 'sa') return eq?.sa?.id === id;
+      if (type === 'anc') return clientAncienneteDe(r.conseiller, roster) === id;
+      return true;
+    };
+    const parNom = new Map();
+    for (const r of rowsPeriode.filter(retenu)) parNom.set(r.conseiller, [...(parNom.get(r.conseiller) || []), r]);
+    groupes = [...parNom].map(([nom, lignes]) => {
+      const eq = equipeDe(nom);
+      return { cle: nom, libelle: nom, detail: [eq?.sa ? `SA ${eq.sa.nom}` : '', eq?.rt ? `RT ${eq.rt.nom}` : ''].filter(Boolean).join(' · '), rows: lignes };
+    });
   } else if (dimension === 'anciennete') {
     const roster = readRoster();
     const cleDe = nom => clientAncienneteDe(nom, roster) || '__inconnue__';
@@ -3918,13 +3940,43 @@ function groupesComparatif(dimension, rows, indexPeriode) {
 
 /** Clés (par indicateur) des meilleurs et des moins bons groupes parmi ceux qui ont assez de données ; en cas d'égalité, tous les ex æquo. */
 function extremesComparatif(metrique, groupes) {
-  const eligibles = groupes.filter(g => g.ind.nbLignes >= SEUIL_PEU_DE_DONNEES && typeof g.ind[metrique.cle] === 'number' && Number.isFinite(g.ind[metrique.cle]));
+  const eligibles = groupes.filter(g => g.ind.nbLignes >= seuilDonnees() && typeof g.ind[metrique.cle] === 'number' && Number.isFinite(g.ind[metrique.cle]));
   if (eligibles.length < 2) return { meilleur: [], pire: [] };
   const valeurs = eligibles.map(g => g.ind[metrique.cle]);
   const haut = Math.max(...valeurs), bas = Math.min(...valeurs);
   if (haut === bas) return { meilleur: [], pire: [] };
   const [m, p] = metrique.mieux === 'haut' ? [haut, bas] : [bas, haut];
   return { meilleur: eligibles.filter(g => g.ind[metrique.cle] === m).map(g => g.cle), pire: eligibles.filter(g => g.ind[metrique.cle] === p).map(g => g.cle) };
+}
+
+/** Tableau des conseillers : un conseiller par ligne, indicateurs en colonnes ; clic sur un indicateur = tri (meilleur d'abord, puis inversé). */
+function tableauComparatifConseillers(groupes, ensemble, extremes) {
+  const tri = etatComparatif.tri;
+  const mTri = METRIQUES_COMPARATIF.find(x => x.cle === tri.cle) || METRIQUES_COMPARATIF[0];
+  const val = g => g.ind[mTri.cle];
+  const valide = v => typeof v === 'number' && Number.isFinite(v);
+  const tries = [...groupes].sort((a, b) => {
+    if (!valide(val(a)) || !valide(val(b))) return (!valide(val(a))) - (!valide(val(b)));
+    const d = mTri.mieux === 'haut' ? val(b) - val(a) : val(a) - val(b);
+    return tri.sens === 'meilleur' ? d : -d;
+  });
+  const entetes = METRIQUES_COMPARATIF.map(m => {
+    const actif = m.cle === tri.cle;
+    return `<th aria-sort="${actif ? (tri.sens === 'meilleur' ? 'descending' : 'ascending') : 'none'}"><button type="button" class="lien-bouton cmp-tri${actif ? ' actif' : ''}" data-cmp-tri="${m.cle}" title="Trier par cet indicateur (clic de nouveau : ordre inverse)">${esc(m.label.replace(' / conseiller / semaine', ' /sem.'))}${actif ? (tri.sens === 'meilleur' ? ' ↓' : ' ↑') : ''}</button></th>`;
+  }).join('');
+  const cellule = (g, m) => {
+    const v = g.ind[m.cle];
+    const meilleur = extremes[m.cle].meilleur.includes(g.cle), pire = extremes[m.cle].pire.includes(g.cle);
+    const marque = meilleur ? '<span class="cmp-marque" title="Meilleur sur cet indicateur">▲</span>' : pire ? '<span class="cmp-marque" title="Moins bon sur cet indicateur">▼</span>' : '';
+    return `<td class="${meilleur ? 'cmp-meilleur' : pire ? 'cmp-pire' : ''}${g.ind.nbLignes < seuilDonnees() ? ' cmp-peu' : ''}" title="${esc(ecartComparatif(v, ensemble[m.cle], m.fmt))}"><span class="cmp-valeur-cell">${formaterComparatif(v, m.fmt)}</span>${marque}</td>`;
+  };
+  return `<table class="table-comparatif">
+    <thead><tr><th>Conseiller</th>${entetes}<th>Semaines</th></tr></thead>
+    <tbody>
+      <tr><td class="cmp-ensemble-ligne">Ensemble<small>${ensemble.nbConseillers} conseillers</small></td>${METRIQUES_COMPARATIF.map(m => `<td class="cmp-ensemble"><span class="cmp-valeur-cell">${formaterComparatif(ensemble[m.cle], m.fmt)}</span></td>`).join('')}<td class="cmp-ensemble">${ensemble.nbLignes}</td></tr>
+      ${tries.map(g => `<tr class="${g.ind.nbLignes < seuilDonnees() ? 'cmp-peu' : ''}"><td>${esc(g.libelle)}${g.detail ? `<small>${esc(g.detail)}</small>` : ''}</td>${METRIQUES_COMPARATIF.map(m => cellule(g, m)).join('')}<td>${g.ind.nbLignes}${g.ind.nbLignes < seuilDonnees() ? ' · peu' : ''}</td></tr>`).join('')}
+    </tbody>
+  </table>`;
 }
 
 function renderComparatif() {
@@ -3949,6 +4001,21 @@ function renderComparatif() {
   etatComparatif.periode = selPeriode.value;
   selPeriode.disabled = !periodeActive;
   selPeriode.title = periodeActive ? '' : 'La période ne s’applique pas : ce comparatif parcourt déjà le temps.';
+  // « Limiter à » : seulement pour comparer les conseillers entre eux (au sein d'un centre, d'un SA ou d'un niveau d'ancienneté)
+  const labelLimite = document.getElementById('cmp-limite-label');
+  labelLimite.style.display = dimension === 'conseiller' ? '' : 'none';
+  if (dimension === 'conseiller') {
+    const selLimite = document.getElementById('cmp-limite');
+    const groupe = (titre, options) => { const og = document.createElement('optgroup'); og.label = titre; og.append(...options.map(([v, t]) => new Option(t, v))); return og; };
+    selLimite.replaceChildren(new Option('Tous les conseillers', ''),
+      ...(organisation.rts.length ? [
+        groupe('Centres', organisation.rts.map(rt => [`rt:${rt.id}`, `RT ${rt.nom}`])),
+        groupe('SA', organisation.rts.flatMap(rt => rt.sas.map(sa => [`sa:${sa.id}`, `SA ${sa.nom} (RT ${rt.nom})`]))),
+      ] : []),
+      groupe('Ancienneté', Object.entries(LIBELLES_ANCIENNETE).map(([cle, libelle]) => [`anc:${cle}`, libelle])));
+    selLimite.value = [...selLimite.querySelectorAll('option')].some(o => o.value === etatComparatif.limite) ? etatComparatif.limite : '';
+    etatComparatif.limite = selLimite.value;
+  }
   const selInd = document.getElementById('cmp-indicateur');
   selInd.replaceChildren(...METRIQUES_COMPARATIF.map(m => new Option(m.label, m.cle)));
   selInd.value = METRIQUES_COMPARATIF.some(m => m.cle === etatComparatif.indicateur) ? etatComparatif.indicateur : 'perf';
@@ -3960,11 +4027,11 @@ function renderComparatif() {
     return;
   }
 
-  const groupes = groupesComparatif(dimension, rows, etatComparatif.periode).map(g => ({ ...g, ind: indicateursComparatif(g.rows) }));
+  const groupes = groupesComparatif(dimension, rows, etatComparatif.periode, etatComparatif.limite).map(g => ({ ...g, ind: indicateursComparatif(g.rows) }));
   if (!groupes.length) { contenu.innerHTML = `<div class="card empty-state">Aucune donnée à comparer sur cette période.</div>`; return; }
   const ensemble = indicateursComparatif(groupes.flatMap(g => g.rows));
   const plusieurs = n => n > 1 ? 's' : '';
-  const entete = (libelle, detail, ind, classe = '') => `<th class="${classe}${ind && ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' cmp-peu-th' : ''}">${esc(libelle)}${detail ? `<small>${esc(detail)}</small>` : ''}<small>${ind.nbConseillers} conseiller${plusieurs(ind.nbConseillers)} · ${ind.nbLignes} semaine${plusieurs(ind.nbLignes)}${ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' · peu de données' : ''}</small></th>`;
+  const entete = (libelle, detail, ind, classe = '') => `<th class="${classe}${ind && ind.nbLignes < seuilDonnees() ? ' cmp-peu-th' : ''}">${esc(libelle)}${detail ? `<small>${esc(detail)}</small>` : ''}<small>${ind.nbConseillers} conseiller${plusieurs(ind.nbConseillers)} · ${ind.nbLignes} semaine${plusieurs(ind.nbLignes)}${ind.nbLignes < seuilDonnees() ? ' · peu de données' : ''}</small></th>`;
 
   // Tableau : indicateurs en lignes, groupes en colonnes
   const extremes = Object.fromEntries(METRIQUES_COMPARATIF.map(m => [m.cle, extremesComparatif(m, groupes)]));
@@ -3976,7 +4043,7 @@ function renderComparatif() {
         const v = g.ind[m.cle];
         const meilleur = extremes[m.cle].meilleur.includes(g.cle), pire = extremes[m.cle].pire.includes(g.cle);
         const marque = meilleur ? '<span class="cmp-marque" title="Meilleur groupe sur cet indicateur">▲</span>' : pire ? '<span class="cmp-marque" title="Moins bon groupe sur cet indicateur">▼</span>' : '';
-        return `<td class="${meilleur ? 'cmp-meilleur' : pire ? 'cmp-pire' : ''}${g.ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' cmp-peu' : ''}"><span class="cmp-valeur-cell">${formaterComparatif(v, m.fmt)}</span>${marque}<span class="cmp-ecart">${esc(ecartComparatif(v, ensemble[m.cle], m.fmt))}</span></td>`;
+        return `<td class="${meilleur ? 'cmp-meilleur' : pire ? 'cmp-pire' : ''}${g.ind.nbLignes < seuilDonnees() ? ' cmp-peu' : ''}"><span class="cmp-valeur-cell">${formaterComparatif(v, m.fmt)}</span>${marque}<span class="cmp-ecart">${esc(ecartComparatif(v, ensemble[m.cle], m.fmt))}</span></td>`;
       }).join('')}
     </tr>`).join('');
 
@@ -3988,9 +4055,9 @@ function renderComparatif() {
   const ordonnes = [...avecValeur].sort((a, b) => m.mieux === 'haut' ? b.ind[m.cle] - a.ind[m.cle] : a.ind[m.cle] - b.ind[m.cle]);
   const barres = ordonnes.map(g => {
     const v = g.ind[m.cle];
-    const classe = g.ind.nbLignes < SEUIL_PEU_DE_DONNEES ? 'peu' : extremes[m.cle].meilleur.includes(g.cle) ? 'meilleur' : extremes[m.cle].pire.includes(g.cle) ? 'pire' : '';
+    const classe = g.ind.nbLignes < seuilDonnees() ? 'peu' : extremes[m.cle].meilleur.includes(g.cle) ? 'meilleur' : extremes[m.cle].pire.includes(g.cle) ? 'pire' : '';
     return `<div class="cmp-ligne">
-      <div class="cmp-nom" title="${esc(g.libelle)}">${esc(g.libelle)}<small>${g.ind.nbConseillers} conseiller${plusieurs(g.ind.nbConseillers)} · ${g.ind.nbLignes} semaine${plusieurs(g.ind.nbLignes)}${g.ind.nbLignes < SEUIL_PEU_DE_DONNEES ? ' · peu de données' : ''}</small></div>
+      <div class="cmp-nom" title="${esc(g.libelle)}">${esc(g.libelle)}<small>${dimension === 'conseiller' ? `${g.detail ? esc(g.detail) + ' · ' : ''}` : `${g.ind.nbConseillers} conseiller${plusieurs(g.ind.nbConseillers)} · `}${g.ind.nbLignes} semaine${plusieurs(g.ind.nbLignes)}${g.ind.nbLignes < seuilDonnees() ? ' · peu de données' : ''}</small></div>
       <div class="cmp-piste" role="img" aria-label="${esc(g.libelle)} : ${formaterComparatif(v, m.fmt)}">
         <div class="barre ${classe}" style="width:${Math.max(v / maxi * 100, 0.5).toFixed(1)}%"></div>
         ${typeof ensemble[m.cle] === 'number' ? `<span class="repere" style="left:${(ensemble[m.cle] / maxi * 100).toFixed(1)}%" title="Ensemble : ${formaterComparatif(ensemble[m.cle], m.fmt)}"></span>` : ''}
@@ -4003,19 +4070,29 @@ function renderComparatif() {
     <div class="card" style="margin-bottom:16px;">
       <div class="card-title"><span>${esc(m.label)}</span><span class="alerte-compteur">${m.mieux === 'haut' ? 'plus c’est haut, mieux c’est' : 'plus c’est bas, mieux c’est'}</span></div>
       <div class="cmp-barres">${barres || '<div class="empty-state">Pas de valeur pour cet indicateur.</div>'}</div>
-      <div class="cmp-legende">Trait sombre = ensemble (${formaterComparatif(ensemble[m.cle], m.fmt)}). Vert = meilleur groupe, rouge = moins bon, gris = peu de données (moins de ${SEUIL_PEU_DE_DONNEES} semaines de conseiller).</div>
+      <div class="cmp-legende">Trait sombre = ensemble (${formaterComparatif(ensemble[m.cle], m.fmt)}). Vert = meilleur groupe, rouge = moins bon, gris = peu de données (moins de ${seuilDonnees()} semaines de conseiller).</div>
     </div>
-    <div class="table-wrap"><table class="table-comparatif">
+    <div class="table-wrap">${dimension === 'conseiller' ? tableauComparatifConseillers(groupes, ensemble, extremes) : `<table class="table-comparatif">
       <thead><tr><th>Indicateur</th>${entete('Ensemble', '', ensemble, 'cmp-ensemble')}${groupes.map(g => entete(g.libelle, g.detail, g.ind)).join('')}</tr></thead>
       <tbody>${lignes}</tbody>
-    </table></div>
-    <div class="cmp-legende">▲ meilleur groupe · ▼ moins bon groupe, par indicateur (seulement parmi les groupes d'au moins ${SEUIL_PEU_DE_DONNEES} semaines de conseiller). Sous chaque valeur : écart avec l'ensemble. Taux de visio et de casse : plus bas = mieux.</div>`;
+    </table>`}</div>
+    <div class="cmp-legende">${dimension === 'conseiller'
+      ? `▲ meilleur · ▼ moins bon, par indicateur (seulement parmi les conseillers d'au moins ${seuilDonnees()} semaines). Clique sur le nom d'un indicateur pour trier : ↓ meilleur d'abord, ↑ moins bon d'abord. Passe la souris sur une valeur pour voir son écart avec l'ensemble. Taux de visio et de casse : plus bas = mieux.`
+      : `▲ meilleur groupe · ▼ moins bon groupe, par indicateur (seulement parmi les groupes d'au moins ${seuilDonnees()} semaines de conseiller). Sous chaque valeur : écart avec l'ensemble. Taux de visio et de casse : plus bas = mieux.`}</div>`;
 }
 
 document.getElementById('view-comparatif').addEventListener('click', (e) => {
   const bouton = e.target.closest('[data-cmp-dimension]');
   if (!bouton) return;
   etatComparatif.dimension = bouton.dataset.cmpDimension;
+  renderComparatif();
+});
+document.getElementById('cmp-limite').addEventListener('change', (e) => { etatComparatif.limite = e.target.value; renderComparatif(); });
+document.getElementById('cmp-contenu').addEventListener('click', (e) => {
+  const entete = e.target.closest('[data-cmp-tri]');
+  if (!entete) return;
+  const cle = entete.dataset.cmpTri;
+  etatComparatif.tri = etatComparatif.tri.cle === cle ? { cle, sens: etatComparatif.tri.sens === 'meilleur' ? 'moins-bon' : 'meilleur' } : { cle, sens: 'meilleur' };
   renderComparatif();
 });
 document.getElementById('cmp-periode').addEventListener('change', (e) => { etatComparatif.periode = e.target.value; renderComparatif(); });
