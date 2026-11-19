@@ -4714,21 +4714,31 @@ function proposerAdresses() {
     if (!entree) continue;
     const connue = emailDejaConnu(entree);
     const adresse = connue || suggererEmail(entree.conseiller);
-    if (adresse) propositions.push({ champ, adresse, connue: !!connue });
+    if (adresse) propositions.push({ champ, adresse, connue: !!connue, nom: entree.conseiller });
   }
+
+  // Deux personnes ne doivent jamais recevoir la même adresse (même initiale et même nom, ex. « Martin Léa » et « Martin Louis ») :
+  // une adresse déjà attribuée, ou proposée plusieurs fois d'après le modèle, n'est PAS proposée — à saisir à la main.
+  const compte = new Map();
+  for (const r of roster) if (r.email) compte.set(r.email, (compte.get(r.email) || 0) + 1);
+  for (const pr of propositions) compte.set(pr.adresse, (compte.get(pr.adresse) || 0) + 1);
+  const ambigus = propositions.filter(pr => !pr.connue && compte.get(pr.adresse) > 1);
+  const retenues = propositions.filter(pr => !ambigus.includes(pr));
+  const phraseAmbigus = ambigus.length ? `\n\nNon proposées (l'adresse serait la même pour plusieurs personnes) : ${ambigus.map(a => a.nom).join(', ')}. À saisir à la main.` : '';
+
   const note = document.getElementById('roster-emails-note');
-  if (!propositions.length) {
-    note.textContent = 'Aucune adresse à proposer : toutes les lignes en ont déjà une (ou le nom n’a pas la forme « Nom Prénom »).';
+  if (!retenues.length) {
+    note.textContent = (ambigus.length ? '' : 'Aucune adresse à proposer : toutes les lignes en ont déjà une (ou le nom n’a pas la forme « Nom Prénom »).') + phraseAmbigus.trim();
     note.style.display = '';
     return;
   }
-  if (!confirm(`Proposer ${propositions.length} adresse${propositions.length > 1 ? 's' : ''} e-mail ?\n\nElles suivent le modèle prénom.nom-mandataire@capfinances.fr (ou le compte déjà utilisé dans Cockpit). Elles sont enregistrées tout de suite : vérifie-les ensuite, elles sont surlignées en pointillés.`)) return;
-  for (const { champ, adresse } of propositions) {
+  if (!confirm(`Proposer ${retenues.length} adresse${retenues.length > 1 ? 's' : ''} e-mail ?\n\nElles suivent le modèle prénom.nom-mandataire@capfinances.fr (ou le compte déjà utilisé dans Cockpit). Elles sont enregistrées tout de suite : vérifie-les ensuite, elles sont surlignées en pointillés.${phraseAmbigus}`)) return;
+  for (const { champ, adresse } of retenues) {
     champ.value = adresse;
     champ.classList.add('email-suggere');
     champ.dispatchEvent(new Event('input', { bubbles: true }));   // déclenche l'enregistrement
   }
-  note.textContent = `${propositions.length} adresse${propositions.length > 1 ? 's proposées' : ' proposée'} (en pointillés) : vérifie-les avant d’envoyer un rappel. Corrige celles qui sont fausses, le surlignage disparaît dès que tu modifies.`;
+  note.textContent = `${retenues.length} adresse${retenues.length > 1 ? 's proposées' : ' proposée'} (en pointillés) : vérifie-les avant d’envoyer un rappel. Corrige celles qui sont fausses, le surlignage disparaît dès que tu modifies.${phraseAmbigus.replace(/\n\n/, ' ')}`;
   note.style.display = '';
 }
 document.getElementById('btn-emails-suggerer').addEventListener('click', proposerAdresses);
