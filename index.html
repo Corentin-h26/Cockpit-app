@@ -414,6 +414,11 @@
   .aide-saisie summary:hover { color: var(--heading); }
   .aide-saisie .field-hint { font-size: 12.5px; line-height: 1.6; margin-top: 8px; max-width: 900px; }
   .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .relance-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--heading-2); }
+  .roster-table input[type="email"] { min-width: 240px; }
+  #roster-emails-note { font-size: 12.5px; line-height: 1.5; margin: 0 0 10px; color: var(--heading-2); }
+  .entry-table input.email-invalide { border-color: var(--coral); background: rgba(239, 91, 110, 0.08); }
+  .entry-table input.email-suggere { border: 1px dashed var(--gold); background: var(--gold-tint); }
   #bloc-rattachement { margin-top: 26px; }
   .rattachement-resume { font-size: 13px; line-height: 1.55; }
   .rattachement-resume .ok { color: var(--success-text); font-weight: 600; }
@@ -1599,11 +1604,14 @@
         <div class="saisie-toolbar">
           <button class="btn btn-primary" id="btn-add-roster" type="button">+ Ajouter un conseiller</button>
           <button class="btn" id="btn-importer-roster" type="button" style="display:none;">Importer le roster initial (33 conseillers)</button>
+          <button class="btn" id="btn-emails-suggerer" type="button" style="display:none;">Pré-remplir les adresses e-mail manquantes</button>
         </div>
+        <div class="field-hint" id="roster-emails-note" style="display:none;"></div>
         <div class="table-wrap">
           <table class="entry-table roster-table">
             <thead><tr>
               <th data-sort="conseiller">Conseiller<span class="sort-arrow"></span></th>
+              <th>E-mail</th>
               <th data-sort="date_entree">Date d'entrée<span class="sort-arrow"></span></th>
               <th data-sort="anciennete">Ancienneté<span class="sort-arrow"></span></th>
               <th data-sort="niveau">Niveau<span class="sort-arrow"></span></th>
@@ -2229,7 +2237,8 @@ function readRoster() {
   for (const tr of body.querySelectorAll('tr')) {
     const nom = tr.querySelector('[data-field="r_conseiller"]')?.value.trim();
     const date = tr.querySelector('[data-field="r_date_entree"]')?.value.trim();
-    if (nom) roster.push({ id: tr.dataset.docId || '', conseiller: nom, date_entree: date || null });
+    const email = tr.querySelector('[data-field="r_email"]')?.value.trim().toLowerCase() || '';
+    if (nom) roster.push({ id: tr.dataset.docId || '', conseiller: nom, date_entree: date || null, email });
   }
   return roster;
 }
@@ -2606,7 +2615,7 @@ function renderParametres() {
 }
 
 // Dernier message de relance et dernière liste calculés (lus par les boutons « Copier »).
-let relanceCourante = { message: '', liste: '' };
+let relanceCourante = { message: '', liste: '', destinataires: [], sujet: '' };
 
 /** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
 function messageRelanceSemaine(semaine) {
@@ -2624,9 +2633,16 @@ function renderSuiviSaisie(toutesLignes) {
   const suiviSemaineLabel = document.getElementById('suivi-saisie-semaine');
   if (suiviSemaineLabel) suiviSemaineLabel.textContent = `semaine du ${jrSC}/${moSC}/${anSC}`;
 
+  // Adresses des retardataires (renseignées dans Centre d'affaires) pour « Ouvrir dans ma messagerie ».
+  const adresseDe = new Map(roster.map(r => [r.conseiller, r.email]));
+  const avecAdresse = nonRemplis.filter(nom => emailValide(adresseDe.get(nom)));
+  const sansAdresse = nonRemplis.filter(nom => !avecAdresse.includes(nom));
+
   relanceCourante = {
     message: messageRelanceSemaine(semaineCourante),
     liste: [...nonRemplis].sort((a, b) => a.localeCompare(b, 'fr')).join('\n'),
+    destinataires: avecAdresse.map(nom => adresseDe.get(nom)),
+    sujet: `Rappel Cockpit : ta semaine du ${libelleDateCourte(semaineCourante)}`,
   };
 
   const suiviSaisieBody = document.getElementById('suivi-saisie-body');
@@ -2640,9 +2656,17 @@ function renderSuiviSaisie(toutesLignes) {
           <span class="pill pill-prioritaire">Pas encore rempli</span>
         </div>`).join('') + `
         <div class="relance-actions">
+          <button class="btn btn-primary" type="button" data-relance="mail"${avecAdresse.length ? '' : ' disabled'}>Ouvrir dans ma messagerie (${avecAdresse.length})</button>
           <button class="btn" type="button" data-relance="message">Copier le message de relance</button>
           <button class="btn" type="button" data-relance="liste">Copier la liste des noms</button>
-        </div>`
+        </div>
+        <div class="relance-note" id="relance-note">${
+          !avecAdresse.length
+            ? 'Aucune adresse e-mail renseignée : ajoute-les dans Centre d’affaires (colonne E-mail).'
+            : sansAdresse.length
+              ? `${sansAdresse.length} sans adresse e-mail, non incluse${sansAdresse.length > 1 ? 's' : ''} : ${sansAdresse.map(esc).join(', ')}. Les destinataires sont en copie cachée : ils ne voient pas les adresses des autres.`
+              : 'Les destinataires sont en copie cachée : ils ne voient pas les adresses des autres.'
+        }</div>`
       : `<div class="empty-state">${ic('checkcircle', 13)} Tout le centre d'affaires a rempli sa semaine.</div>`;
 }
 
@@ -2650,8 +2674,34 @@ function renderSuiviSaisie(toutesLignes) {
 document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
   const bouton = e.target.closest('[data-relance]');
   if (!bouton) return;
+  if (bouton.dataset.relance === 'mail') { ouvrirMessagerieRelance(bouton); return; }
   copierTexteRessource(relanceCourante[bouton.dataset.relance] || '', bouton);
 });
+
+const LIMITE_MAILTO = 1900;   // au-delà, certaines messageries ignorent le lien
+
+function ouvrirMailto(url) { window.location.href = url; }
+
+/** Ouvre un e-mail prérempli : destinataires en copie cachée (CCI), sujet et message. Rien n'est envoyé sans un clic de l'utilisateur. */
+function ouvrirMessagerieRelance(bouton) {
+  const { destinataires, sujet, message } = relanceCourante;
+  if (!destinataires.length) return;
+  const info = texte => { const note = document.getElementById('relance-note'); if (note) note.textContent = texte; };
+  const bcc = destinataires.join(',');
+  const complet = `mailto:?bcc=${bcc}&subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(message.replace(/\n/g, '\r\n'))}`;
+  if (complet.length <= LIMITE_MAILTO) { ouvrirMailto(complet); return; }
+
+  // Trop long pour un lien : destinataires et sujet dans l'e-mail, message copié à coller.
+  const sansCorps = `mailto:?bcc=${bcc}&subject=${encodeURIComponent(sujet)}`;
+  if (sansCorps.length <= LIMITE_MAILTO) {
+    copierTexteRessource(message, bouton);
+    info('Message copié : colle-le dans le corps de l’e-mail qui s’ouvre.');
+    ouvrirMailto(sansCorps);
+    return;
+  }
+  copierTexteRessource(destinataires.join('; '), bouton);
+  info('Trop de destinataires pour un seul e-mail : les adresses sont copiées, colle-les en copie cachée (CCI).');
+}
 
 function renderDashboard(rows, toutesLignes) {
   const equipe = agreger(rows);
@@ -4205,6 +4255,7 @@ document.getElementById('rows-body').addEventListener('input', (e) => {
 function construireLigneRosterHTML(docId, data) {
   return `<tr data-doc-id="${esc(docId)}">
     <td><input type="text" data-field="r_conseiller" placeholder="Nom Prénom" value="${esc(data.conseiller)}"></td>
+    <td><input type="email" data-field="r_email" placeholder="prenom.nom@capfinances.fr" autocomplete="off" value="${esc(data.email)}"></td>
     <td><input type="date" data-field="r_date_entree" value="${esc(data.date_entree)}"></td>
     <td class="anc-duree"></td>
     <td class="anc-niveau"></td>
@@ -4218,11 +4269,12 @@ function appliquerVerrouillageRoster() {
     tr.classList.toggle('row-readonly', !isAdmin);
   }
   document.getElementById('btn-add-roster').style.display = isAdmin ? '' : 'none';
+  document.getElementById('btn-emails-suggerer').style.display = isAdmin ? '' : 'none';
 }
 
 function ajouterLigneRoster() {
   if (!isAdmin) return;
-  const data = { conseiller: '', date_entree: null };
+  const data = { conseiller: '', date_entree: null, email: '' };
   db.collection('cockpit_roster').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }).then(ref => {
     const body = document.getElementById('roster-body');
     const template = document.createElement('tbody');
@@ -4621,6 +4673,75 @@ document.getElementById('card-rattachement').addEventListener('click', async (e)
   }
 });
 
+/* ---- Adresses e-mail des conseillers (pour relancer ceux qui n'ont pas rempli leur semaine) ---- */
+
+function emailValide(texte) {
+  return /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(String(texte || '').trim());
+}
+
+const lettresSeules = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+
+/** Modèle observé sur les comptes existants : « Paris Alexandre » -> a.paris-mandataire@capfinances.fr (le roster est en « Nom Prénom »). */
+function suggererEmail(nomComplet) {
+  const mots = String(nomComplet || '').trim().split(/\s+/).filter(Boolean);
+  if (mots.length < 2) return '';
+  const prenom = lettresSeules(mots[mots.length - 1]);
+  const nom = lettresSeules(mots.slice(0, -1).join(''));
+  return prenom && nom ? `${prenom[0]}.${nom}-mandataire@capfinances.fr` : '';
+}
+
+/** Compte déjà utilisé dans Cockpit par ce conseiller (adresse de ses propres saisies), s'il y en a un : plus fiable que le modèle. */
+function emailDejaConnu(entree) {
+  const cleNom = lettresSeules(entree.conseiller.split(/\s+/).slice(0, -1).join(''));
+  if (!entree.id || !cleNom) return '';
+  const compte = new Map();
+  for (const tr of document.getElementById('rows-body').querySelectorAll('tr')) {
+    if (tr.dataset.conseillerId !== entree.id) continue;
+    const mail = (tr.dataset.ownerEmail || '').toLowerCase();
+    if (emailValide(mail) && lettresSeules(mail.split('@')[0]).includes(cleNom)) compte.set(mail, (compte.get(mail) || 0) + 1);
+  }
+  return [...compte].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+}
+
+function proposerAdresses() {
+  if (!isAdmin) return;
+  const roster = readRoster();
+  const propositions = [];
+  for (const tr of document.getElementById('roster-body').querySelectorAll('tr')) {
+    const champ = tr.querySelector('[data-field="r_email"]');
+    if (!champ || champ.value.trim()) continue;
+    const entree = roster.find(r => r.id === tr.dataset.docId);
+    if (!entree) continue;
+    const connue = emailDejaConnu(entree);
+    const adresse = connue || suggererEmail(entree.conseiller);
+    if (adresse) propositions.push({ champ, adresse, connue: !!connue });
+  }
+  const note = document.getElementById('roster-emails-note');
+  if (!propositions.length) {
+    note.textContent = 'Aucune adresse à proposer : toutes les lignes en ont déjà une (ou le nom n’a pas la forme « Nom Prénom »).';
+    note.style.display = '';
+    return;
+  }
+  if (!confirm(`Proposer ${propositions.length} adresse${propositions.length > 1 ? 's' : ''} e-mail ?\n\nElles suivent le modèle prénom.nom-mandataire@capfinances.fr (ou le compte déjà utilisé dans Cockpit). Elles sont enregistrées tout de suite : vérifie-les ensuite, elles sont surlignées en pointillés.`)) return;
+  for (const { champ, adresse } of propositions) {
+    champ.value = adresse;
+    champ.classList.add('email-suggere');
+    champ.dispatchEvent(new Event('input', { bubbles: true }));   // déclenche l'enregistrement
+  }
+  note.textContent = `${propositions.length} adresse${propositions.length > 1 ? 's proposées' : ' proposée'} (en pointillés) : vérifie-les avant d’envoyer un rappel. Corrige celles qui sont fausses, le surlignage disparaît dès que tu modifies.`;
+  note.style.display = '';
+}
+document.getElementById('btn-emails-suggerer').addEventListener('click', proposerAdresses);
+
+// Adresse mal formée : champ en rouge ; une adresse modifiée à la main n'est plus « suggérée ».
+document.getElementById('roster-body').addEventListener('input', (e) => {
+  const champ = e.target;
+  if (champ.dataset?.field !== 'r_email') return;
+  const texte = champ.value.trim();
+  champ.classList.toggle('email-invalide', texte !== '' && !emailValide(texte));
+  if (e.isTrusted) champ.classList.remove('email-suggere');   // saisie à la main (pas notre remplissage automatique)
+});
+
 const rosterWriteTimers = new Map();
 document.getElementById('roster-body').addEventListener('input', (e) => {
   renderAll();
@@ -4632,6 +4753,7 @@ document.getElementById('roster-body').addEventListener('input', (e) => {
     const data = {
       conseiller: tr.querySelector('[data-field="r_conseiller"]')?.value.trim() || '',
       date_entree: tr.querySelector('[data-field="r_date_entree"]')?.value.trim() || null,
+      email: tr.querySelector('[data-field="r_email"]')?.value.trim().toLowerCase() || '',
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
     db.collection('cockpit_roster').doc(docId).set(data, { merge: true }).catch(err => console.error(err));
