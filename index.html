@@ -414,6 +414,9 @@
   .aide-saisie summary:hover { color: var(--heading); }
   .aide-saisie .field-hint { font-size: 12.5px; line-height: 1.6; margin-top: 8px; max-width: 900px; }
   .relance-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .relance-webmail { margin-top: 10px; font-size: 12px; color: var(--heading-2); }
+  .lien-bouton { font: inherit; font-weight: 600; color: var(--gold-text); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
+  .lien-bouton:hover { color: var(--heading); }
   .relance-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--heading-2); }
   .roster-table input[type="email"] { min-width: 240px; }
   #roster-emails-note { font-size: 12.5px; line-height: 1.5; margin: 0 0 10px; color: var(--heading-2); }
@@ -2660,6 +2663,9 @@ function renderSuiviSaisie(toutesLignes) {
           <button class="btn" type="button" data-relance="message">Copier le message de relance</button>
           <button class="btn" type="button" data-relance="liste">Copier la liste des noms</button>
         </div>
+        ${avecAdresse.length ? `<div class="relance-webmail">Ta messagerie ne s’ouvre pas ? Ouvrir dans
+          <button class="lien-bouton" type="button" data-relance="outlook">Outlook (web)</button> ·
+          <button class="lien-bouton" type="button" data-relance="gmail">Gmail (web)</button></div>` : ''}
         <div class="relance-note" id="relance-note">${
           !avecAdresse.length
             ? 'Aucune adresse e-mail renseignée : ajoute-les dans Centre d’affaires (colonne E-mail).'
@@ -2675,12 +2681,28 @@ document.getElementById('suivi-saisie-body').addEventListener('click', (e) => {
   const bouton = e.target.closest('[data-relance]');
   if (!bouton) return;
   if (bouton.dataset.relance === 'mail') { ouvrirMessagerieRelance(bouton); return; }
+  if (bouton.dataset.relance === 'outlook' || bouton.dataset.relance === 'gmail') { ouvrirWebmailRelance(bouton.dataset.relance, bouton); return; }
   copierTexteRessource(relanceCourante[bouton.dataset.relance] || '', bouton);
 });
 
 const LIMITE_MAILTO = 1900;   // au-delà, certaines messageries ignorent le lien
 
 function ouvrirMailto(url) { window.location.href = url; }
+function ouvrirFenetre(url) { window.open(url, '_blank', 'noopener'); }
+
+/** Si aucune messagerie n'est associée aux liens e-mail, le navigateur ne dit rien : on le signale au bout d'un instant (la page perd le focus quand une application s'ouvre). */
+function surveillerOuvertureMessagerie() {
+  let reagi = false;
+  const marquer = () => { reagi = true; };
+  window.addEventListener('blur', marquer, { once: true });
+  document.addEventListener('visibilitychange', marquer, { once: true });
+  setTimeout(() => {
+    window.removeEventListener('blur', marquer);
+    document.removeEventListener('visibilitychange', marquer);
+    const note = document.getElementById('relance-note');
+    if (!reagi && note) note.textContent = 'Rien ne s’est ouvert ? Aucune messagerie n’est associée aux liens e-mail sur cet ordinateur : utilise « Outlook (web) » ou « Gmail (web) » ci-dessus, ou copie le message et la liste des noms.';
+  }, 1800);
+}
 
 /** Ouvre un e-mail prérempli : destinataires en copie cachée (CCI), sujet et message. Rien n'est envoyé sans un clic de l'utilisateur. */
 function ouvrirMessagerieRelance(bouton) {
@@ -2689,7 +2711,7 @@ function ouvrirMessagerieRelance(bouton) {
   const info = texte => { const note = document.getElementById('relance-note'); if (note) note.textContent = texte; };
   const bcc = destinataires.join(',');
   const complet = `mailto:?bcc=${bcc}&subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(message.replace(/\n/g, '\r\n'))}`;
-  if (complet.length <= LIMITE_MAILTO) { ouvrirMailto(complet); return; }
+  if (complet.length <= LIMITE_MAILTO) { ouvrirMailto(complet); surveillerOuvertureMessagerie(); return; }
 
   // Trop long pour un lien : destinataires et sujet dans l'e-mail, message copié à coller.
   const sansCorps = `mailto:?bcc=${bcc}&subject=${encodeURIComponent(sujet)}`;
@@ -2701,6 +2723,23 @@ function ouvrirMessagerieRelance(bouton) {
   }
   copierTexteRessource(destinataires.join('; '), bouton);
   info('Trop de destinataires pour un seul e-mail : les adresses sont copiées, colle-les en copie cachée (CCI).');
+}
+
+/** Ouvre la fenêtre de rédaction de la messagerie web (Outlook ou Gmail), destinataires en CCI, sujet et message prérenseignés. */
+function ouvrirWebmailRelance(type, bouton) {
+  const { destinataires, sujet, message } = relanceCourante;
+  if (!destinataires.length) return;
+  const outlook = type === 'outlook';
+  const base = outlook ? 'https://outlook.office.com/mail/deeplink/compose?' : 'https://mail.google.com/mail/?view=cm&fs=1&';
+  const parametres = corps => `${base}bcc=${encodeURIComponent(destinataires.join(','))}&${outlook ? 'subject' : 'su'}=${encodeURIComponent(sujet)}${corps ? `&body=${encodeURIComponent(message)}` : ''}`;
+  const note = document.getElementById('relance-note');
+  let url = parametres(true);
+  if (url.length > LIMITE_MAILTO) {
+    url = parametres(false);
+    copierTexteRessource(message, bouton);
+    if (note) note.textContent = 'Message copié : colle-le dans le corps de l’e-mail qui s’ouvre.';
+  }
+  ouvrirFenetre(url);
 }
 
 function renderDashboard(rows, toutesLignes) {
