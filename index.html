@@ -421,6 +421,8 @@
   .lien-bouton:hover { color: var(--heading); }
   .lien-bouton.fait { color: var(--success-text); text-decoration: none; }
   .watch-actions { display: flex; align-items: center; gap: 12px; }
+  .reglage-ligne { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .reglage-ligne input { margin-top: 2px; }
   .relance-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--heading-2); }
   .roster-table input[type="email"] { min-width: 240px; }
   body:not(.est-admin) .col-email { display: none; }   /* colonne E-mail : administrateur uniquement */
@@ -1422,6 +1424,7 @@
       <div class="view active" id="view-dashboard">
         <div class="page-title">Dashboard</div>
         <div class="page-sub">Vue d'ensemble du centre d'affaires, calculée en direct à partir des saisies de "Ma semaine".</div>
+        <div class="field-hint bilans-exclus" style="display:none;"></div>
         <div class="field-hint" id="dashboard-semaine-auto" style="display:none; color:var(--gold-text); font-weight:600;"></div>
         <div class="field-hint" id="dashboard-hors-roster" style="display:none;"></div>
         <hr class="rule">
@@ -1560,6 +1563,7 @@
       <div class="view" id="view-classement">
         <div class="page-title">Classement</div>
         <div class="page-sub">Performance ID cumulée sur toutes les semaines saisies.</div>
+        <div class="field-hint bilans-exclus" style="display:none;"></div>
         <hr class="rule">
         <div class="card">
           <div style="overflow-x:auto;">
@@ -1587,6 +1591,7 @@
       <div class="view" id="view-conseillers">
         <div class="page-title">Conseillers</div>
         <div class="page-sub">La fiche de chaque conseiller — clique un nom pour voir le détail.</div>
+        <div class="field-hint bilans-exclus" style="display:none;"></div>
         <hr class="rule">
         <div class="saisie-toolbar">
           <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--heading-2);cursor:pointer;">
@@ -1646,6 +1651,7 @@
       <div class="view" id="view-statistiques">
         <div class="page-title">Statistiques</div>
         <div class="page-sub">Vue analytique du centre d'affaires : pipeline, répartition des niveaux et top recommandations.</div>
+        <div class="field-hint bilans-exclus" style="display:none;"></div>
         <hr class="rule">
 
         <div class="card" id="stats-pipeline"></div>
@@ -1677,6 +1683,7 @@
       <div class="view" id="view-alertes">
         <div class="page-title">Alertes</div>
         <div class="page-sub" id="alertes-sub"></div>
+        <div class="field-hint bilans-exclus" style="display:none;"></div>
         <hr class="rule">
         <div class="alertes-bascule" role="group" aria-label="Regrouper les alertes">
           <button type="button" class="btn actif" data-alertes-vue="conseiller" aria-pressed="true">Par conseiller</button>
@@ -1772,6 +1779,17 @@
         <div class="page-title">Paramètres</div>
         <div class="page-sub">Pondération du Performance ID — partagée pour tout le centre d'affaires, modifiable par l'administrateur uniquement.</div>
         <hr class="rule">
+
+        <div class="card" id="card-reglages" style="margin-bottom:16px;">
+          <div class="card-title"><span>Calcul des moyennes</span></div>
+          <label class="reglage-ligne">
+            <input type="checkbox" id="reglage-exclure-bilans" checked>
+            <span>Ne pas compter les semaines dont le bilan (réalisé) n'est pas rempli</span>
+          </label>
+          <div class="field-hint" style="margin-top:8px;">
+            Coché : une semaine de conseiller sans bilan (aucun chiffre de réalisé, pas de réponse à « Comment évalues-tu ta semaine ? ») est ignorée partout — moyennes, classement, alertes, statistiques, analyse IA. Décoché : elle compte comme une semaine à zéro (casse de 100 %, signature et concrétisation à 0). Réglage partagé, modifiable par l'administrateur uniquement.
+          </div>
+        </div>
 
         <div class="card">
           <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="19" stroke="currentColor" stroke-width="1.6"/><line x1="5" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z" fill="currentColor" opacity="0.7"/><rect x="8" y="19" width="8" height="2" rx="1" fill="currentColor"/></svg><span>Pondération du Performance ID</span></div>
@@ -2393,7 +2411,7 @@ function indicateursDashboard(rows) {
 function semainePrecedenteDuDashboard(toutesLignes) {
   const choisie = document.getElementById('filtre-semaine').value;
   if (!choisie || document.getElementById('filtre-mois').value !== '') return null;
-  const population = filtrerParEquipeEtAnciennete(toutesLignes);
+  const population = lignesComptees(filtrerParEquipeEtAnciennete(toutesLignes));   // une semaine sans bilan ne sert pas de point de comparaison
   const avant = [...new Set(population.map(r => r.semaine).filter(sem => sem && sem < choisie))].sort();
   const precedente = avant[avant.length - 1];
   return precedente ? { semaine: precedente, rows: population.filter(r => r.semaine === precedente) } : null;
@@ -2555,7 +2573,33 @@ function filtrerParEquipeEtAnciennete(rows) {
   return filtre;
 }
 
-function appliquerFiltres(rows) {
+/**
+ * Réglage partagé (cockpit_parametres/reglages, modifiable par l'administrateur) : une semaine de conseiller dont le bilan
+ * (réalisé) n'est pas rempli n'est PAS comptée dans les moyennes, le classement, les alertes et les statistiques — elle y
+ * apparaîtrait comme une semaine à zéro (casse de 100 %, signature et concrétisation à 0…). Désactivé : ancien calcul.
+ */
+let exclureBilansVides = true;
+const lignesComptees = rows => exclureBilansVides ? rows.filter(bilanRempli) : rows;
+
+/** Reflète le réglage partagé dans la case de l'onglet Paramètres (modifiable seulement par l'administrateur). */
+function majCaseReglages() {
+  const case_ = document.getElementById('reglage-exclure-bilans');
+  if (!case_) return;
+  case_.checked = exclureBilansVides;
+  case_.disabled = !isAdmin;
+}
+
+document.getElementById('reglage-exclure-bilans').addEventListener('change', (e) => {
+  if (!isAdmin) { majCaseReglages(); return; }
+  e.target.disabled = true;
+  db.collection('cockpit_parametres').doc('reglages')
+    .set({ exclure_bilans_vides: e.target.checked, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    .catch(err => { console.error('Réglage', err); alert('Réglage non enregistré : ' + err.message); majCaseReglages(); })
+    .finally(() => { e.target.disabled = !isAdmin; });
+});
+
+/** Lignes de la période choisie (semaine, mois, équipe, ancienneté), AVANT retrait des semaines sans bilan. */
+function appliquerFiltresBruts(rows) {
   let filtre = filtrerParEquipeEtAnciennete(rows);
 
   const semaineSel = document.getElementById('filtre-semaine').value;
@@ -2568,6 +2612,31 @@ function appliquerFiltres(rows) {
   }
 
   return filtre;
+}
+
+/** Lignes servant aux indicateurs : la période choisie, sans les semaines dont le bilan n'est pas rempli. */
+function appliquerFiltres(rows) {
+  return lignesComptees(appliquerFiltresBruts(rows));
+}
+
+/** Phrase d'information sur les semaines non comptées (période choisie) ; vide si rien n'est écarté. */
+function texteBilansExclus(periode, comptees) {
+  const ecartees = periode.filter(r => !bilanRempli(r));
+  if (!ecartees.length) return '';
+  if (!exclureBilansVides) return 'Les semaines dont le bilan (réalisé) n’est pas rempli sont comptées à zéro (réglage de l’administrateur, onglet Paramètres).';
+  const pl = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+  const sansAucun = new Set(periode.map(r => r.conseiller));
+  for (const r of comptees) sansAucun.delete(r.conseiller);
+  return `${pl(ecartees.length, 'semaine')} de conseiller non comptée${ecartees.length > 1 ? 's' : ''} dans ces chiffres : bilan (réalisé) non rempli.`
+    + (sansAucun.size ? ` ${pl(sansAucun.size, 'conseiller')} sans aucun bilan sur la période, non classé${sansAucun.size > 1 ? 's' : ''}.` : '');
+}
+
+function majNoteBilansExclus(periode, comptees) {
+  const texte = texteBilansExclus(periode, comptees);
+  for (const zone of document.querySelectorAll('.bilans-exclus')) {
+    zone.textContent = texte;
+    zone.style.display = texte ? '' : 'none';
+  }
 }
 
 /* =========================================================
@@ -2598,7 +2667,9 @@ function renderAll() {
   majAvertissementHorsRoster();
   const toutesLignes = readRows();
   populerFiltresSemaineEtMois(toutesLignes);
-  const rows = appliquerFiltres(toutesLignes);
+  const periode = appliquerFiltresBruts(toutesLignes);
+  const rows = lignesComptees(periode);
+  majNoteBilansExclus(periode, rows);
   renderDashboard(rows, toutesLignes);
   renderClassement(rows);
   renderConseillers(rows);
@@ -2641,7 +2712,9 @@ function semaineBilan(jour = new Date().getDay()) {
 }
 
 /** Bilan rempli : un chiffre du réalisé saisi, ou la question « Comment évalues-tu ta semaine ? » répondue (même si tout vaut 0). */
-const bilanRempli = r => realiseRenseigne(r) || CHAMPS_REALISE.some(c => (r[c] || 0) > 0) || !!r.ressenti;
+function bilanRempli(r) {
+  return realiseRenseigne(r) || CHAMPS_REALISE.some(c => (r[c] || 0) > 0) || !!r.ressenti;
+}
 
 /** Message à envoyer aux conseillers qui n'ont pas rempli la semaine en cours (même texte pour tous, sans nom). */
 function messageRelance(type, semaine) {
@@ -2951,7 +3024,7 @@ function renderDashboard(rows, toutesLignes) {
       <span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span>
     </div>`).join('') || `<div class="empty-state">Personne en dessous du seuil actuellement.</div>`;
 
-  const progression = meilleureProgression(toutesLignes);
+  const progression = meilleureProgression(lignesComptees(toutesLignes));
   const progCard = progression
     ? kpiCard({ ic: 'star', title: 'Plus forte progression', value: esc(progression.conseiller), variation: `${progression.delta > 0 ? '+' : ''}${progression.delta.toFixed(1)} pts vs semaine précédente`, tone: progression.delta >= 0 ? 'positive' : 'negative' })
     : kpiCard({ ic: 'star', title: 'Plus forte progression', value: '—', variation: 'Pas encore assez d’historique (2 semaines mini).' });
@@ -3195,7 +3268,7 @@ function renderConseillers(rows) {
   const entreeRoster = roster.find(r => r.conseiller === conseillerSelectionne);
   const mois = entreeRoster ? moisDepuis(entreeRoster.date_entree) : null;
   const niveau = niveauDe(agg.performance);
-  const historique = historiqueDe(readRows(), conseillerSelectionne);
+  const historique = historiqueDe(lignesComptees(readRows()), conseillerSelectionne);
 
   const signatures = agg.r2_signes;
 
@@ -3534,7 +3607,7 @@ function renderStatistiques(rows) {
       ${etapes.map((e, i) => `${pchainStageHTML(e)}${i < etapes.length - 1 ? '<div class="pchain-arrow">→</div>' : ''}`).join('')}
     </div>`;
 
-  const parMois = tauxParMois(readRows());
+  const parMois = tauxParMois(lignesComptees(readRows()));
   document.getElementById('stats-evolution').innerHTML = `
     <div class="card-title">${ic('trending', 15)}<span>Évolution des taux clés (centre d'affaires)</span></div>
     ${multiLineChartSVG(parMois.map(m => m.label), [
@@ -3603,6 +3676,7 @@ let alertesParConseiller = true;
 function renderAlertes(rows) {
   const classement = classementDe(rows);
   const toutes = readRows();
+  const comptees = lignesComptees(toutes);   // historique de performance : seulement les semaines dont le bilan est rempli
 
   // Chaque alerte : { conseiller, detail (texte brut), grave }. « grave » = situation à traiter en priorité.
   const categories = [
@@ -3619,7 +3693,7 @@ function renderAlertes(rows) {
     { ic: 'trending', titre: 'Absence de progression (semaine sur semaine)', items: (() => {
         const out = [];
         for (const c of classement) {
-          const hist = historiqueDe(toutes, c.conseiller);
+          const hist = historiqueDe(comptees, c.conseiller);
           if (hist.length < 2) continue;
           const delta = Math.round((hist[hist.length - 1].performance - hist[hist.length - 2].performance) * 10) / 10;
           if (delta <= 0) out.push({ conseiller: c.conseiller, detail: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} pts vs semaine précédente` });
@@ -6642,7 +6716,7 @@ function construirePayloadAnalyseIA(rows, toutesLignes) {
             };
           }),
       } : {}),
-      evolution_performance: historiqueDe(toutesLignes, c.conseiller).slice(-4)
+      evolution_performance: historiqueDe(lignesComptees(toutesLignes), c.conseiller).slice(-4)
         .map(h => ({ semaine: h.semaine, performance_id: arrondi(h.performance) })),
       accompagnement_declare: derniere ? derniere.accompagnement : [],
       ressenti_derniere_semaine: derniere ? derniere.ressenti : null,
@@ -7329,6 +7403,14 @@ function demarrerEcoutes() {
     appliquerRosterSnapshot(snap);
   }, err => { console.error('Sync roster', err); marquerSynchronise(false); });
   unsubscribers.push(unsubRoster);
+
+  // Réglage « ne pas compter les semaines dont le bilan n'est pas rempli » (par défaut : activé, tant que rien n'est enregistré).
+  const unsubReglages = db.collection('cockpit_parametres').doc('reglages').onSnapshot(snap => {
+    exclureBilansVides = !(snap.exists && snap.data().exclure_bilans_vides === false);
+    majCaseReglages();
+    renderAll();
+  }, err => console.error('Sync réglages', err));
+  unsubscribers.push(unsubReglages);
 
   const unsubPoids = db.collection('cockpit_parametres').doc('poids').onSnapshot(snap => {
     if (poidsFocused) { pendingPoidsSnap = snap; return; }
