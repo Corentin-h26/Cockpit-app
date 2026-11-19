@@ -2684,10 +2684,16 @@ function texteBilansExclus(periode, comptees) {
   if (!ecartees.length) return '';
   if (!exclureBilansVides) return 'Les semaines dont le bilan (réalisé) n’est pas rempli sont comptées à zéro (réglage de l’administrateur, onglet Paramètres).';
   const pl = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+  // Bilan encore attendu (semaine en cours ou tout juste terminée) ≠ bilan oublié : on ne parle d'oubli que pour les semaines closes.
+  const attendus = ecartees.filter(r => semaineOuverte(r.semaine));
+  const oublies = ecartees.filter(r => !semaineOuverte(r.semaine));
   const sansAucun = new Set(periode.map(r => r.conseiller));
   for (const r of comptees) sansAucun.delete(r.conseiller);
-  return `${pl(ecartees.length, 'semaine')} de conseiller non comptée${ecartees.length > 1 ? 's' : ''} dans ces chiffres : bilan (réalisé) non rempli.`
-    + (sansAucun.size ? ` ${pl(sansAucun.size, 'conseiller')} sans aucun bilan sur la période, non classé${sansAucun.size > 1 ? 's' : ''}.` : '');
+  const phrases = [];
+  if (oublies.length) phrases.push(`${pl(oublies.length, 'semaine')} de conseiller non comptée${oublies.length > 1 ? 's' : ''} dans ces chiffres : bilan (réalisé) non rempli.`);
+  if (attendus.length) phrases.push(`${pl(attendus.length, 'bilan')} (réalisé) encore attendu${attendus.length > 1 ? 's' : ''} pour la semaine en cours : ${attendus.length > 1 ? 'ils seront comptés' : 'il sera compté'} dès ${attendus.length > 1 ? 'qu’ils sont remplis' : 'qu’il est rempli'}.`);
+  if (sansAucun.size) phrases.push(`${pl(sansAucun.size, 'conseiller')} sans aucun bilan sur la période, non classé${sansAucun.size > 1 ? 's' : ''}.`);
+  return phrases.join(' ');
 }
 
 function majNoteBilansExclus(periode, comptees) {
@@ -2769,6 +2775,14 @@ let typeRelance = new Date().getDay() === 3 ? 'realise' : 'semaine';
 /** Semaine dont on relance le bilan : la semaine en cours, sauf jeudi et vendredi où l'on relance celle qui vient de se terminer (le mercredi précédent). */
 function semaineBilan(jour = new Date().getDay()) {
   return jour === 4 || jour === 5 ? ajouterJoursISO(jeudiCourant(), -7) : jeudiCourant();
+}
+
+/**
+ * Semaine dont le bilan (réalisé) n'est pas encore dû : la semaine en cours, et la précédente jusqu'au vendredi (on relance
+ * le bilan le jeudi et le vendredi). Sur ces semaines, un bilan vide veut dire « pas encore », pas « oublié ».
+ */
+function semaineOuverte(semaine) {
+  return !!semaine && semaine >= semaineBilan();
 }
 
 /** Bilan rempli : un chiffre du réalisé saisi, ou la question « Comment évalues-tu ta semaine ? » répondue (même si tout vaut 0). */
@@ -3028,7 +3042,22 @@ function renderDashboard(rows, toutesLignes) {
   const cur = indicateursDashboard(rows);
   const precedente = semainePrecedenteDuDashboard(toutesLignes);
   const prec = precedente ? indicateursDashboard(precedente.rows) : null;
-  const tend = (cle, type, mieuxQuand) => prec && !prec.vide ? tendanceDe(cur[cle], prec[cle], type, mieuxQuand) : null;
+
+  // Semaine en cours : le « prévu » (potentiel…) est saisi dès le jeudi, le « réalisé » seulement le mercredi soir. Les lignes
+  // dont le bilan est attendu ne servent pas aux moyennes (elles seraient à zéro), mais leur potentiel prévu est bien affiché.
+  const enAttente = exclureBilansVides ? appliquerFiltresBruts(toutesLignes).filter(r => !bilanRempli(r) && semaineOuverte(r.semaine)) : [];
+  const potentielAttente = sum(enAttente, 'potentiel');
+  const potentielAffiche = cur.potentiel + potentielAttente;
+  const attenteSeule = cur.vide && enAttente.length > 0;   // rien de réalisé pour l'instant : on n'affiche pas de faux zéros
+  const nbEnAttente = new Set(enAttente.map(r => r.conseiller)).size;
+  const tend = (cle, type, mieuxQuand) => prec && !prec.vide && !cur.vide ? tendanceDe(cur[cle], prec[cle], type, mieuxQuand) : null;
+  // Potentiel de la semaine précédente, compté comme celui de la semaine affichée (bilan rempli, ou bilan encore attendu) — sinon la flèche comparerait deux bases différentes.
+  const potentielPrec = precedente
+    ? sum(filtrerParEquipeEtAnciennete(toutesLignes).filter(r => r.semaine === precedente.semaine && (!exclureBilansVides || bilanRempli(r) || semaineOuverte(r.semaine))), 'potentiel')
+    : 0;
+  const tendPotentiel = prec && !prec.vide && potentielAffiche > 0 ? tendanceDe(potentielAffiche, potentielPrec, 'euro', 'hausse') : null;
+  const tiret = '—';
+  const enAttenteTexte = 'Bilan (réalisé) à venir';
   const classeStatut = st => cur.vide ? '' : st === 'warn' ? ' warn' : st === 'bad' ? ' bad' : '';
   const stat = {
     perf: cur.perf === null ? 'ok' : statutDepuisPerformance(cur.perf),
@@ -3054,25 +3083,27 @@ function renderDashboard(rows, toutesLignes) {
         <div class="kpi-title">${ic('heart', 14)} Santé du Cabinet</div>
         <div class="kpi-value kpi-value--hero${classeStatut(stat.perf)}">${cur.perf === null ? '—' : cur.perf.toFixed(1)}<span class="kpi-sur"> / 100</span></div>
         <div class="kpi-sante-ligne">${niveau ? `<span class="pill ${niveau.classe}">${niveau.texte}</span>` : ''}${tendanceHTML(tend('perf', 'score', 'hausse'))}</div>
-        <div class="kpi-variation">Performance ID moyenne${cur.nb ? ` · ${cur.nb} conseiller${cur.nb > 1 ? 's' : ''}` : ''}</div>
+        <div class="kpi-variation">${attenteSeule ? 'Calculée dès que les bilans (réalisé) sont remplis' : `Performance ID moyenne${cur.nb ? ` · ${cur.nb} conseiller${cur.nb > 1 ? 's' : ''}` : ''}`}</div>
       </div>
       ${cur.perf === null ? '' : `<div class="kpi-sante-jauge">${gaugeChartSVG(cur.perf, 100)}</div>`}
     </div>
     <div class="kpi-card kpi-resultats">
       <div class="kpi-title">${ic('coins', 14)} Résultats financiers <span class="kpi-periode">sur la période affichée</span></div>
       <div class="kpi-resultats-grille">
-        <div><div class="kpi-sous-titre">Commissions réalisées</div><div class="kpi-value kpi-value--moyen">${euro(cur.commissions)}</div>${tendanceHTML(tend('commissions', 'euro', 'hausse'))}</div>
-        <div><div class="kpi-sous-titre">Potentiel</div><div class="kpi-value kpi-value--moyen">${euro(cur.potentiel)}</div>${tendanceHTML(tend('potentiel', 'euro', 'hausse'))}</div>
-        <div><div class="kpi-sous-titre">Concrétisation</div><div class="kpi-value kpi-value--moyen${classeStatut(stat.concretisation)}">${pct(cur.concretisation)}</div>${tendanceHTML(tend('concretisation', 'taux', 'hausse'))}<div class="kpi-variation">Ambition : ${OBJECTIFS.concretisation * 100} %</div></div>
+        <div><div class="kpi-sous-titre">Commissions réalisées</div><div class="kpi-value kpi-value--moyen">${attenteSeule ? tiret : euro(cur.commissions)}</div>${attenteSeule ? `<div class="kpi-variation">${enAttenteTexte}</div>` : tendanceHTML(tend('commissions', 'euro', 'hausse'))}</div>
+        <div><div class="kpi-sous-titre">Potentiel</div><div class="kpi-value kpi-value--moyen">${euro(potentielAffiche)}</div>${tendanceHTML(tendPotentiel)}${potentielAttente && !attenteSeule ? `<div class="kpi-variation">dont ${euro(potentielAttente)} en attente de bilan</div>` : ''}${attenteSeule ? `<div class="kpi-variation">Prévu par ${nbEnAttente} conseiller${nbEnAttente > 1 ? 's' : ''}</div>` : ''}</div>
+        <div><div class="kpi-sous-titre">Concrétisation</div><div class="kpi-value kpi-value--moyen${classeStatut(stat.concretisation)}">${attenteSeule ? tiret : pct(cur.concretisation)}</div>${tendanceHTML(tend('concretisation', 'taux', 'hausse'))}<div class="kpi-variation">Ambition : ${OBJECTIFS.concretisation * 100} %</div></div>
       </div>
       <div class="bar-track" role="img" aria-label="Commissions réalisées sur le potentiel : ${pct(ratioCommissions)}"><div class="bar-fill ${cur.vide ? '' : bonStatut(stat.concretisation)}" style="width:${(ratioCommissions * 100).toFixed(1)}%"></div></div>
     </div>`;
 
+  // Le taux de visio ne dépend que du prévu (visio / RDV posés) : il reste lisible dès le jeudi, avant le bilan.
+  const visioPrevu = attenteSeule ? agreger(enAttente).taux_visio : null;
   document.getElementById('kpi-grid').innerHTML = [
-    { ic: 'users', title: 'Recommandations (moy. hebdo)', value: cur.reco.toFixed(1), variation: `Ambition : ${OBJECTIFS.recommandations}`, statut: cur.vide ? undefined : stat.reco, tendance: tend('reco', 'nombre', 'hausse') },
-    { ic: 'rotate', title: 'Transformation R1 → R2', value: pct(cur.r1r2), variation: `Ambition : ${OBJECTIFS.r1_r2 * 100} %`, statut: cur.vide ? undefined : stat.r1r2, tendance: tend('r1r2', 'taux', 'hausse') },
-    { ic: 'video', title: 'Taux de RDV Visio', value: pct(cur.visio), variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %`, statut: cur.vide ? undefined : stat.visio, tendance: tend('visio', 'taux', 'baisse') },
-    { ic: 'calendarx', title: 'Taux de casse', value: pct(cur.casse), variation: "RDV posés qui n'ont pas eu lieu", statut: cur.vide ? undefined : stat.casse, tendance: tend('casse', 'taux', 'baisse') },
+    { ic: 'users', title: 'Recommandations (moy. hebdo)', value: attenteSeule ? tiret : cur.reco.toFixed(1), variation: attenteSeule ? enAttenteTexte : `Ambition : ${OBJECTIFS.recommandations}`, statut: cur.vide ? undefined : stat.reco, tendance: tend('reco', 'nombre', 'hausse') },
+    { ic: 'rotate', title: 'Transformation R1 → R2', value: attenteSeule ? tiret : pct(cur.r1r2), variation: attenteSeule ? enAttenteTexte : `Ambition : ${OBJECTIFS.r1_r2 * 100} %`, statut: cur.vide ? undefined : stat.r1r2, tendance: tend('r1r2', 'taux', 'hausse') },
+    { ic: 'video', title: 'Taux de RDV Visio', value: attenteSeule ? pct(visioPrevu) : pct(cur.visio), variation: `Sur les RDV posés · max recommandé ${OBJECTIFS.visio_max * 100} %`, statut: attenteSeule ? statutAtteinte(visioPrevu, OBJECTIFS.visio_max, true) : cur.vide ? undefined : stat.visio, tendance: tend('visio', 'taux', 'baisse') },
+    { ic: 'calendarx', title: 'Taux de casse', value: attenteSeule ? tiret : pct(cur.casse), variation: attenteSeule ? enAttenteTexte : "RDV posés qui n'ont pas eu lieu", statut: cur.vide ? undefined : stat.casse, tendance: tend('casse', 'taux', 'baisse') },
   ].map(kpiCard).join('');
 
   const aAccompagner = classement.filter(c => c.performance < SEUILS.bon).slice(-3).reverse();
@@ -3080,7 +3111,7 @@ function renderDashboard(rows, toutesLignes) {
     <div class="watch-row-item">
       <div><div class="watch-name">${esc(c.conseiller)}</div><div class="watch-sub">${c.performance.toFixed(1)} / 100</div></div>
       <span class="pill ${niveauDe(c.performance).classe}">${niveauDe(c.performance).texte}</span>
-    </div>`).join('') || `<div class="empty-state">Personne en dessous du seuil actuellement.</div>`;
+    </div>`).join('') || `<div class="empty-state">${attenteSeule ? 'Disponible dès que les bilans (réalisé) sont remplis.' : 'Personne en dessous du seuil actuellement.'}</div>`;
 
   const progression = meilleureProgression(lignesComptees(toutesLignes));
   const progCard = progression
@@ -3109,7 +3140,7 @@ function renderDashboard(rows, toutesLignes) {
   if (lbBody1) {
     lbBody1.innerHTML = lbGauche.length
       ? lbGauche.map((c, i) => ligneLeaderboard(c, i + 1)).join('')
-      : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant — remplis "Ma semaine".</td></tr>`;
+      : `<tr><td colspan="4" class="empty-state">${attenteSeule ? 'Classement disponible dès que les bilans (réalisé) sont remplis.' : 'Aucune saisie pour l\'instant — remplis "Ma semaine".'}</td></tr>`;
   }
   if (lbBody2) {
     lbBody2.innerHTML = lbDroite.map((c, i) => ligneLeaderboard(c, i + 6)).join('');
@@ -3127,7 +3158,7 @@ function renderDashboard(rows, toutesLignes) {
 
   document.getElementById('objectifs-body').innerHTML = rows.length
     ? objectifsLignes.map(ligneObjectifHTML).join('')
-    : `<tr><td colspan="4" class="empty-state">Aucune saisie pour l'instant.</td></tr>`;
+    : `<tr><td colspan="4" class="empty-state">${attenteSeule ? 'Disponible dès que les bilans (réalisé) sont remplis.' : 'Aucune saisie pour l\'instant.'}</td></tr>`;
 }
 
 let classementSort = { key: 'performance', dir: 'desc' };
