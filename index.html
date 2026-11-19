@@ -421,6 +421,7 @@
   .watch-actions { display: flex; align-items: center; gap: 12px; }
   .relance-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--heading-2); }
   .roster-table input[type="email"] { min-width: 240px; }
+  body:not(.est-admin) .col-email { display: none; }   /* colonne E-mail : administrateur uniquement */
   #roster-emails-note { font-size: 12.5px; line-height: 1.5; margin: 0 0 10px; color: var(--heading-2); }
   .entry-table input.email-invalide { border-color: var(--coral); background: rgba(239, 91, 110, 0.08); }
   .entry-table input.email-suggere { border: 1px dashed var(--gold); background: var(--gold-tint); }
@@ -1454,10 +1455,12 @@
           </table>
         </div>
 
-        <div class="section-label">Suivi des saisies</div>
-        <div class="card" id="card-suivi-saisie">
-          <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>N'ont pas rempli leur semaine</span><span id="suivi-saisie-semaine" style="font-weight:400;color:var(--heading-2);font-size:12px;margin-left:auto;"></span></div>
-          <div id="suivi-saisie-body"></div>
+        <div id="bloc-suivi-saisie" style="display:none;">
+          <div class="section-label">Suivi des saisies</div>
+          <div class="card" id="card-suivi-saisie">
+            <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3.5 22 20H2z" fill="currentColor" opacity="0.16"/><path d="M12 3.5 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="12" y1="9.3" x2="12" y2="14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></svg><span>N'ont pas rempli leur semaine</span><span id="suivi-saisie-semaine" style="font-weight:400;color:var(--heading-2);font-size:12px;margin-left:auto;"></span></div>
+            <div id="suivi-saisie-body"></div>
+          </div>
         </div>
       </div>
 
@@ -1616,7 +1619,7 @@
           <table class="entry-table roster-table">
             <thead><tr>
               <th data-sort="conseiller">Conseiller<span class="sort-arrow"></span></th>
-              <th>E-mail</th>
+              <th class="col-email">E-mail</th>
               <th data-sort="date_entree">Date d'entrée<span class="sort-arrow"></span></th>
               <th data-sort="anciennete">Ancienneté<span class="sort-arrow"></span></th>
               <th data-sort="niveau">Niveau<span class="sort-arrow"></span></th>
@@ -2634,6 +2637,16 @@ function messageRelanceSemaine(semaine) {
 
 /** Roster vs saisies de la semaine commerciale en cours (jeudiCourant) : qui n'a pas encore de ligne « Ma semaine » pour cette semaine, avec de quoi les relancer. */
 function renderSuiviSaisie(toutesLignes) {
+  // Réservé à l'administrateur : pour tout autre compte, la section est masquée et RIEN n'est écrit dans la page
+  // (ni noms des retardataires, ni adresses).
+  const bloc = document.getElementById('bloc-suivi-saisie');
+  if (bloc) bloc.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin) {
+    relanceCourante = { message: '', liste: '', destinataires: [], sujet: '', adresses: '', adresseParNom: {} };
+    const corpsVide = document.getElementById('suivi-saisie-body');
+    if (corpsVide) corpsVide.textContent = '';
+    return;
+  }
   const roster = readRoster();
   const semaineCourante = jeudiCourant();
   const remplisCetteSemaine = new Set(toutesLignes.filter(r => r.semaine === semaineCourante).map(r => r.conseiller));
@@ -4376,7 +4389,7 @@ document.getElementById('rows-body').addEventListener('input', (e) => {
 function construireLigneRosterHTML(docId, data) {
   return `<tr data-doc-id="${esc(docId)}">
     <td><input type="text" data-field="r_conseiller" placeholder="Nom Prénom" value="${esc(data.conseiller)}"></td>
-    <td><input type="email" data-field="r_email" placeholder="prenom.nom@capfinances.fr" autocomplete="off" value="${esc(data.email)}"></td>
+    <td class="col-email"><input type="email" data-field="r_email" placeholder="prenom.nom@capfinances.fr" autocomplete="off" value="${esc(isAdmin ? data.email : '')}"></td>
     <td><input type="date" data-field="r_date_entree" value="${esc(data.date_entree)}"></td>
     <td class="anc-duree"></td>
     <td class="anc-niveau"></td>
@@ -7291,6 +7304,7 @@ auth.onAuthStateChanged(user => {
   unsubscribers = [];
   currentUser = user;
   isAdmin = !!user && user.email === ADMIN_EMAIL;
+  document.body.classList.toggle('est-admin', isAdmin);
 
   if (!user) {
     document.body.classList.remove('authed');
